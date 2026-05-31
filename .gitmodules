@@ -10,3 +10,6 @@
 [submodule "references/polkadot-sdk-minimal-template"]
 	path = references/polkadot-sdk-minimal-template
 	url = https://github.com/paritytech/polkadot-sdk-minimal-template.git
+[submodule "references/frontier-parachain-template"]
+	path = references/frontier-parachain-template
+	url = https://github.com/paritytech/frontier-parachain-template.git
