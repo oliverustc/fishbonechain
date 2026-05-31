@@ -1,0 +1,22 @@
+# 外部依赖（本地 replace）
+\gnark
+\gnark-crypto
+\pianist-gnark
+\pianist-gnark-crypto
+
+# 工具与环境
+\.claude
+\.venv
+plot/.venv/
+__pycache__/
+*.pyc
+
+# 基准测试结果
+\results
+
+# Forge 编译产物与缓存（可由 forge build 重新生成）
+bpiano/sol/out/
+bpiano/sol/cache/
+
+# solgen 生成的 Solidity 测试 fixture（可由 go test ./solgen/ 重新生成）
+bpiano/sol/test/fixture_agg_k*.json

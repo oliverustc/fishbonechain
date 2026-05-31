@@ -1,0 +1,12 @@
+[submodule "references/polkadot-cookbook"]
+	path = references/polkadot-cookbook
+	url = https://github.com/polkadot-developers/polkadot-cookbook.git
+[submodule "references/polkadot-sdk-parachain-template"]
+	path = references/polkadot-sdk-parachain-template
+	url = https://github.com/paritytech/polkadot-sdk-parachain-template.git
+[submodule "references/polkadot-sdk-solochain-template"]
+	path = references/polkadot-sdk-solochain-template
+	url = https://github.com/paritytech/polkadot-sdk-solochain-template.git
+[submodule "references/polkadot-sdk-minimal-template"]
+	path = references/polkadot-sdk-minimal-template
+	url = https://github.com/paritytech/polkadot-sdk-minimal-template.git

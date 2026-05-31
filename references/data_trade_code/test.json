@@ -1,0 +1,35 @@
+{
+    "vehicleId": "ABCDEF123456789",
+    "vehicleType": "sedan",
+    "vehicleModel": "Tesla model Y",
+    "vimNum": "5YJ3E7EB9LF123456",
+    "manufactureDate": "2023-03-15",
+    "ownerAgeGroup": "32",
+    "ownerGender": "male",
+    "insurancePolicy": "full_coverage",
+    "records": [
+        {
+            "timestamp": "2024-07-15-08:00:00",
+            "driveData": {
+                "speed": 60,
+                "acceleration": 0.8,
+                "breakPressure": 0
+            },
+            "powerData": {
+                "battery Soc (%)": 78.3,
+                "power (kW)": 18.2,
+                "motor temperature (℃)": 42.5,
+                "battery temperature (℃)": 35.2
+            },
+            "environmentData": {
+                "temperature": 28.1,
+                "humidity": 65,
+                "gradient": 1.2,
+                "location": {
+                    "long": "116.407",
+                    "lat": "39.904"
+                }
+            }
+        }
+    ]
+}

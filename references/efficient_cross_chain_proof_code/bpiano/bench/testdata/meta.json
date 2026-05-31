@@ -1,0 +1,27 @@
+{
+  "circuit": "Keccak-256",
+  "T": 262144,
+  "M": 2,
+  "kMax": 100,
+  "kValues": [
+    2,
+    10,
+    20,
+    30,
+    40,
+    50,
+    60,
+    70,
+    80,
+    90,
+    100
+  ],
+  "nBatchedProofXClaims": 13,
+  "nBatchedProofYClaims": 15,
+  "pianoProvePerProofNs": 8586623652,
+  "bpianoProvePerProofNs": 6200535821,
+  "generatedAt": "2026-03-29T14:49:41Z",
+  "host": "swt-blockchain",
+  "goVersion": "go1.25.6",
+  "numCPU": 112
+}
