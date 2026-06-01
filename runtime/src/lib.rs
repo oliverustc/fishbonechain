@@ -232,4 +232,7 @@ mod runtime {
 
 	#[runtime::pallet_index(9)]
 	pub type Fmc = pallet_fmc;
+
+	#[runtime::pallet_index(10)]
+	pub type Crowdsource = pallet_crowdsource;
 }

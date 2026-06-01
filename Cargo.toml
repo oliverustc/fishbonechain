@@ -11,6 +11,7 @@ members = [
     "pallets/template",
     "pallets/ccmc",
     "pallets/fmc",
+    "pallets/crowdsource",
     "runtime",
 ]
 resolver = "2"
@@ -28,8 +29,9 @@ too-many-arguments = { level = "allow", priority = 2 }
 [workspace.dependencies]
 fishbone-runtime = { path = "./runtime", default-features = false }
 pallet-fishbone-template = { path = "./pallets/template", default-features = false }
-pallet-ccmc = { path = "./pallets/ccmc", default-features = false }
-pallet-fmc  = { path = "./pallets/fmc",  default-features = false }
+pallet-ccmc        = { path = "./pallets/ccmc",        default-features = false }
+pallet-fmc         = { path = "./pallets/fmc",         default-features = false }
+pallet-crowdsource = { path = "./pallets/crowdsource", default-features = false }
 clap = { version = "4.5.13" }
 frame-benchmarking-cli = { version = "47.0.0", default-features = false }
 frame-metadata-hash-extension = { version = "0.8.0", default-features = false }
