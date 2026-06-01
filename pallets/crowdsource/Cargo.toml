@@ -1,0 +1,52 @@
+[package]
+name        = "pallet-crowdsource"
+version     = "0.1.0"
+description = "FishboneChain child chain crowdsourcing pallet: epoch lifecycle, data collection, Merkle digest"
+edition     = "2021"
+license     = "MIT-0"
+authors     = ["FishboneChain"]
+
+[lints]
+workspace = true
+
+[dependencies]
+codec      = { workspace = true }
+scale-info = { workspace = true }
+
+frame-support = { workspace = true }
+frame-system  = { workspace = true }
+sp-runtime    = { workspace = true }
+sp-io         = { workspace = true }
+
+# Cross-pallet type aliases only (no Config inheritance)
+pallet-ccmc = { workspace = true }
+pallet-fmc  = { workspace = true }
+
+# Merkle tree
+binary-merkle-tree = { version = "16.0.0", default-features = false }
+
+[dev-dependencies]
+pallet-balances = { workspace = true, features = ["std"] }
+sp-core         = { workspace = true, features = ["std"] }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "scale-info/std",
+    "frame-support/std",
+    "frame-system/std",
+    "sp-runtime/std",
+    "sp-io/std",
+    "pallet-ccmc/std",
+    "pallet-fmc/std",
+    "binary-merkle-tree/std",
+]
+runtime-benchmarks = [
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+]
+try-runtime = [
+    "frame-support/try-runtime",
+    "frame-system/try-runtime",
+]

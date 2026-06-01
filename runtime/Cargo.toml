@@ -27,8 +27,9 @@ pallet-balances.workspace = true
 pallet-grandpa.workspace = true
 pallet-sudo.workspace = true
 pallet-fishbone-template.workspace = true
-pallet-ccmc.workspace = true
-pallet-fmc.workspace  = true
+pallet-ccmc.workspace        = true
+pallet-fmc.workspace         = true
+pallet-crowdsource.workspace = true
 pallet-timestamp.workspace = true
 pallet-transaction-payment-rpc-runtime-api.workspace = true
 pallet-transaction-payment.workspace = true
@@ -71,6 +72,7 @@ std = [
 	"pallet-fishbone-template/std",
 	"pallet-ccmc/std",
 	"pallet-fmc/std",
+	"pallet-crowdsource/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
@@ -104,6 +106,7 @@ runtime-benchmarks = [
 	"pallet-fishbone-template/runtime-benchmarks",
 	"pallet-ccmc/runtime-benchmarks",
 	"pallet-fmc/runtime-benchmarks",
+	"pallet-crowdsource/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-transaction-payment/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
@@ -121,6 +124,7 @@ try-runtime = [
 	"pallet-fishbone-template/try-runtime",
 	"pallet-ccmc/try-runtime",
 	"pallet-fmc/try-runtime",
+	"pallet-crowdsource/try-runtime",
 	"pallet-timestamp/try-runtime",
 	"pallet-transaction-payment/try-runtime",
 	"sp-runtime/try-runtime",
