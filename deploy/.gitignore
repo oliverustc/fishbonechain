@@ -1,0 +1,14 @@
+# 密钥文件（绝不进 git）
+keys/
+
+# Chain spec 大文件（可从 fishbone-node 重新生成）
+specs/
+
+# Python 构建产物
+__pycache__/
+*.pyc
+.venv/
+.python-version
+
+# uv lock（可选，小文件可以提交）
+# uv.lock

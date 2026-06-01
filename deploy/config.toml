@@ -1,0 +1,105 @@
+# FishboneChain 多节点部署配置
+# 单一真相来源：所有节点参数在此定义
+
+[cluster]
+name       = "fishbone-testnet"
+binary     = "/home/debian/fishbone/bin/fishbone-node"
+base_dir   = "/home/debian/fishbone"
+log_dir    = "/home/debian/fishbone/logs"
+sudo_pass  = "debian"
+
+# 跳板机（开发机不能直连 10.2.2.x，通过 bcg 做 SSH/HTTP 中转）
+[gateway]
+ssh        = "bcg"             # SSH Host alias
+ip         = "192.168.8.41"
+
+[chains.main]
+id       = "fishbone_main"
+spec     = "specs/main-custom-raw.json"
+p2p_port = 30333
+rpc_port = 9944
+prom_port = 9615
+
+[chains.child1]
+id       = "fishbone_child_1"
+spec     = "specs/child1-custom-raw.json"
+p2p_port = 30334
+rpc_port = 9945
+prom_port = 9616
+
+[chains.child2]
+id       = "fishbone_child_2"
+spec     = "specs/child2-custom-raw.json"
+p2p_port = 30335
+rpc_port = 9946
+prom_port = 9617
+
+# ── 节点定义 ──────────────────────────────────────────────────────────────────
+# roles: 该节点参与哪些链（validator）
+# peer_ids: 在各链上的 libp2p Peer ID（由 generate-keys.py 填充）
+
+[[nodes]]
+id      = "f1"
+ip      = "10.2.2.11"
+ssh     = "f1"
+roles   = ["main", "child1"]
+
+[nodes.peer_ids]
+main   = "12D3KooWEG8gvUe7RRvrgknZwbzg1snqKQzxhewX5FDaEYGfcDLa"
+child1 = "12D3KooWNy8n5FWgmUA991q8pDQdDPYVJqp996sBwCeF7QFZMkLy"
+child2 = ""
+
+[[nodes]]
+id      = "f2"
+ip      = "10.2.2.12"
+ssh     = "f2"
+roles   = ["main", "child1"]
+
+[nodes.peer_ids]
+main   = "12D3KooWFsrUUPRd7oVv4aUQ4oF3oi1zfGYGvhW3TyZvvuWhQqNL"
+child1 = "12D3KooWDYDwT3CEaTvyPLkoRq9gPdfUGa39aEDnPpxrqYaZqGWS"
+child2 = ""
+
+[[nodes]]
+id      = "f3"
+ip      = "10.2.2.13"
+ssh     = "f3"
+roles   = ["main", "child1"]
+
+[nodes.peer_ids]
+main   = "12D3KooWAEnd9YjewBvTDXAyc2WDuh89wXoDBLYMuV5RUxoBRDP1"
+child1 = "12D3KooWFxTgfD81ujSLAgnfNsze8dY1rUYYDTK4adUEBgypRZvY"
+child2 = ""
+
+[[nodes]]
+id      = "f4"
+ip      = "10.2.2.14"
+ssh     = "f4"
+roles   = ["main", "child2"]
+
+[nodes.peer_ids]
+main   = "12D3KooWAzKDpDs5jCSX3eC5urRotn4QBsqzhz8pSEqbjsPWYf9k"
+child1 = ""
+child2 = "12D3KooWKSmiHP8wVNwsR42GU5xee11eLSuRH11EAgoJACypJZpn"
+
+[[nodes]]
+id      = "f5"
+ip      = "10.2.2.15"
+ssh     = "f5"
+roles   = ["main", "child2"]
+
+[nodes.peer_ids]
+main   = "12D3KooWE7erpnv3EzmqhEjkHNB4i2vsDgquJKwG637qPJM9gnur"
+child1 = ""
+child2 = "12D3KooWKf6Nkn3YxujskCxh6buagTdBneB37jc6E95YgpiRJb2x"
+
+[[nodes]]
+id      = "f6"
+ip      = "10.2.2.16"
+ssh     = "f6"
+roles   = ["main", "child2"]
+
+[nodes.peer_ids]
+main   = "12D3KooWHAASsrtvGcRvMDjLFgyedGkcfp4pphyatVWbpdXp8Het"
+child1 = ""
+child2 = "12D3KooWSkfms5X99L7Wgd3Y5MbcE9w5tMG64TUn1tfGttUgZs3V"

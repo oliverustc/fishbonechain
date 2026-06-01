@@ -1,0 +1,10 @@
+[project]
+name = "deploy"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.11"
+dependencies = [
+    "asyncssh>=2.23.0",
+    "rich>=15.0.0",
+    "typer>=0.26.4",
+]
