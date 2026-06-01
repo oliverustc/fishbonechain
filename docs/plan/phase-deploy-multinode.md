@@ -35,28 +35,31 @@
 
 ## 三、待完成
 
-### Step 1：补全 Python 框架细节
-- [ ] `cmd/__init__.py` 和 `main.py` 入口
-- [ ] `cmd/status.py` 通过 bcg 做 RPC 中转（非直连，因为开发机不在 10.2.2.x 网段）
-- [ ] 在 `config.toml` 中记录 bcg 信息
-- [ ] 测试 `uv run python3 cmd/status.py`
+### Step 1：补全 Python 框架细节 ✅
+- [x] `cmd/__init__.py` 和入口文件
+- [x] `cmd/status.py` 通过 bcg 做 RPC 中转（ssh 系统命令，完整读取 ~/.ssh/config）
+- [x] `config.toml` 加入 [gateway] bcg 配置
+- [x] remote.py 改用 subprocess ssh（替代 asyncssh，解决 ProxyJump 不兼容问题）
 
-### Step 2：整理 deploy 目录，清除冗余文件
-- [ ] 删除早期的 bash 脚本（scripts/ 下的旧脚本已被 Python 框架取代）
-- [ ] 删除 specs/ 下的可读 json（只保留 raw json，大文件）
-- [ ] 更新 .gitignore（排除 keys/*.env、specs/*.json 的大文件）
+### Step 2：整理 deploy 目录 ✅
+- [x] 删除早期 bash 脚本
+- [x] 删除 spec 可读版本（保留 raw.json）
+- [x] 部署 .gitignore（排除 keys/ 和 specs/）
 
-### Step 3：git 提交
-- [ ] 提交 deploy/ 目录（排除密钥文件和大 spec 文件）
-- [ ] 提交 docs/plan/phase-deploy-multinode.md
+### Step 3：git 提交 ✅
+- [x] commit e385eba — Add multi-node deployment framework and 6-node testnet
 
-### Step 4：验证管理命令可用
-- [ ] `uv run python3 cmd/status.py` 显示三链状态
-- [ ] `uv run python3 cmd/control.py stop --chains main` 停止主链
-- [ ] `uv run python3 cmd/control.py start --chains main` 启动主链
-- [ ] `uv run python3 cmd/logs.py main` 实时日志聚合
+### Step 4：验证管理命令 ✅
+- [x] `uv run python3 cmd/status.py` — 显示 6 节点三链状态表格
+- [x] `uv run python3 cmd/control.py restart --nodes f1 --chains child1` — 成功重启
 
-### Step 5：更新内存文件，记录多节点部署经验
+### Step 5：更新内存文件
+
+关键经验：
+- asyncssh 不兼容复杂 SSH config（ProxyJump + IdentityFile + User）→ 改用系统 ssh 命令
+- 开发机在 WSL2 内，不在 10.2.2.x 网段 → RPC 查询必须通过 bcg 中转
+- systemd ExecStart 多个 `--bootnodes` 参数需要每条单独一行用 `\` 续行
+- `--unsafe-rpc-external` 是允许外部访问 RPC 的正确 flag（非 `--rpc-addr`）
 
 ---
 
@@ -102,4 +105,4 @@ deploy/
 
 - [x] 基础环境清理（2026-06-01）
 - [x] 三链部署与启动（2026-06-01）
-- [ ] Python 管理框架完善（Step 1-4）
+- [x] Python 管理框架完善（2026-06-01）
