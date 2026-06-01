@@ -477,9 +477,9 @@ print('metadata 长度:', len(meta['result']))
 
 > 执行过程中实时更新
 
-- [ ] Step 1：pallet 目录建立 + workspace 更新  完成时间：
-- [ ] Step 2：pallet-ccmc 实现  完成时间：
-- [ ] Step 3：pallet-fmc 实现  完成时间：
-- [ ] Step 4：集成进 Runtime  完成时间：
-- [ ] Step 5：单元测试编写与通过  完成时间：
-- [ ] Step 6：端到端集成验证  完成时间：
+- [x] Step 1：pallet 目录建立 + workspace 更新  完成时间：2026-05-31
+- [x] Step 2：pallet-ccmc 实现  完成时间：2026-05-31
+- [x] Step 3：pallet-fmc 实现  完成时间：2026-05-31
+- [x] Step 4：集成进 Runtime  完成时间：2026-05-31
+- [x] Step 5：单元测试编写与通过  完成时间：2026-05-31（22/22 通过）
+- [x] Step 6：端到端集成验证  完成时间：2026-05-31（7步全部 InBlock 确认）

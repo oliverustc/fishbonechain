@@ -162,3 +162,18 @@ impl pallet_fishbone_template::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_fishbone_template::weights::SubstrateWeight<Runtime>;
 }
+
+/// Configure pallet-ccmc (Child Chain Management Contract).
+impl pallet_ccmc::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type WeightInfo = ();
+}
+
+/// Configure pallet-fmc (Fund Management Contract).
+impl pallet_fmc::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type CcmcPallet = pallet_ccmc::Pallet<Runtime>;
+	type WeightInfo = ();
+}

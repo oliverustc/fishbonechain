@@ -22,3 +22,11 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Node.js
+node_modules/
+
+# Session planning files (temporary, not part of codebase)
+task_plan.md
+findings.md
+progress.md

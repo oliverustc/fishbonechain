@@ -225,4 +225,11 @@ mod runtime {
 	// Include the custom logic from the pallet-fishbone-template in the runtime.
 	#[runtime::pallet_index(7)]
 	pub type Template = pallet_fishbone_template;
+
+	// FishboneChain business pallets
+	#[runtime::pallet_index(8)]
+	pub type Ccmc = pallet_ccmc;
+
+	#[runtime::pallet_index(9)]
+	pub type Fmc = pallet_fmc;
 }
