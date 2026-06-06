@@ -1,118 +1,143 @@
 /**
- * FishboneChain Phase 2 链下桥接脚本
+ * FishboneChain 链下桥接脚本
  *
  * 监听子链 EpochFinalized 事件，自动向主链提交：
  *   ccmc.submitEpochDigest(chainId, epoch, merkleRoot)
  *   fmc.submitBill(requester, taskId, epoch, billAmounts)
  *
  * 用法：
- *   node --input-type=module < scripts/bridge.js
- *   node --input-type=module < scripts/bridge.js --once   # 处理一次后退出
+ *   CHILD_WS=ws://... MAIN_WS=ws://... MINER_SURI="//Alice" \
+ *   REQUESTER="5Grw..." TASK_ID=0 \
+ *   node scripts/bridge.js
+ *
+ * 环境变量：
+ *   CHILD_WS      子链 RPC（默认 ws://127.0.0.1:9945）
+ *   MAIN_WS       主链 RPC（默认 ws://127.0.0.1:9944）
+ *   MINER_SURI    矿工账户助记词或 //URI（默认 //Alice）
+ *   REQUESTER     任务请求方地址（默认 Alice SS58）
+ *   TASK_ID       任务 ID（默认 0）
  */
 
 import { ApiPromise, WsProvider, Keyring } from "@polkadot/api";
 
-const CHILD1_WS = process.env.CHILD_WS  || "ws://127.0.0.1:9945";
-const MAIN_WS   = process.env.MAIN_WS   || "ws://127.0.0.1:9944";
-const ONCE      = process.argv.includes("--once");
-
-// 代表矿工（提交摘要和账单的签名者）
+const CHILD_WS   = process.env.CHILD_WS   || "ws://127.0.0.1:9945";
+const MAIN_WS    = process.env.MAIN_WS    || "ws://127.0.0.1:9944";
 const MINER_SURI = process.env.MINER_SURI || "//Alice";
+const TASK_ID    = parseInt(process.env.TASK_ID ?? "0", 10);
+const CHAIN_ID   = parseInt(process.env.CHAIN_ID ?? "0", 10);
+const ONCE       = process.argv.includes("--once");
+
+// REQUESTER 默认为 Alice 的 SS58 地址
+const REQUESTER  = process.env.REQUESTER  || "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY";
 
 function log(msg) {
   console.log(`[bridge ${new Date().toISOString()}] ${msg}`);
 }
 
-async function submitToMainChain(mainApi, miner, chainId, epoch, merkleRoot, billAmounts) {
-  log(`提交 Epoch ${epoch} 摘要到主链...`);
-
-  // 1. 提交 Epoch 摘要到 CCMC
-  await new Promise((resolve, reject) => {
-    mainApi.tx.ccmc
-      .submitEpochDigest(chainId, epoch, merkleRoot)
-      .signAndSend(miner, ({ status, dispatchError }) => {
-        if (dispatchError) {
-          // AlreadyVoted 是正常情况（其他矿工已提交），不视为错误
-          if (dispatchError.isModule) {
-            const { name } = mainApi.registry.findMetaError(dispatchError.asModule);
-            if (name === "AlreadyVoted") {
-              log(`  Epoch ${epoch} 摘要已由他人提交，跳过`);
-              resolve();
-              return;
-            }
+async function sendTx(api, tx, signer, label) {
+  return new Promise((resolve, reject) => {
+    tx.signAndSend(signer, ({ status, dispatchError }) => {
+      if (dispatchError) {
+        if (dispatchError.isModule) {
+          const { name } = api.registry.findMetaError(dispatchError.asModule);
+          if (name === "AlreadyVoted") {
+            log(`  [跳过] ${label}：AlreadyVoted（其他矿工已提交）`);
+            resolve({ skipped: true });
+            return;
           }
-          reject(new Error(`ccmc.submitEpochDigest failed: ${dispatchError}`));
-        } else if (status.isInBlock) {
-          log(`  ✓ 摘要已上链 #${status.asInBlock}`);
-          resolve();
         }
-      }).catch(reject);
+        reject(new Error(`${label} failed: ${dispatchError}`));
+      } else if (status.isInBlock) {
+        log(`  ✓ ${label} 已上链 block=${status.asInBlock}`);
+        resolve({ skipped: false });
+      }
+    }).catch(reject);
   });
+}
 
-  // 2. 按任务提交账单到 FMC
-  // billAmounts 格式：[(accountId, amount), ...]
-  // 需要知道每个任务的 requester 和 task_id：从子链存储读取
-  // Phase 2 简化：只处理单任务场景（task_id=0, requester 从事件上下文获取）
-  // 完整实现需要在 EpochFinalized 事件中携带 per-task 账单信息
+async function submitToMainChain(mainApi, miner, chainId, epoch, merkleRoot, billAmounts) {
+  // 1. 提交 Epoch 摘要到 CCMC
+  log(`提交 Epoch=${epoch} 摘要到主链 (chain_id=${chainId})...`);
+  await sendTx(
+    mainApi,
+    mainApi.tx.ccmc.submitEpochDigest(chainId, epoch, merkleRoot),
+    miner,
+    `ccmc.submitEpochDigest(chain=${chainId}, epoch=${epoch})`
+  );
+
+  // 2. 提交账单到 FMC
   if (billAmounts.length === 0) {
     log("  本 Epoch 无账单，跳过 FMC 提交");
     return;
   }
 
-  log(`  提交账单（${billAmounts.length} 个接收方）...`);
-  // TODO Phase 2 完整实现：遍历任务列表，逐任务提交账单
-  // 当前简化：打印账单内容，不实际提交（因为 requester/taskId 信息在事件中不完整）
-  for (const [addr, amount] of billAmounts) {
-    log(`    → ${addr}: ${amount.toHuman()}`);
-  }
-  log("  [注意] 完整账单提交需 EpochFinalized 事件携带 per-task 信息，已记录待后续实现");
+  log(`  提交账单 task_id=${TASK_ID}，requester=${REQUESTER.slice(0,8)}…，共 ${billAmounts.length} 笔`);
+
+  // bill_amounts 格式：[(AccountId, Balance), ...]
+  const amounts = billAmounts.map(([addr, amt]) => [addr.toString(), amt.toString()]);
+
+  await sendTx(
+    mainApi,
+    mainApi.tx.fmc.submitBill(REQUESTER, TASK_ID, epoch, amounts),
+    miner,
+    `fmc.submitBill(task=${TASK_ID}, epoch=${epoch}, recipients=${amounts.length})`
+  );
+
+  log(`  账单结算完成（若 2/3 矿工已提交则自动结算）`);
 }
 
 async function main() {
   log(`启动桥接服务`);
-  log(`子链 RPC: ${CHILD1_WS}`);
-  log(`主链 RPC: ${MAIN_WS}`);
-
-  const [childProvider, mainProvider] = [
-    new WsProvider(CHILD1_WS),
-    new WsProvider(MAIN_WS),
-  ];
+  log(`子链 RPC:  ${CHILD_WS}`);
+  log(`主链 RPC:  ${MAIN_WS}`);
+  log(`CHAIN_ID:  ${CHAIN_ID}`);
+  log(`TASK_ID:   ${TASK_ID}`);
+  log(`REQUESTER: ${REQUESTER.slice(0, 12)}…`);
 
   const [childApi, mainApi] = await Promise.all([
-    ApiPromise.create({ provider: childProvider }),
-    ApiPromise.create({ provider: mainProvider }),
+    ApiPromise.create({ provider: new WsProvider(CHILD_WS) }),
+    ApiPromise.create({ provider: new WsProvider(MAIN_WS) }),
   ]);
 
   const keyring = new Keyring({ type: "sr25519" });
   const miner   = keyring.addFromUri(MINER_SURI);
-
-  log(`矿工账户: ${miner.address}`);
-
-  const childChain = await childApi.rpc.system.chain();
-  const mainChain  = await mainApi.rpc.system.chain();
-  log(`子链: ${childChain}  主链: ${mainChain}`);
+  log(`矿工账户:  ${miner.address}`);
+  log(`子链: ${await childApi.rpc.system.chain()}  主链: ${await mainApi.rpc.system.chain()}`);
 
   let processedCount = 0;
 
-  // 订阅子链事件
   const unsub = await childApi.query.system.events(async (events) => {
     for (const { event } of events) {
-      if (!childApi.events.crowdsource.EpochFinalized.is(event)) continue;
+      // 使用 section/method 匹配，避免自定义 pallet 类型注册问题
+      if (event.section !== "crowdsource" || event.method !== "EpochFinalized") continue;
 
-      const { chain_id, epoch, merkle_root, bill_amounts } = event.data;
-      log(`\n收到 EpochFinalized 事件:`);
-      log(`  chain_id   = ${chain_id}`);
-      log(`  epoch      = ${epoch}`);
-      log(`  merkleRoot = ${merkle_root}`);
-      log(`  账单笔数   = ${bill_amounts.length}`);
+      // 支持两种字段名格式（camelCase 和 snake_case）
+      const data = event.data;
+      const rawChainId    = data.chain_id    ?? data.chainId;
+      const rawEpoch      = data.epoch       ?? data.epochId;
+      const rawRoot       = data.merkle_root ?? data.merkleRoot;
+      const rawBillAmts   = data.bill_amounts ?? data.billAmounts ?? [];
+
+      // chain_id 优先从事件读取，回退到 CHAIN_ID 环境变量
+      const chain_id   = rawChainId?.toNumber?.() ?? CHAIN_ID;
+      const epoch      = rawEpoch?.toNumber?.()   ?? rawEpoch;
+      const merkle_root = rawRoot;
+      const bill_amounts = rawBillAmts;
+
+      log(`\n── EpochFinalized ──────────────────────`);
+      log(`  chain_id  = ${chain_id}`);
+      log(`  epoch     = ${epoch}`);
+      log(`  root      = ${merkle_root}`);
+      log(`  accounts  = ${bill_amounts.length}`);
 
       try {
         await submitToMainChain(
           mainApi, miner,
           chain_id, epoch, merkle_root,
-          bill_amounts.map(([addr, amt]) => [addr.toString(), amt]),
+          bill_amounts,
         );
         processedCount++;
+        log(`  [OK] Epoch ${epoch} 处理完毕（累计 ${processedCount}）`);
       } catch (e) {
         log(`[错误] ${e.message}`);
       }
@@ -127,19 +152,18 @@ async function main() {
   });
 
   if (ONCE) {
-    log("等待第一个 EpochFinalized 事件...");
-    // once 模式超时 5 分钟
     await new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("超时：未收到 EpochFinalized 事件")), 300_000)
+      setTimeout(() => reject(new Error("超时：5 分钟内未收到 EpochFinalized")), 300_000)
     );
   } else {
     log("持续监听中（Ctrl+C 退出）...");
     process.on("SIGINT", async () => {
-      log("收到 SIGINT，正在退出...");
+      log("收到 SIGINT，退出...");
       unsub();
       await Promise.all([childApi.disconnect(), mainApi.disconnect()]);
       process.exit(0);
     });
+    await new Promise(() => {}); // keep alive
   }
 }
 
