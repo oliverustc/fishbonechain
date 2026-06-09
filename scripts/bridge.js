@@ -5,24 +5,30 @@
  *   ccmc.submitEpochDigest(chainId, epoch, merkleRoot)
  *   fmc.submitBill(requester, taskId, epoch, billAmounts)
  *
- * 用法：
+ * 用法（单矿工，测试场景 miner_count=1）：
  *   CHILD_WS=ws://... MAIN_WS=ws://... MINER_SURI="//Alice" \
- *   REQUESTER="5Grw..." TASK_ID=0 \
+ *   REQUESTER="5Grw..." TASK_ID=0 CHAIN_ID=0 \
+ *   node scripts/bridge.js
+ *
+ * 用法（多矿工，模拟生产场景，逗号分隔所有矿工的 SURI）：
+ *   MINER_SURIS="seed1,seed2,seed3,seed4,seed5" \
+ *   CHILD_WS=ws://... MAIN_WS=ws://... TASK_ID=3 CHAIN_ID=3 \
  *   node scripts/bridge.js
  *
  * 环境变量：
  *   CHILD_WS      子链 RPC（默认 ws://127.0.0.1:9945）
  *   MAIN_WS       主链 RPC（默认 ws://127.0.0.1:9944）
- *   MINER_SURI    矿工账户助记词或 //URI（默认 //Alice）
+ *   MINER_SURI    单个矿工 SURI（默认 //Alice；被 MINER_SURIS 覆盖）
+ *   MINER_SURIS   逗号分隔的多个矿工 SURI（用于达到 2/3 投票阈值）
  *   REQUESTER     任务请求方地址（默认 Alice SS58）
  *   TASK_ID       任务 ID（默认 0）
+ *   CHAIN_ID      子链 ID（默认 0）
  */
 
 import { ApiPromise, WsProvider, Keyring } from "@polkadot/api";
 
 const CHILD_WS   = process.env.CHILD_WS   || "ws://127.0.0.1:9945";
 const MAIN_WS    = process.env.MAIN_WS    || "ws://127.0.0.1:9944";
-const MINER_SURI = process.env.MINER_SURI || "//Alice";
 const TASK_ID    = parseInt(process.env.TASK_ID ?? "0", 10);
 const CHAIN_ID   = parseInt(process.env.CHAIN_ID ?? "0", 10);
 const ONCE       = process.argv.includes("--once");
@@ -30,10 +36,16 @@ const ONCE       = process.argv.includes("--once");
 // REQUESTER 默认为 Alice 的 SS58 地址
 const REQUESTER  = process.env.REQUESTER  || "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY";
 
+// 支持多矿工：MINER_SURIS 优先，否则降级到 MINER_SURI 单个
+const _minerSuris = process.env.MINER_SURIS
+  ? process.env.MINER_SURIS.split(",").map(s => s.trim()).filter(Boolean)
+  : [process.env.MINER_SURI || "//Alice"];
+
 function log(msg) {
   console.log(`[bridge ${new Date().toISOString()}] ${msg}`);
 }
 
+// resolve({ skipped, settled }) — skipped=已跳过, settled=本次触发了结算
 async function sendTx(api, tx, signer, label) {
   return new Promise((resolve, reject) => {
     tx.signAndSend(signer, ({ status, dispatchError }) => {
@@ -41,49 +53,63 @@ async function sendTx(api, tx, signer, label) {
         if (dispatchError.isModule) {
           const { name } = api.registry.findMetaError(dispatchError.asModule);
           if (name === "AlreadyVoted") {
-            log(`  [跳过] ${label}：AlreadyVoted（其他矿工已提交）`);
-            resolve({ skipped: true });
+            log(`  [跳过] ${label}：AlreadyVoted（本矿工已投票）`);
+            resolve({ skipped: true, settled: false });
+            return;
+          }
+          if (name === "NotAMiner") {
+            log(`  [跳过] ${label}：NotAMiner（账户未注册为该链矿工，检查 MINER_SURIS 配置）`);
+            resolve({ skipped: true, settled: false });
             return;
           }
         }
         reject(new Error(`${label} failed: ${dispatchError}`));
       } else if (status.isInBlock) {
         log(`  ✓ ${label} 已上链 block=${status.asInBlock}`);
-        resolve({ skipped: false });
+        resolve({ skipped: false, settled: true });
       }
     }).catch(reject);
   });
 }
 
-async function submitToMainChain(mainApi, miner, chainId, epoch, merkleRoot, billAmounts) {
-  // 1. 提交 Epoch 摘要到 CCMC
+async function submitToMainChain(mainApi, miners, chainId, epoch, merkleRoot, billAmounts) {
+  // 1. 提交 Epoch 摘要到 CCMC（用第一个矿工提交，AlreadyVoted 说明已提交）
   log(`提交 Epoch=${epoch} 摘要到主链 (chain_id=${chainId})...`);
   await sendTx(
     mainApi,
     mainApi.tx.ccmc.submitEpochDigest(chainId, epoch, merkleRoot),
-    miner,
+    miners[0],
     `ccmc.submitEpochDigest(chain=${chainId}, epoch=${epoch})`
   );
 
-  // 2. 提交账单到 FMC
+  // 2. 提交账单到 FMC（多矿工依次投票，达到 2/3 阈值后结算自动触发）
   if (billAmounts.length === 0) {
     log("  本 Epoch 无账单，跳过 FMC 提交");
     return;
   }
 
   log(`  提交账单 task_id=${TASK_ID}，requester=${REQUESTER.slice(0,8)}…，共 ${billAmounts.length} 笔`);
+  log(`  矿工投票（共 ${miners.length} 个矿工）...`);
 
   // bill_amounts 格式：[(AccountId, Balance), ...]
   const amounts = billAmounts.map(([addr, amt]) => [addr.toString(), amt.toString()]);
 
-  await sendTx(
-    mainApi,
-    mainApi.tx.fmc.submitBill(REQUESTER, TASK_ID, epoch, amounts),
-    miner,
-    `fmc.submitBill(task=${TASK_ID}, epoch=${epoch}, recipients=${amounts.length})`
-  );
-
-  log(`  账单结算完成（若 2/3 矿工已提交则自动结算）`);
+  let voteCount = 0;
+  for (const miner of miners) {
+    const { skipped, settled } = await sendTx(
+      mainApi,
+      mainApi.tx.fmc.submitBill(REQUESTER, TASK_ID, epoch, amounts),
+      miner,
+      `fmc.submitBill(task=${TASK_ID}, epoch=${epoch}, miner=${miner.address.slice(0,8)}…)`
+    );
+    if (!skipped) voteCount++;
+    if (settled && voteCount > 0) {
+      // 检查是否已结算（pallet 里达到阈值后自动结算，不再需要继续投票）
+      log(`  账单结算完成（${voteCount}/${miners.length} 矿工已投票）`);
+      return;
+    }
+  }
+  log(`  所有矿工投票完毕（${voteCount} 票有效），等待链上阈值达成`);
 }
 
 async function main() {
@@ -100,8 +126,8 @@ async function main() {
   ]);
 
   const keyring = new Keyring({ type: "sr25519" });
-  const miner   = keyring.addFromUri(MINER_SURI);
-  log(`矿工账户:  ${miner.address}`);
+  const miners  = _minerSuris.map(uri => keyring.addFromUri(uri));
+  log(`矿工账户（${miners.length} 个）: ${miners.map(m => m.address.slice(0,8)+'…').join(', ')}`);
   log(`子链: ${await childApi.rpc.system.chain()}  主链: ${await mainApi.rpc.system.chain()}`);
 
   let processedCount = 0;
@@ -132,7 +158,7 @@ async function main() {
 
       try {
         await submitToMainChain(
-          mainApi, miner,
+          mainApi, miners,
           chain_id, epoch, merkle_root,
           bill_amounts,
         );

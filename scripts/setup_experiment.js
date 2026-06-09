@@ -5,7 +5,7 @@
  *   1. 主链：给 f1-f12 验证人账户充值（用于支付手续费 + CCMC 押金）
  *   2. 主链：Alice 向 FMC 充值（实验预算）
  *   3. 主链：注册 6 条子链到 CCMC（得到 chain_id 0-5）
- *   4. 主链：各验证人 join 对应子链
+ *   4. 主链：矿工账户 join 对应子链（bridge 投票账户必须在此注册）
  *   5. 主链：Alice 创建并激活 6 个任务
  *   6. 各子链：sync_task（Alice 调用，无权限限制）
  *   7. 各子链：给工作者账户充值（//Worker{i}）
@@ -14,6 +14,19 @@
  *   node scripts/setup_experiment.js
  *   node scripts/setup_experiment.js --dry-run   # 只打印计划不执行
  *   node scripts/setup_experiment.js --step 3    # 只执行第 3 步
+ *
+ * bridge.js 账单投票说明：
+ *   fmc.submit_bill 要求调用方是已注册矿工（Miners 存储），且达到 2/3 阈值才结算。
+ *
+ *   单机测试模式（推荐）：
+ *     CHAINS 中 miners 只填 ["alice"]，bridge 用 MINER_SURI="//Alice"。
+ *     miner_count=1 → threshold=1 → 单次投票即可结算。
+ *
+ *   多矿工模式（生产仿真）：
+ *     CHAINS 中 miners 填所有参与投票的 validator id（如 f1-f7）。
+ *     bridge 用 MINER_SURIS="seed1,seed2,...,seed5"（至少 2/3 数量）。
+ *     本脚本默认使用多矿工模式；如需切换到单机测试模式，
+ *     将下方 CHAINS 每项的 miners 改为 ["alice"]。
  */
 
 import { ApiPromise, WsProvider, Keyring } from "@polkadot/api";
@@ -227,17 +240,23 @@ async function main() {
     log("    可在 Polkadot.js 查询 ccmc.childChains 存储核实");
   }
 
-  // ── Step 4：验证人加入各自子链 ───────────────────────────────────────────
+  // ── Step 4：矿工账户加入各自子链（bridge 投票账户必须在此注册）────────
   if (!skip(4)) {
-    log("\n── Step 4：验证人加入各自子链");
+    log("\n── Step 4：矿工账户加入各自子链");
     for (const chain of CHAINS) {
       log(`  child${chain.chain_id + 1} (chain_id=${chain.chain_id})：${chain.miners.join(", ")} 加入`);
-      for (const fId of chain.miners) {
+      for (const minerId of chain.miners) {
+        // 支持 "alice" 特殊值（使用 Alice 账户作为单矿工测试 bridge）
+        const signer = minerId === "alice" ? alice : valKeys[minerId];
+        if (!signer) {
+          log(`  [warn] 未知矿工 ID: ${minerId}，跳过`);
+          continue;
+        }
         await sendTx(
           mainApi,
           mainApi.tx.ccmc.joinChildChain(chain.chain_id),
-          valKeys[fId],
-          `ccmc.joinChildChain(${chain.chain_id}) by ${fId}`
+          signer,
+          `ccmc.joinChildChain(${chain.chain_id}) by ${minerId}`
         );
       }
     }
