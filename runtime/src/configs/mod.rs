@@ -47,6 +47,13 @@ use super::{
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
+/// Maximum block size in bytes. 10 MB for child3 (medical annotation, --features block-10mb),
+/// 5 MB default for all other chains.
+#[cfg(feature = "block-10mb")]
+const MAX_BLOCK_BYTES: u32 = 10 * 1024 * 1024;
+#[cfg(not(feature = "block-10mb"))]
+const MAX_BLOCK_BYTES: u32 = 5 * 1024 * 1024;
+
 parameter_types! {
 	pub const BlockHashCount: BlockNumber = 2400;
 	pub const Version: RuntimeVersion = VERSION;
@@ -56,7 +63,7 @@ parameter_types! {
 		Weight::from_parts(2u64 * WEIGHT_REF_TIME_PER_SECOND, u64::MAX),
 		NORMAL_DISPATCH_RATIO,
 	);
-	pub RuntimeBlockLength: BlockLength = BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
+	pub RuntimeBlockLength: BlockLength = BlockLength::max_with_normal_ratio(MAX_BLOCK_BYTES, NORMAL_DISPATCH_RATIO);
 	pub const SS58Prefix: u8 = 42;
 }
 
@@ -98,6 +105,31 @@ impl pallet_aura::Config for Runtime {
 	type SlotDuration = pallet_aura::MinimumPeriodTimesTwo<Runtime>;
 }
 
+#[cfg(feature = "babe")]
+parameter_types! {
+	// 2,628,000 slots ≈ 1 year at 6s/block — effectively no epoch change during experiment
+	// BABE VRF randomness still works; epoch boundary just won't be reached
+	pub const BabeEpochDuration: u64 = 2_628_000;
+}
+
+#[cfg(feature = "babe")]
+impl pallet_babe::Config for Runtime {
+	type EpochDuration = BabeEpochDuration;
+	type ExpectedBlockTime = ConstU64<{ SLOT_DURATION }>;
+	type EpochChangeTrigger = pallet_babe::ExternalTrigger;
+	type DisabledValidators = ();
+	type WeightInfo = ();
+	type MaxAuthorities = ConstU32<32>;
+	type MaxNominators = ConstU32<0>;
+	type KeyOwnerProof = sp_core::Void;
+	type EquivocationReportSystem = ();
+}
+
+impl pallet_authorship::Config for Runtime {
+	type FindAuthor = ();
+	type EventHandler = ();
+}
+
 impl pallet_grandpa::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 
@@ -113,6 +145,12 @@ impl pallet_grandpa::Config for Runtime {
 impl pallet_timestamp::Config for Runtime {
 	/// A timestamp: milliseconds since the unix epoch.
 	type Moment = u64;
+	/// Under `babe` feature: use no-op hook so pallet_aura's slot assertion is skipped
+	/// (BABE blocks carry a BABE digest, not an AURA digest, so CurrentSlot is never
+	/// updated via on_initialize and the Aura hook would always panic).
+	#[cfg(feature = "babe")]
+	type OnTimestampSet = ();
+	#[cfg(not(feature = "babe"))]
 	type OnTimestampSet = Aura;
 	type MinimumPeriod = ConstU64<{ SLOT_DURATION / 2 }>;
 	type WeightInfo = ();

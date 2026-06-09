@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "devDependencies": {
     "@polkadot/api": "^16.5.6"
   }

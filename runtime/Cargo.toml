@@ -23,6 +23,8 @@ frame-system-rpc-runtime-api.workspace = true
 frame-system.workspace = true
 frame-try-runtime = { optional = true, workspace = true }
 pallet-aura.workspace = true
+pallet-authorship.workspace = true
+pallet-babe = { workspace = true, optional = true }
 pallet-balances.workspace = true
 pallet-grandpa.workspace = true
 pallet-sudo.workspace = true
@@ -38,6 +40,7 @@ serde_json = { workspace = true, default-features = false, features = ["alloc"] 
 sp-api.workspace = true
 sp-block-builder.workspace = true
 sp-consensus-aura = { features = ["serde"], workspace = true }
+sp-consensus-babe = { features = ["serde"], workspace = true }
 sp-consensus-grandpa = { features = ["serde"], workspace = true }
 sp-core = { features = ["serde"], workspace = true }
 sp-genesis-builder.workspace = true
@@ -66,6 +69,8 @@ std = [
 	"frame-system/std",
 	"frame-try-runtime?/std",
 	"pallet-aura/std",
+	"pallet-authorship/std",
+	"pallet-babe?/std",
 	"pallet-balances/std",
 	"pallet-grandpa/std",
 	"pallet-sudo/std",
@@ -81,6 +86,7 @@ std = [
 	"sp-api/std",
 	"sp-block-builder/std",
 	"sp-consensus-aura/std",
+	"sp-consensus-babe/std",
 	"sp-consensus-grandpa/std",
 	"sp-core/std",
 	"sp-genesis-builder/std",
@@ -142,3 +148,10 @@ metadata-hash = ["substrate-wasm-builder/metadata-hash"]
 # A convenience feature for enabling things when doing a build
 # for an on-chain release.
 on-chain-release-build = ["metadata-hash", "sp-api/disable-logging"]
+
+# Block time variants (compile-time selection via --features)
+block-2s = []    # AURA 2s 出块，子链 2（交通感知）
+block-1s = []    # AURA 1s 出块，子链 5（传感器网络）
+block-10mb = []  # 10 MB 区块，子链 3（医疗影像标注）
+# `babe` feature: enables pallet_babe (pallet_authorship always present as non-optional)
+babe = ["pallet-babe"]
