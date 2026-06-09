@@ -32,6 +32,7 @@ use frame_support::{
 use pallet_grandpa::AuthorityId as GrandpaId;
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+use sp_consensus_babe::AuthorityId as BabeId;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
 	traits::{Block as BlockT, NumberFor},
@@ -42,9 +43,110 @@ use sp_version::RuntimeVersion;
 
 // Local module imports
 use super::{
-	AccountId, Aura, Balance, Block, Executive, Grandpa, InherentDataExt, Nonce, Runtime,
+	AccountId, Balance, Block, Executive, Grandpa, InherentDataExt, Nonce, Runtime,
 	RuntimeCall, RuntimeGenesisConfig, SessionKeys, System, TransactionPayment, VERSION,
 };
+use super::Aura;
+#[cfg(feature = "babe")]
+use super::Babe;
+#[cfg(feature = "babe")]
+use pallet_babe;
+
+// ── BabeApi helpers ──────────────────────────────────────────────────────────
+// Defined outside impl_runtime_apis! so #[cfg] is respected by the compiler.
+// impl_runtime_apis! is a proc-macro that processes tokens before cfg expansion,
+// so we cannot have two impl BabeApi blocks inside it under different #[cfg].
+
+#[cfg(not(feature = "babe"))]
+fn babe_api_configuration() -> sp_consensus_babe::BabeConfiguration {
+	use sp_core::crypto::ByteArray;
+	let authorities: Vec<(BabeId, u64)> = pallet_aura::Authorities::<Runtime>::get()
+		.into_iter()
+		.filter_map(|id| BabeId::from_slice(id.as_slice()).ok().map(|b| (b, 1u64)))
+		.collect();
+	sp_consensus_babe::BabeConfiguration {
+		slot_duration: crate::SLOT_DURATION,
+		epoch_length: 500_000_000,
+		c: (1, 4),
+		authorities,
+		randomness: Default::default(),
+		allowed_slots: sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryVRFSlots,
+	}
+}
+#[cfg(not(feature = "babe"))]
+fn babe_api_current_epoch_start() -> sp_consensus_babe::Slot {
+	sp_consensus_babe::Slot::from(0u64)
+}
+#[cfg(not(feature = "babe"))]
+fn babe_api_current_epoch() -> sp_consensus_babe::Epoch {
+	use sp_core::crypto::ByteArray;
+	const EPOCH_LEN: u64 = 500_000_000;
+	let authorities: Vec<(BabeId, u64)> = pallet_aura::Authorities::<Runtime>::get()
+		.into_iter()
+		.filter_map(|id| BabeId::from_slice(id.as_slice()).ok().map(|b| (b, 1u64)))
+		.collect();
+	sp_consensus_babe::Epoch {
+		epoch_index: 0,
+		start_slot: sp_consensus_babe::Slot::from(0u64),
+		duration: EPOCH_LEN,
+		authorities,
+		randomness: Default::default(),
+		config: sp_consensus_babe::BabeEpochConfiguration {
+			c: (1, 4),
+			allowed_slots: sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryVRFSlots,
+		},
+	}
+}
+#[cfg(not(feature = "babe"))]
+fn babe_api_next_epoch() -> sp_consensus_babe::Epoch {
+	use sp_core::crypto::ByteArray;
+	const EPOCH_LEN: u64 = 500_000_000;
+	let authorities: Vec<(BabeId, u64)> = pallet_aura::Authorities::<Runtime>::get()
+		.into_iter()
+		.filter_map(|id| BabeId::from_slice(id.as_slice()).ok().map(|b| (b, 1u64)))
+		.collect();
+	sp_consensus_babe::Epoch {
+		epoch_index: 1,
+		start_slot: sp_consensus_babe::Slot::from(EPOCH_LEN),
+		duration: EPOCH_LEN,
+		authorities,
+		randomness: Default::default(),
+		config: sp_consensus_babe::BabeEpochConfiguration {
+			c: (1, 4),
+			allowed_slots: sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryVRFSlots,
+		},
+	}
+}
+
+#[cfg(feature = "babe")]
+fn babe_api_configuration() -> sp_consensus_babe::BabeConfiguration {
+	let epoch_config = pallet_babe::EpochConfig::<Runtime>::get().unwrap_or(
+		sp_consensus_babe::BabeEpochConfiguration {
+			c: (1, 4),
+			allowed_slots: sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryVRFSlots,
+		},
+	);
+	sp_consensus_babe::BabeConfiguration {
+		slot_duration: Babe::slot_duration(),
+		epoch_length: crate::configs::BabeEpochDuration::get(),
+		c: epoch_config.c,
+		authorities: Babe::authorities().to_vec(),
+		randomness: Babe::randomness(),
+		allowed_slots: epoch_config.allowed_slots,
+	}
+}
+#[cfg(feature = "babe")]
+fn babe_api_current_epoch_start() -> sp_consensus_babe::Slot {
+	Babe::current_epoch_start()
+}
+#[cfg(feature = "babe")]
+fn babe_api_current_epoch() -> sp_consensus_babe::Epoch {
+	Babe::current_epoch()
+}
+#[cfg(feature = "babe")]
+fn babe_api_next_epoch() -> sp_consensus_babe::Epoch {
+	Babe::next_epoch()
+}
 
 impl_runtime_apis! {
 	impl sp_api::Core<Block> for Runtime {
@@ -118,6 +220,8 @@ impl_runtime_apis! {
 		}
 	}
 
+	// AuraApi is always implemented: pallet_aura exists in both AURA and BABE runtimes.
+	// service.rs (AURA consensus service) requires AuraApi to compile even in BABE builds.
 	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
 		fn slot_duration() -> sp_consensus_aura::SlotDuration {
 			sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
@@ -127,6 +231,35 @@ impl_runtime_apis! {
 			pallet_aura::Authorities::<Runtime>::get().into_inner()
 		}
 	}
+
+	// Single BabeApi impl delegates to feature-gated helpers defined above impl_runtime_apis!.
+	impl sp_consensus_babe::BabeApi<Block> for Runtime {
+		fn configuration() -> sp_consensus_babe::BabeConfiguration {
+			babe_api_configuration()
+		}
+		fn current_epoch_start() -> sp_consensus_babe::Slot {
+			babe_api_current_epoch_start()
+		}
+		fn current_epoch() -> sp_consensus_babe::Epoch {
+			babe_api_current_epoch()
+		}
+		fn next_epoch() -> sp_consensus_babe::Epoch {
+			babe_api_next_epoch()
+		}
+		fn generate_key_ownership_proof(
+			_slot: sp_consensus_babe::Slot,
+			_authority_id: BabeId,
+		) -> Option<sp_consensus_babe::OpaqueKeyOwnershipProof> {
+			None
+		}
+		fn submit_report_equivocation_unsigned_extrinsic(
+			_equivocation_proof: sp_consensus_babe::EquivocationProof<<Block as BlockT>::Header>,
+			_key_owner_proof: sp_consensus_babe::OpaqueKeyOwnershipProof,
+		) -> Option<()> {
+			None
+		}
+	}
+
 
 	impl sp_session::SessionKeys<Block> for Runtime {
 		fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> {

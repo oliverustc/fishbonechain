@@ -183,56 +183,12 @@ pub type Executive = frame_executive::Executive<
 	Migrations,
 >;
 
-// Create the runtime by composing the FRAME pallets that were previously configured.
-#[frame_support::runtime]
-mod runtime {
-	#[runtime::runtime]
-	#[runtime::derive(
-		RuntimeCall,
-		RuntimeEvent,
-		RuntimeError,
-		RuntimeOrigin,
-		RuntimeFreezeReason,
-		RuntimeHoldReason,
-		RuntimeSlashReason,
-		RuntimeLockId,
-		RuntimeTask,
-		RuntimeViewFunction
-	)]
-	pub struct Runtime;
+// Runtime definition is split into two files to support optional BABE consensus:
+// - runtime_aura.rs: AURA-only (default)
+// - runtime_babe.rs: BABE + AURA pallets (--features babe)
+// `include!` is used because #[frame_support::runtime] strips #[cfg] attributes.
+#[cfg(not(feature = "babe"))]
+include!("runtime_aura.rs");
 
-	#[runtime::pallet_index(0)]
-	pub type System = frame_system;
-
-	#[runtime::pallet_index(1)]
-	pub type Timestamp = pallet_timestamp;
-
-	#[runtime::pallet_index(2)]
-	pub type Aura = pallet_aura;
-
-	#[runtime::pallet_index(3)]
-	pub type Grandpa = pallet_grandpa;
-
-	#[runtime::pallet_index(4)]
-	pub type Balances = pallet_balances;
-
-	#[runtime::pallet_index(5)]
-	pub type TransactionPayment = pallet_transaction_payment;
-
-	#[runtime::pallet_index(6)]
-	pub type Sudo = pallet_sudo;
-
-	// Include the custom logic from the pallet-fishbone-template in the runtime.
-	#[runtime::pallet_index(7)]
-	pub type Template = pallet_fishbone_template;
-
-	// FishboneChain business pallets
-	#[runtime::pallet_index(8)]
-	pub type Ccmc = pallet_ccmc;
-
-	#[runtime::pallet_index(9)]
-	pub type Fmc = pallet_fmc;
-
-	#[runtime::pallet_index(10)]
-	pub type Crowdsource = pallet_crowdsource;
-}
+#[cfg(feature = "babe")]
+include!("runtime_babe.rs");

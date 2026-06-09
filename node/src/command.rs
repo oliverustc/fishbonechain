@@ -3,6 +3,7 @@ use crate::{
 	chain_spec,
 	cli::{Cli, Subcommand},
 	service,
+	service_babe,
 };
 use frame_benchmarking_cli::{BenchmarkCmd, ExtrinsicFactory, SUBSTRATE_REFERENCE_HARDWARE};
 use sc_cli::SubstrateCli;
@@ -37,10 +38,15 @@ impl SubstrateCli for Cli {
 
 	fn load_spec(&self, id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
 		Ok(match id {
-			"dev" | "main-dev"   => Box::new(chain_spec::main_dev()?),
+			"dev" | "main-dev"         => Box::new(chain_spec::main_dev()?),
 			"" | "local" | "main-local" => Box::new(chain_spec::main_local()?),
-			"child1-local"       => Box::new(chain_spec::child1_local()?),
-			"child2-local"       => Box::new(chain_spec::child2_local()?),
+			"child1-local"             => Box::new(chain_spec::child1_local()?),
+			"child2-local"             => Box::new(chain_spec::child2_local()?),
+			"child3-local"             => Box::new(chain_spec::child3_local()?),
+			"child4-local"             => Box::new(chain_spec::child4_local()?),
+			"child5-local"             => Box::new(chain_spec::child5_local()?),
+			"child6-local"             => Box::new(chain_spec::child6_local()?),
+			"child6-babe"              => Box::new(chain_spec::child6_babe_local()?),
 			path =>
 				Box::new(chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(path))?),
 		})
@@ -180,17 +186,32 @@ pub fn run() -> sc_cli::Result<()> {
 		None => {
 			let runner = cli.create_runner(&cli.run)?;
 			runner.run_node_until_exit(|config| async move {
+				let is_babe_chain = config.chain_spec.id().contains("babe");
 				match config.network.network_backend.unwrap_or_default() {
-					sc_network::config::NetworkBackendType::Libp2p => service::new_full::<
-						sc_network::NetworkWorker<
-							fishbone_runtime::opaque::Block,
-							<fishbone_runtime::opaque::Block as sp_runtime::traits::Block>::Hash,
-						>,
-					>(config)
-					.map_err(sc_cli::Error::Service),
-					sc_network::config::NetworkBackendType::Litep2p =>
-						service::new_full::<sc_network::Litep2pNetworkBackend>(config)
-							.map_err(sc_cli::Error::Service),
+					sc_network::config::NetworkBackendType::Libp2p => {
+						if is_babe_chain {
+							service_babe::new_full::<sc_network::NetworkWorker<
+								fishbone_runtime::opaque::Block,
+								<fishbone_runtime::opaque::Block as sp_runtime::traits::Block>::Hash,
+							>>(config)
+							.map_err(sc_cli::Error::Service)
+						} else {
+							service::new_full::<sc_network::NetworkWorker<
+								fishbone_runtime::opaque::Block,
+								<fishbone_runtime::opaque::Block as sp_runtime::traits::Block>::Hash,
+							>>(config)
+							.map_err(sc_cli::Error::Service)
+						}
+					},
+					sc_network::config::NetworkBackendType::Litep2p => {
+						if is_babe_chain {
+							service_babe::new_full::<sc_network::Litep2pNetworkBackend>(config)
+								.map_err(sc_cli::Error::Service)
+						} else {
+							service::new_full::<sc_network::Litep2pNetworkBackend>(config)
+								.map_err(sc_cli::Error::Service)
+						}
+					},
 				}
 			})
 		},
