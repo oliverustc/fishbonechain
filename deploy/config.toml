@@ -13,6 +13,9 @@ sudo_pass  = "debian"
 ssh        = "bcg"             # SSH Host alias
 ip         = "192.168.8.41"
 
+# ── 链定义 ───────────────────────────────────────────────────────────────────
+# binary: 可选，不填则使用 cluster.binary；子链 2/3/5/6 需要专用 binary
+
 [chains.main]
 id       = "fishbone_main"
 spec     = "specs/main-custom-raw.json"
@@ -21,6 +24,8 @@ rpc_port = 9944
 prom_port = 9615
 
 [chains.child1]
+# 城市快递配送确认（基准链，AURA-3，6s 出块，10min Sc）
+# 验证人：f1 f2 f3
 id       = "fishbone_child_1"
 spec     = "specs/child1-custom-raw.json"
 p2p_port = 30334
@@ -28,78 +33,235 @@ rpc_port = 9945
 prom_port = 9616
 
 [chains.child2]
+# 实时城市交通感知（高频微任务，AURA-3，2s 出块，5min Sc）
+# 验证人：f4 f5 f6 | binary: fishbone-node-2s
 id       = "fishbone_child_2"
 spec     = "specs/child2-custom-raw.json"
+binary   = "/home/debian/fishbone/bin/fishbone-node-2s"
 p2p_port = 30335
 rpc_port = 9946
 prom_port = 9617
 
+[chains.child3]
+# 专业医疗影像标注（长周期高价值，AURA-3，6s 出块，30min Sc，10MB 区块）
+# 验证人：f7 f8 f9 | binary: fishbone-node-10mb
+id       = "fishbone_child_3"
+spec     = "specs/child3-custom-raw.json"
+binary   = "/home/debian/fishbone/bin/fishbone-node-10mb"
+p2p_port = 30336
+rpc_port = 9947
+prom_port = 9618
+
+[chains.child4]
+# 金融支付凭证核验（高安全性，AURA-7，6s 出块，20min Sc）
+# 验证人：f1 f2 f3 f4 f5 f6 f7（7 个，BFT f=2）
+id       = "fishbone_child_4"
+spec     = "specs/child4-custom-raw.json"
+p2p_port = 30337
+rpc_port = 9948
+prom_port = 9619
+
+[chains.child5]
+# 野外科学传感器网络（超高频 IoT，AURA-3，1s 出块，60s Sc）
+# 验证人：f10 f11 f12 | binary: fishbone-node-1s
+id       = "fishbone_child_5"
+spec     = "specs/child5-custom-raw.json"
+binary   = "/home/debian/fishbone/bin/fishbone-node-1s"
+p2p_port = 30338
+rpc_port = 9949
+prom_port = 9620
+
+[chains.child6]
+# 去中心化数据市场（BABE-5，6s 出块，200-slot epoch）
+# 使用 fishbone-node-babe binary（--features fishbone-runtime/babe 编译）
+id       = "fishbone_child_6_babe"
+spec     = "specs/child6-custom-raw.json"
+binary   = "/home/debian/fishbone/bin/fishbone-node-babe"
+p2p_port = 30339
+rpc_port = 9950
+prom_port = 9621
+
 # ── 节点定义 ──────────────────────────────────────────────────────────────────
 # roles: 该节点参与哪些链（validator）
 # peer_ids: 在各链上的 libp2p Peer ID（由 generate-keys.py 填充）
+# 子链矿工 ⊆ 主链矿工（论文核心约束）
 
 [[nodes]]
 id      = "f1"
 ip      = "10.2.2.11"
 ssh     = "f1"
-roles   = ["main", "child1"]
+roles   = ["main", "child1", "child4", "child6"]
 
 [nodes.peer_ids]
 main   = "12D3KooWEG8gvUe7RRvrgknZwbzg1snqKQzxhewX5FDaEYGfcDLa"
 child1 = "12D3KooWNy8n5FWgmUA991q8pDQdDPYVJqp996sBwCeF7QFZMkLy"
 child2 = ""
+child3 = ""
+child4 = "12D3KooWEzqdETWNBZ34tcemhRA8msBH7ik4vZqQkekZts72Eg9W"
+child5 = ""
+child6 = "12D3KooWDpGaJH1xggrY1e9xhyym1JYzADxK6WipdDrArmt7d1Ba"
 
 [[nodes]]
 id      = "f2"
 ip      = "10.2.2.12"
 ssh     = "f2"
-roles   = ["main", "child1"]
+roles   = ["main", "child1", "child4", "child6"]
 
 [nodes.peer_ids]
 main   = "12D3KooWFsrUUPRd7oVv4aUQ4oF3oi1zfGYGvhW3TyZvvuWhQqNL"
 child1 = "12D3KooWDYDwT3CEaTvyPLkoRq9gPdfUGa39aEDnPpxrqYaZqGWS"
 child2 = ""
+child3 = ""
+child4 = "12D3KooWFBCVDS8aBj6ZvbDuykDQPXsNLiJ96qgTmcvnJMM45CKc"
+child5 = ""
+child6 = "12D3KooWRQ8LjYQCuPGeoXBCBWZLi25MLwBNmoYULFYayXmnxhwH"
 
 [[nodes]]
 id      = "f3"
 ip      = "10.2.2.13"
 ssh     = "f3"
-roles   = ["main", "child1"]
+roles   = ["main", "child1", "child4", "child6"]
 
 [nodes.peer_ids]
 main   = "12D3KooWAEnd9YjewBvTDXAyc2WDuh89wXoDBLYMuV5RUxoBRDP1"
 child1 = "12D3KooWFxTgfD81ujSLAgnfNsze8dY1rUYYDTK4adUEBgypRZvY"
 child2 = ""
+child3 = ""
+child4 = "12D3KooWLUHZNStauREBnasL9Xb8nVuysDrDUBmWBKjZwUMha6CW"
+child5 = ""
+child6 = "12D3KooWLgWrAGTV7a5jm2rGaBf7oKpd6wLBbfmGNkvzySKiz3Gn"
 
 [[nodes]]
 id      = "f4"
 ip      = "10.2.2.14"
 ssh     = "f4"
-roles   = ["main", "child2"]
+roles   = ["main", "child2", "child4", "child6"]
 
 [nodes.peer_ids]
 main   = "12D3KooWAzKDpDs5jCSX3eC5urRotn4QBsqzhz8pSEqbjsPWYf9k"
 child1 = ""
 child2 = "12D3KooWKSmiHP8wVNwsR42GU5xee11eLSuRH11EAgoJACypJZpn"
+child3 = ""
+child4 = "12D3KooWGEeA7kGn1Mh6NdNHk2r3j33cFwBEznSBB5tN7hM5Kjua"
+child5 = ""
+child6 = "12D3KooWB5nwiJ7UKcKwByemEgmuz51o9EfspwtXx88zbwpXmybo"
 
 [[nodes]]
 id      = "f5"
 ip      = "10.2.2.15"
 ssh     = "f5"
-roles   = ["main", "child2"]
+roles   = ["main", "child2", "child4", "child6"]
 
 [nodes.peer_ids]
 main   = "12D3KooWE7erpnv3EzmqhEjkHNB4i2vsDgquJKwG637qPJM9gnur"
 child1 = ""
 child2 = "12D3KooWKf6Nkn3YxujskCxh6buagTdBneB37jc6E95YgpiRJb2x"
+child3 = ""
+child4 = "12D3KooWN7LKBs97FFknxcTH1zRHzbx4ctuVrHxNwSWfg1hxb8u7"
+child5 = ""
+child6 = "12D3KooWPtNEsx2fLity4wgbrM7gPoaghBMMxyjrUDf3q4NhA8tM"
 
 [[nodes]]
 id      = "f6"
 ip      = "10.2.2.16"
 ssh     = "f6"
-roles   = ["main", "child2"]
+roles   = ["main", "child2", "child4"]
 
 [nodes.peer_ids]
 main   = "12D3KooWHAASsrtvGcRvMDjLFgyedGkcfp4pphyatVWbpdXp8Het"
 child1 = ""
 child2 = "12D3KooWSkfms5X99L7Wgd3Y5MbcE9w5tMG64TUn1tfGttUgZs3V"
+child3 = ""
+child4 = "12D3KooWAYnMeepBFYCFRyLAjdEos6RpVtmVstrQS3bjJHhSMDXd"
+child5 = ""
+child6 = ""
+
+[[nodes]]
+id      = "f7"
+ip      = "10.2.2.17"
+ssh     = "f7"
+roles   = ["main", "child3", "child4"]
+
+[nodes.peer_ids]
+main   = "12D3KooWJ7ExmXMqJzr2JRyoNp9DY8g5k1MVUphMsxYmBZHBor6n"
+child1 = ""
+child2 = ""
+child3 = "12D3KooWSDmKBSxqqixaoYY3hJxapi5RuJwLbEHXvsbYsBQWZ3X2"
+child4 = "12D3KooW9uV7SNec3w5SZxwiKKQqcYHik31zRgKw1YqKmDUxU3dh"
+child5 = ""
+child6 = ""
+
+[[nodes]]
+id      = "f8"
+ip      = "10.2.2.18"
+ssh     = "f8"
+roles   = ["main", "child3"]
+
+[nodes.peer_ids]
+main   = "12D3KooWPbDnK3Xsr5tyWCk3jXfnhQF4dTSgN2BbtiUctjq1uur7"
+child1 = ""
+child2 = ""
+child3 = "12D3KooWJWfwAEDzUa2DtkjTY9pkq3s59bwsqrE4zuehSXGQtLyg"
+child4 = ""
+child5 = ""
+child6 = ""
+
+[[nodes]]
+id      = "f9"
+ip      = "10.2.2.19"
+ssh     = "f9"
+roles   = ["main", "child3"]
+
+[nodes.peer_ids]
+main   = "12D3KooWJzEozB4TRaHJLqb1WLB2jFmKnMmhPF6tWY8FonJt2Xfp"
+child1 = ""
+child2 = ""
+child3 = "12D3KooWGDCixjfeBzk8KCwz52wfBsZFZsTZUrE8BsuTJgJyZpLw"
+child4 = ""
+child5 = ""
+child6 = ""
+
+[[nodes]]
+id      = "f10"
+ip      = "10.2.2.20"
+ssh     = "f10"
+roles   = ["main", "child5"]
+
+[nodes.peer_ids]
+main   = "12D3KooWGS3WJighLgtiUXw92rpYMHHsG5RnrmXPD9TpKbMB6GfN"
+child1 = ""
+child2 = ""
+child3 = ""
+child4 = ""
+child5 = "12D3KooWB8KgPAbLoJ221YPWSp9SiUdK7fBft3zmcJEGQTKidcCB"
+child6 = ""
+
+[[nodes]]
+id      = "f11"
+ip      = "10.2.2.21"
+ssh     = "f11"
+roles   = ["main", "child5"]
+
+[nodes.peer_ids]
+main   = "12D3KooWGHckY1sSiFqrDsadfLh1Bdz5uMmhxuWKG6jRdk628qn9"
+child1 = ""
+child2 = ""
+child3 = ""
+child4 = ""
+child5 = "12D3KooWLWB5pG5Z3smMkeyYLAamoCTmL3YRQ35rdfyPj2j3NwML"
+child6 = ""
+
+[[nodes]]
+id      = "f12"
+ip      = "10.2.2.22"
+ssh     = "f12"
+roles   = ["main", "child5"]
+
+[nodes.peer_ids]
+main   = "12D3KooWBnV6J75Ho5rcVt66Ui39gAcw2U4q1gV5kUA4ZQMTr8Lg"
+child1 = ""
+child2 = ""
+child3 = ""
+child4 = ""
+child5 = "12D3KooWC8PLnE7d59k1DvGDxRT2V83UEKV9MTiTDBmKeuVGzLpZ"
+child6 = ""

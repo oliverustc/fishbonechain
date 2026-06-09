@@ -26,6 +26,9 @@ Thumbs.db
 # Node.js
 node_modules/
 
+# Compiled node binaries (built locally, not committed)
+deploy/bin/
+
 # Session planning files (temporary, not part of codebase)
 task_plan.md
 findings.md

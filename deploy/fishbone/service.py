@@ -40,6 +40,16 @@ StandardError=append:{log_dir}/{chain_name}.log
 WantedBy=multi-user.target
 """
 
+_CHAIN_LABELS: dict[str, str] = {
+    "main":   "Main Chain",
+    "child1": "Child-1 (Delivery Crowdsource)",
+    "child2": "Child-2 (Traffic Sensing, 2s)",
+    "child3": "Child-3 (Medical Annotation, 10MB)",
+    "child4": "Child-4 (Financial Verification, 7-val)",
+    "child5": "Child-5 (IoT Sensor Network, 1s)",
+    "child6": "Child-6 (Data Market, BABE)",
+}
+
 
 def render_service(
     cfg: ClusterConfig,
@@ -50,23 +60,18 @@ def render_service(
     chain_cfg = cfg.chains[chain]
     bootnodes = cfg.bootnodes(chain)
 
-    # 每条 bootnode 单独一行，用 \ 续行
     if bootnodes:
-        bn_lines = " \\\n  ".join(f"--bootnodes {b}" for b in bootnodes)
-        bootnodes_args = bn_lines
+        bootnodes_args = " \\\n  ".join(f"--bootnodes {b}" for b in bootnodes)
     else:
         bootnodes_args = ""
 
-    chain_label = {
-        "main":   "Main Chain",
-        "child1": "Child Chain 1",
-        "child2": "Child Chain 2",
-    }.get(chain, chain)
+    chain_label = _CHAIN_LABELS.get(chain, chain)
+    binary = cfg.chain_binary(chain)
 
     return SERVICE_TEMPLATE.format(
         chain_label=chain_label,
         chain_name=chain,
-        binary=cfg.binary,
+        binary=binary,
         base_dir=cfg.base_dir,
         spec=chain_cfg.spec,
         p2p_port=chain_cfg.p2p_port,
