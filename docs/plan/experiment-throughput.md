@@ -28,8 +28,7 @@
 - **适用场景**：验证人集合动态、部分不可信（开放参与的去中心化链）
 - **优点**：VRF 随机分配出块权，攻击者无法提前预测出块者，抗操纵性强
 - **缺点**：比 AURA 有约 15-20% 额外开销（VRF 计算）
-- **当前项目状态**：❌ 尚未实现，需要添加 `pallet-babe` + `pallet-session` + 修改 `service.rs`
-- **实现工作量**：约 1-2 天（crate 已在 registry，属于配置工程）
+- **当前项目状态**：✅ 已实现（2026-06-04）。`pallet_babe` + `pallet_authorship` 已加入 runtime，`service_babe.rs` 完整实现，`fishbone-node-babe` binary 已编译，child6 BABE 共识出块验证通过。
 
 ### 两种共识的关键实验差异
 在同等硬件条件下，BABE 链的单次出块时间略长于 AURA，但提供更强的公平性保证。实验中可通过对比：
@@ -328,31 +327,32 @@
 
 ## 五、需要实现的工作
 
-### 5.1 代码层面（按优先级排序）
+### 5.1 代码层面（全部已完成）
 
-| 优先级 | 工作项 | 工作量 |
-|--------|-------|-------|
-| P0 | pallet-crowdsource EpochFinalized 事件加 task 信息 | 2h |
-| P0 | bridge.js 补全 FMC 账单提交 | 4h |
-| P0 | 编译 fishbone-node-2s（AURA 2s 版本）| 2h |
-| P0 | 编译 fishbone-node-1s（AURA 1s 版本）| 1h（基于 2s 版）|
-| P1 | 添加 BABE 共识到 node/runtime（pallet-babe + pallet-session）| 1-2d |
-| P1 | 编译 fishbone-node-babe 专用 binary | 2h |
-| P1 | 子链 4（7 验证人）的 chain spec 和 session key 配置 | 2h |
-| P2 | scripts/worker.js（负载模拟，支持 6 个场景参数配置）| 4h |
-| P2 | scripts/metrics.js（指标采集，CSV 输出）| 2h |
-| P2 | deploy/config.toml 扩展（新增 6 条子链配置）| 1h |
-| P2 | Python 管理框架适配新链（cmd/deploy.py 扩展）| 2h |
+| 优先级 | 工作项 | 状态 |
+|--------|-------|------|
+| P0 | pallet-crowdsource EpochFinalized 事件加 task 信息 | ✅ 完成 |
+| P0 | bridge.js 补全 FMC 账单提交 | ✅ 完成 |
+| P0 | 编译 fishbone-node-2s（AURA 2s 版本）| ✅ 完成 |
+| P0 | 编译 fishbone-node-1s（AURA 1s 版本）| ✅ 完成 |
+| P1 | 添加 BABE 共识到 node/runtime（pallet-babe + pallet-authorship）| ✅ 完成 |
+| P1 | 编译 fishbone-node-babe 专用 binary | ✅ 完成 |
+| P1 | 子链 4（7 验证人）的 chain spec 配置 | ✅ 完成 |
+| P2 | scripts/worker.js（负载模拟，支持 6 个场景参数配置）| ✅ 完成 |
+| P2 | scripts/metrics.js（指标采集，CSV 输出）| ✅ 完成 |
+| P2 | deploy/config.toml 扩展（新增 6 条子链配置）| ✅ 完成 |
+| P2 | Python 管理框架适配新链（cmd/deploy.py 扩展）| ✅ 完成 |
 
-### 5.2 BABE 实现路径概述
+**当前状态**：所有实验前置准备已完成，6 条子链（含 BABE child6）均已部署并运行。可直接执行 `worker.js` + `metrics.js` 采集实验数据。
 
-在 `node/src/` 中新增 `service_babe.rs`，基于 `sc-consensus-babe` 替换 AURA 逻辑。Runtime 新增：
-```toml
-pallet-babe = { workspace = true }
-pallet-session = { workspace = true }
-pallet-authorship = { workspace = true }
-```
-子链 6 使用专用 binary `fishbone-node-babe`，其余子链继续使用 AURA 系列 binary。
+### 5.2 BABE 实际实现说明
+
+实际实现与原计划有所不同（详见 `docs/plan/implementation-record.md` Phase 5 节）：
+
+- `pallet_babe` + `pallet_authorship` 已加入 runtime（**不需要 pallet-session**）
+- 使用 `include!()` 将 runtime 拆分为 `runtime_aura.rs` / `runtime_babe.rs` 两个文件，通过 `--features babe` Cargo feature 切换
+- `service_babe.rs` 完整实现 BABE + GRANDPA 共识服务
+- child6 chain id 为 `fishbone_child_6_babe`，keystore 注入 `babe`（sr25519）+ `gran`（ed25519）密钥
 
 ### 5.3 运行时多版本策略
 

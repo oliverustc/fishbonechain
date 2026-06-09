@@ -9,7 +9,6 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from fishbone.config import load
@@ -22,18 +21,31 @@ console = Console()
 DEPLOY_DIR = Path(__file__).parent.parent
 KEYS_DIR   = DEPLOY_DIR / "keys"
 SPECS_DIR  = DEPLOY_DIR / "specs"
-BINARY_SRC = Path("/home/swt/fishbonechain/target/release/fishbone-node")
+BIN_DIR    = DEPLOY_DIR / "bin"
 
 
 # ── 单节点操作 ─────────────────────────────────────────────────────────────────
 
-async def push_binary(remote: RemoteNode, cfg, node_id: str):
-    dest = cfg.binary
-    await remote.run(f"mkdir -p {Path(dest).parent}")
+async def push_binaries(remote: RemoteNode, cfg, node_id: str):
+    """推送该集群所有 binary 变体（按 chains 定义去重）。"""
+    needed: set[str] = set()
+    for chain in cfg.chains.values():
+        needed.add(chain.binary or cfg.binary)
+
+    dest_dir = str(Path(cfg.binary).parent)
+    await remote.run(f"mkdir -p {dest_dir}")
+
     async with await remote._conn.start_sftp_client() as sftp:
-        await sftp.put(str(BINARY_SRC), dest)
-    await remote.run(f"chmod +x {dest}")
-    console.print(f"  [{node_id}] ✓ binary")
+        for remote_path in needed:
+            bin_name = Path(remote_path).name
+            local = BIN_DIR / bin_name
+            if local.exists():
+                await sftp.put(str(local), remote_path)
+                await remote.run(f"chmod +x {remote_path}")
+            else:
+                console.print(f"  [{node_id}] [yellow]⚠ 本地未找到 {local}，跳过[/yellow]")
+
+    console.print(f"  [{node_id}] ✓ binaries")
 
 
 async def push_specs(remote: RemoteNode, cfg, node_id: str):
@@ -48,20 +60,19 @@ async def push_specs(remote: RemoteNode, cfg, node_id: str):
 
 
 async def setup_dirs(remote: RemoteNode, cfg, node_id: str):
-    dirs = " ".join([
-        f"{cfg.base_dir}/{chain}" for chain in ["main", "child1", "child2"]
-    ] + [cfg.log_dir])
-    await remote.run(f"mkdir -p {dirs}")
+    chain_dirs = " ".join(f"{cfg.base_dir}/{chain}" for chain in cfg.chains)
+    await remote.run(f"mkdir -p {chain_dirs} {cfg.log_dir}")
     console.print(f"  [{node_id}] ✓ dirs")
 
 
 async def generate_node_keys(remote: RemoteNode, cfg, node_id: str):
-    for chain in ["main", "child1", "child2"]:
+    for chain in cfg.chains:
         key_path = f"{cfg.base_dir}/{chain}/node-key"
         exists = await remote.exists(key_path)
         if not exists:
+            bin_path = cfg.chain_binary(chain)
             await remote.run(
-                f"{cfg.binary} key generate-node-key --file {key_path} 2>/dev/null"
+                f"{bin_path} key generate-node-key --file {key_path} 2>/dev/null"
             )
     console.print(f"  [{node_id}] ✓ node keys")
 
@@ -72,7 +83,6 @@ async def inject_validator_keys(remote: RemoteNode, cfg, node: object):
         console.print(f"  [{node.id}] [red]✗ 没有 keys/{node.id}.env[/red]")
         return
 
-    # 解析 env 文件
     env = {}
     for line in env_file.read_text().splitlines():
         line = line.strip()
@@ -87,16 +97,17 @@ async def inject_validator_keys(remote: RemoteNode, cfg, node: object):
         chain_cfg = cfg.chains[chain]
         spec_path = f"{cfg.base_dir}/{chain_cfg.spec}"
         base_path = f"{cfg.base_dir}/{chain}"
+        bin_path  = cfg.chain_binary(chain)
 
         await remote.run(
-            f"{cfg.binary} key insert "
+            f"{bin_path} key insert "
             f"--base-path {base_path} "
             f"--chain {spec_path} "
             f"--scheme sr25519 --key-type aura "
             f'--suri "{aura_phrase}" 2>/dev/null'
         )
         await remote.run(
-            f"{cfg.binary} key insert "
+            f"{bin_path} key insert "
             f"--base-path {base_path} "
             f"--chain {spec_path} "
             f"--scheme ed25519 --key-type gran "
@@ -129,7 +140,7 @@ async def start_services(remote: RemoteNode, cfg, node: object, chains: list[str
 
 async def deploy_node(remote: RemoteNode, cfg, node):
     await setup_dirs(remote, cfg, node.id)
-    await push_binary(remote, cfg, node.id)
+    await push_binaries(remote, cfg, node.id)
     await push_specs(remote, cfg, node.id)
     await generate_node_keys(remote, cfg, node.id)
     await inject_validator_keys(remote, cfg, node)
@@ -161,6 +172,7 @@ def deploy(
             await asyncio.gather(*tasks)
 
         if start:
+            # 1. 先启动主链，等待出块稳定
             console.print("\n[bold]启动主链服务...[/bold]")
             async with connect_all(nodes, cfg.sudo_pass) as remotes:
                 await asyncio.gather(*[
@@ -170,10 +182,12 @@ def deploy(
 
             await asyncio.sleep(10)
 
-            console.print("[bold]启动子链服务...[/bold]")
+            # 2. 按子链编号顺序启动（高频链 child5 最后，避免 mempool 压力干扰主链同步）
+            child_chains = sorted(c for c in cfg.chains if c != "main")
+            console.print(f"[bold]启动子链服务（顺序：{', '.join(child_chains)}）...[/bold]")
             async with connect_all(nodes, cfg.sudo_pass) as remotes:
                 await asyncio.gather(*[
-                    start_services(remotes[n.id], cfg, n, ["child1", "child2"])
+                    start_services(remotes[n.id], cfg, n, child_chains)
                     for n in nodes if n.id in remotes
                 ])
 
