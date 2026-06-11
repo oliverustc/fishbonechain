@@ -339,21 +339,29 @@ def fig_epoch1_snapshot():
 # ─────────────────────────────────────────────────────────────────────────────
 # 图6：实验D — N=1/2/4链线性扩展验证
 # ─────────────────────────────────────────────────────────────────────────────
-def fig_linear_scaling(csv_path='/tmp/exp_scale_state.csv'):
+def fig_linear_scaling(csv_path=None):
+    if csv_path is None:
+        csv_path = os.path.join(os.path.dirname(__file__), '..', 'docs', 'figures', 'data',
+                                'exp_scale_state.csv')
+        if not os.path.exists(csv_path):
+            csv_path = '/tmp/exp_scale_state.csv'
+
     rows = []
     with open(csv_path) as f:
         rows = list(csv.DictReader(f))
     if not rows:
-        print('[warn] fig6: exp_scale_state.csv 无数据')
+        print('[warn] fig6: 无数据')
         return
 
+    # N=1: child4; N=2: child4+child1; N=3: child4+child1+child6
     CHAIN_URLS = {
         'ws://10.2.2.11:9948': 'child4',
-        'ws://10.2.2.17:9947': 'child3',
         'ws://10.2.2.11:9945': 'child1',
         'ws://10.2.2.11:9950': 'child6',
     }
+    CHAIN_COLORS = {'child4': '#1565C0', 'child1': '#2E7D32', 'child6': '#E65100'}
 
+    # 每条链 per-epoch 峰值提交量
     ep_subs = {name: defaultdict(int) for name in CHAIN_URLS.values()}
     for r in rows:
         name = CHAIN_URLS.get(r['chain_url'])
@@ -364,63 +372,88 @@ def fig_linear_scaling(csv_path='/tmp/exp_scale_state.csv'):
             ep_subs[name][ep] = max(ep_subs[name][ep], subs)
         except: pass
 
-    # 排除首个（部分）和最后一个（进行中）Epoch，取稳态均值
-    def avg_active(name):
-        ep_items = sorted(ep_subs[name].items())
-        if len(ep_items) <= 2:
-            vals = [s for _, s in ep_items if s > 0]
-        else:
-            stable = ep_items[1:-1]
-            vals = [s for _, s in stable if s > 0]
-        return np.mean(vals) if vals else 0, len(vals)
+    def stable_vals(name):
+        items = sorted(ep_subs[name].items())
+        if len(items) <= 2:
+            return [s for _, s in items if s > 0]
+        return [s for _, s in items[1:-1] if s > 0]  # 去掉首尾不完整 epoch
 
-    c4_avg, c4_n = avg_active('child4')
-    c3_avg, c3_n = avg_active('child3')
-    c1_avg, c1_n = avg_active('child1')
-    c6_avg, c6_n = avg_active('child6')
+    c4_vals = stable_vals('child4')
+    c1_vals = stable_vals('child1')
+    c6_vals = stable_vals('child6')
 
-    print(f'[fig6] child4: {c4_avg:.1f} 次/Epoch ({c4_n} epochs)')
-    print(f'[fig6] child3: {c3_avg:.1f} 次/Epoch ({c3_n} epochs)')
-    print(f'[fig6] child1: {c1_avg:.1f} 次/Epoch ({c1_n} epochs)')
-    print(f'[fig6] child6: {c6_avg:.1f} 次/Epoch ({c6_n} epochs)')
+    for name, vals in [('child4', c4_vals), ('child1', c1_vals), ('child6', c6_vals)]:
+        print(f'[fig6] {name}: mean={np.mean(vals):.1f}  std={np.std(vals):.1f}  n={len(vals)}')
 
-    n_chains   = [1, 2, 4]
-    total_subs = [c4_avg, c4_avg + c3_avg, c4_avg + c3_avg + c1_avg + c6_avg]
+    # 对齐 epoch 数（取最少的那个）
+    n_ep = min(len(c4_vals), len(c1_vals), len(c6_vals))
+    c4 = np.array(c4_vals[:n_ep])
+    c1 = np.array(c1_vals[:n_ep])
+    c6 = np.array(c6_vals[:n_ep])
 
-    x_ref = np.linspace(0, 4.5, 100)
-    y_ref = c4_avg * x_ref
+    # 三个 N 配置的每 epoch 聚合值
+    n1_vals = c4                   # N=1: child4 alone
+    n2_vals = c4 + c1              # N=2: child4 + child1
+    n3_vals = c4 + c1 + c6        # N=3: all three
 
-    fig, ax = plt.subplots(figsize=(7, 5))
+    configs = [
+        (1, n1_vals, 'child4',           '#1565C0'),
+        (2, n2_vals, 'child4 + child1',  '#2E7D32'),
+        (3, n3_vals, 'child4+child1+child6', '#E65100'),
+    ]
 
-    ax.scatter(n_chains, total_subs, color='#1565C0', s=120, zorder=5, label='实测聚合吞吐量')
-    ax.plot(x_ref, y_ref, 'r--', linewidth=1.5, label=f'理想线性：{c4_avg:.0f}×N 次/Epoch')
+    fig, ax = plt.subplots(figsize=(8, 5.5))
 
-    for n, s in zip(n_chains, total_subs):
-        ax.annotate(f'{s:.0f} 次/Epoch\n(N={n}条链)', xy=(n, s),
-                    xytext=(n + 0.15, s - c4_avg * 0.2),
-                    fontsize=10, fontweight='bold', color='#1565C0')
+    # 散点：每个 epoch 一个点（加随机 x 抖动以免重叠）
+    rng = np.random.default_rng(42)
+    all_means = []
+    for n, vals, label, color in configs:
+        jitter = rng.uniform(-0.06, 0.06, size=len(vals))
+        ax.scatter(np.full(len(vals), n) + jitter, vals,
+                   color=color, alpha=0.45, s=40, zorder=4)
+        mean_v = np.mean(vals)
+        std_v  = np.std(vals)
+        ax.errorbar(n, mean_v, yerr=std_v, fmt='o', color=color,
+                    markersize=10, linewidth=2, capsize=6, zorder=5,
+                    label=f'N={n}  ({label})\n均值={mean_v:.0f}，σ={std_v:.1f}')
+        all_means.append(mean_v)
 
-    ax.set_xticks([1, 2, 4])
-    ax.set_xticklabels(['1条链\n(child4)', '2条链\n(child3+4)', '4条链\n(child1+3+4+6)'])
-    ax.set_xlabel('并发链数量 (N)')
-    ax.set_ylabel('聚合吞吐量（次/Epoch）')
-    ax.set_xlim(0, 5)
-    ax.set_ylim(0, max(total_subs) * 1.3)
-    ax.set_title('实验D：吞吐量线性扩展验证\n'
-                 '每链50个工作者（场景d配置），4链同时运行测量')
-    ax.legend(loc='upper left')
+    # 理想线性参考线（过原点，斜率 = N=1 均值）
+    baseline = all_means[0]
+    x_ref = np.linspace(0.5, 3.5, 100)
+    y_ref = baseline * x_ref
+    ax.plot(x_ref, y_ref, 'k--', linewidth=1.4, alpha=0.5, label=f'理想线性 ({baseline:.0f}×N)')
+
+    # 线性回归 + R²
+    from numpy.polynomial import polynomial as P
+    ns = np.array([1, 2, 3], dtype=float)
+    coeffs = np.polyfit(ns, all_means, 1)
+    y_fit = np.polyval(coeffs, ns)
+    ss_res = np.sum((np.array(all_means) - y_fit) ** 2)
+    ss_tot = np.sum((np.array(all_means) - np.mean(all_means)) ** 2)
+    r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 1.0
+    ax.plot(x_ref, np.polyval(coeffs, x_ref), color='#880E4F',
+            linewidth=1.6, linestyle='-.', alpha=0.7,
+            label=f'线性拟合  R²={r2:.4f}')
+
+    # 扩展倍率标注
+    for n, mean_v in zip([1, 2, 3], all_means):
+        ratio = mean_v / baseline
+        ax.annotate(f'{mean_v:.0f}\n({ratio:.2f}×)',
+                    xy=(n, mean_v), xytext=(n + 0.12, mean_v + baseline * 0.05),
+                    fontsize=9, color='#333', fontweight='bold')
+
+    ax.set_xticks([1, 2, 3])
+    ax.set_xticklabels(['N=1\n(child4)', 'N=2\n(child4+child1)', 'N=3\n(全部三链)'], fontsize=10)
+    ax.set_xlabel('并发子链数量 (N)', fontsize=12)
+    ax.set_ylabel('聚合吞吐量（提交次数 / Epoch）', fontsize=12)
+    ax.set_xlim(0.5, 3.8)
+    ax.set_ylim(0, max(all_means) * 1.35)
+    ax.set_title(f'实验D：多链并发吞吐量线性扩展验证\n'
+                 f'各链 50 workers（场景d配置）× {n_ep} 个稳态 Epoch，R²={r2:.4f}',
+                 fontsize=11, fontweight='bold')
+    ax.legend(loc='upper left', fontsize=9, framealpha=0.92)
     ax.grid(alpha=0.3)
-
-    if len(n_chains) >= 3:
-        predicted_4 = c4_avg * 4
-        actual_4 = total_subs[2]
-        ratio = actual_4 / predicted_4
-        ax.text(0.3, max(total_subs) * 0.55,
-                f'N=4 实测：{actual_4:.0f} 次/Epoch\n'
-                f'N=4 理想（4×N=1）：{predicted_4:.0f} 次/Epoch\n'
-                f'扩展倍率：{ratio:.2f}×（链配置多样性红利）',
-                fontsize=9, color='#1565C0',
-                bbox=dict(boxstyle='round', facecolor='#E3F2FD', edgecolor='#1565C0', alpha=0.9))
 
     plt.tight_layout()
     out = os.path.join(OUT_DIR, 'fig6_linear_scaling.png')
@@ -429,11 +462,206 @@ def fig_linear_scaling(csv_path='/tmp/exp_scale_state.csv'):
     print(f'[saved] {out}')
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 图7a：实验E — 资金锁定比例时序对比
+# ─────────────────────────────────────────────────────────────────────────────
+def fig7a_liquidity_ratio(csv_path=None):
+    if csv_path is None:
+        csv_path = os.path.join(os.path.dirname(__file__), '..', 'docs', 'figures', 'data',
+                                'exp_e_fund_state_v5.csv')
+
+    rows = []
+    with open(csv_path) as f:
+        rows = list(csv.DictReader(f))
+    if not rows:
+        print('[warn] fig7a: 无数据')
+        return
+
+    # ── 常量 ──────────────────────────────────────────────────────────────────
+    # 6 条子链预算合计：1500+2+40000+5000+0.5+25000 = 71502.5 UNIT/epoch
+    SUM_BUDGET   = 71502.5
+    T_PLANNED    = 3
+    TRAD_INITIAL = T_PLANNED * SUM_BUDGET   # 214507.5 UNIT
+
+    # BillSettled 精确事件（从 metrics_fund.log 提取，含 task_id）
+    # 格式：(elapsed_min, chain_name)
+    BILL_EVENTS = [
+        (2.13,  'child1'), (3.74,  'child6'), (6.54,  'child5'),
+        (6.64,  'child3'), (6.84,  'child4'), (14.14, 'child1'),
+        (15.74, 'child6'), (18.54, 'child5'), (18.64, 'child3'),
+        (18.84, 'child4'), (26.14, 'child1'), (27.94, 'child6'),
+        (30.64, 'child3'), (30.84, 'child4'),
+    ]  # 仅截取 T=3 计划窗口内（≤31 min）的事件
+
+    # ── 解析时序数据 ──────────────────────────────────────────────────────────
+    t0 = datetime.fromisoformat(rows[0]['timestamp'].replace('Z', '+00:00'))
+
+    elapsed  = []
+    fb_ratio = []   # task_locked / TRAD_INITIAL（与传统方案同分母）
+
+    for r in rows:
+        ts = datetime.fromisoformat(r['timestamp'].replace('Z', '+00:00'))
+        t  = (ts - t0).total_seconds() / 60.0
+        locked = float(r['task_locked_unit'])
+        elapsed.append(t)
+        fb_ratio.append(locked / TRAD_INITIAL * 100)
+
+    # 传统基线（分段线性：每次 BillSettled 降一级）
+    # 等价于 (T - relative_epoch) × SUM_BUDGET / TRAD_INITIAL × 100
+    trad_ratio = [float(r['baseline_locked_unit']) / TRAD_INITIAL * 100 for r in rows]
+
+    # 找 baseline 降到 0 的时刻（T_PLANNED 完成点）
+    t_end = next((elapsed[i] for i, r in enumerate(rows)
+                  if float(r['baseline_locked_unit']) == 0), elapsed[-1])
+    x_max = t_end + 2.5
+
+    # 只保留截断窗口内的数据
+    cut = next((i for i, t in enumerate(elapsed) if t > x_max), len(elapsed))
+    elapsed_cut  = elapsed[:cut]
+    fb_ratio_cut = fb_ratio[:cut]
+    trad_cut     = trad_ratio[:cut]
+
+    # ── 绘图 ──────────────────────────────────────────────────────────────────
+    fig, ax = plt.subplots(figsize=(11, 5))
+
+    ax.plot(elapsed_cut, fb_ratio_cut, color='#1565C0', linewidth=2.2,
+            label='FishboneChain', zorder=3)
+    ax.step(elapsed_cut, trad_cut, where='post', color='#E65100', linewidth=2.2,
+            linestyle='--', label='传统预锁方案', zorder=3)
+
+    # 节省空间填充
+    ax.fill_between(elapsed_cut, fb_ratio_cut, trad_cut,
+                    where=[tr > fb for tr, fb in zip(trad_cut, fb_ratio_cut)],
+                    alpha=0.07, color='#E65100')
+
+    # BillSettled 垂直标线（6 链各色）
+    CHAIN_COLORS = {
+        'child1': '#1E88E5', 'child2': '#43A047', 'child3': '#8E24AA',
+        'child4': '#E65100', 'child5': '#00838F', 'child6': '#2E7D32',
+    }
+    CHAIN_LABELS = {
+        'child1': 'C1(1.5k)', 'child2': 'C2(2)',  'child3': 'C3(40k)',
+        'child4': 'C4(5k)',   'child5': 'C5(0.5)', 'child6': 'C6(25k)',
+    }
+    labeled = set()
+    for (t_ev, chain) in BILL_EVENTS:
+        if t_ev > x_max:
+            continue
+        clr = CHAIN_COLORS[chain]
+        ax.axvline(x=t_ev, color=clr, linewidth=1.1, alpha=0.6, linestyle=':')
+        labeled.add(chain)
+
+    # T=3 完成线
+    ax.axvline(x=t_end, color='gray', linewidth=1.3, linestyle='-.', alpha=0.7, zorder=2)
+    ax.text(t_end + 0.2, 95, 'T=3 完成', fontsize=8, color='gray', va='top')
+
+    # 改善比标注（初始时刻）
+    ax.annotate('', xy=(0.5, fb_ratio_cut[0] + 1), xytext=(0.5, trad_cut[0] - 1),
+                arrowprops=dict(arrowstyle='<->', color='#555', lw=1.2))
+    ax.text(1.0, (fb_ratio_cut[0] + trad_cut[0]) / 2,
+            f'3× 改善', fontsize=9, color='#555', va='center', fontweight='bold')
+
+    ax.set_xlabel('运行时长（分钟）', fontsize=12)
+    ax.set_ylabel('锁定资金占传统初始锁仓比例 (%)', fontsize=12)
+    ax.set_title(
+        '实验E：6 条并发子链  —  FishboneChain vs 传统预锁方案  锁定资金比例时序对比\n'
+        'C1:1,500U  C2:2U  C3:40,000U  C4:5,000U  C5:0.5U  C6:25,000U  '
+        '（Σ=71,502.5 U/epoch，T_planned=3）',
+        fontsize=10, fontweight='bold')
+    ax.set_xlim(0, x_max)
+    ax.set_ylim(0, 108)
+    ax.legend(loc='upper right', fontsize=10, framealpha=0.92,
+              ncol=1, borderpad=0.8)
+    ax.grid(axis='y', alpha=0.3)
+    ax.grid(axis='x', alpha=0.15)
+
+    plt.tight_layout()
+    out = os.path.join(OUT_DIR, 'fig7a_liquidity_ratio.png')
+    fig.savefig(out)
+    plt.close()
+    print(f'[saved] {out}')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 图7b：实验E — 相同总资金下的资金容量对比
+# ─────────────────────────────────────────────────────────────────────────────
+def fig7b_capital_capacity():
+    # 参考基准：传统方案一次性预锁 T×ΣB = 3×71502.5 = 214507.5 UNIT
+    # FishboneChain：仅锁 1 epoch × ΣB = 71502.5 UNIT，其余 143005 UNIT 保持可用
+    SUM_BUDGET    = 71502.5
+    T_PLANNED     = 3
+    TOTAL_DEPOSIT = T_PLANNED * SUM_BUDGET   # 214507.5（传统方案恰好需要的总量）
+
+    FB_LOCKED   = SUM_BUDGET                      # 71502.5
+    FB_FREE     = TOTAL_DEPOSIT - FB_LOCKED        # 143005.0
+    TRAD_LOCKED = TOTAL_DEPOSIT                    # 214507.5（全部锁住）
+    TRAD_FREE   = 0.0
+
+    CHILD3_BUDGET = 40000   # 用最大规格（child3 医疗标注）作为额外任务单位
+
+    fig, ax = plt.subplots(figsize=(9, 3.5))
+
+    methods     = ['FishboneChain', '传统预锁方案']
+    locked_vals = [FB_LOCKED,  TRAD_LOCKED]
+    free_vals   = [FB_FREE,    TRAD_FREE]
+
+    ax.barh(methods, locked_vals, color=['#1565C0', '#E65100'],
+            height=0.45, label='已锁定（当前 Epoch）')
+    ax.barh(methods, free_vals, left=locked_vals,
+            color=['#90CAF9', '#FFCC80'],
+            height=0.45, label='可用余额')
+
+    # 数值标注（传统方案：右侧；FishboneChain：各段中央）
+    # 传统方案仅在右边缘标锁定量
+    ax.text(TRAD_LOCKED - TOTAL_DEPOSIT * 0.01, 1,
+            f'{TRAD_LOCKED:,.0f} U (100%)',
+            ha='right', va='center', color='white', fontsize=9, fontweight='bold')
+    # FishboneChain 两段各自标注
+    ax.text(FB_LOCKED / 2, 0, f'{FB_LOCKED:,.0f} U\n({FB_LOCKED/TOTAL_DEPOSIT*100:.1f}%)',
+            ha='center', va='center', color='white', fontsize=9, fontweight='bold')
+    ax.text(FB_LOCKED + FB_FREE / 2, 0,
+            f'{FB_FREE:,.0f} U\n({FB_FREE/TOTAL_DEPOSIT*100:.1f}%)',
+            ha='center', va='center', color='#333', fontsize=9, fontweight='bold')
+
+    # 可扩展任务标注
+    new_tasks_fb = int(FB_FREE / CHILD3_BUDGET)
+    ax.annotate(f'可额外激活 {new_tasks_fb} 个 child3 规格任务\n（各 40,000 U/epoch）',
+                xy=(TOTAL_DEPOSIT, 0), xytext=(TOTAL_DEPOSIT * 0.65, -0.40),
+                arrowprops=dict(arrowstyle='->', color='#1565C0', lw=1.5),
+                fontsize=9, color='#1565C0', fontweight='bold')
+    # 传统方案：直接在条形内注明
+    ax.text(TOTAL_DEPOSIT * 0.5, 1,
+            '无法激活任何新任务（资金全部锁定）',
+            ha='center', va='center', color='white', fontsize=9,
+            fontstyle='italic', alpha=0.9)
+
+    ax.set_xlabel('资金量（UNIT）', fontsize=11)
+    ax.set_title(
+        f'实验E：相同总预算（{TOTAL_DEPOSIT:,.0f} UNIT = 3 epoch × Σ预算）下的资金利用率对比\n'
+        '（6 条子链并发：Σ=71,502.5 U/epoch）',
+        fontsize=10, fontweight='bold')
+    ax.set_xlim(0, TOTAL_DEPOSIT * 1.38)
+    ax.legend(loc='lower right', fontsize=10)
+    ax.grid(axis='x', alpha=0.3)
+    ax.set_axisbelow(True)
+
+    plt.tight_layout()
+    out = os.path.join(OUT_DIR, 'fig7b_capital_capacity.png')
+    fig.savefig(out)
+    plt.close()
+    print(f'[saved] {out}')
+
+
 if __name__ == '__main__':
     import sys
     only_fig6 = '--fig6' in sys.argv
+    only_fig7 = '--fig7' in sys.argv
 
-    if only_fig6:
+    if only_fig7:
+        print('生成图7（资金流动性）...')
+        fig7a_liquidity_ratio()
+        fig7b_capital_capacity()
+    elif only_fig6:
         print('生成图6（线性扩展）...')
         try:
             fig_linear_scaling()
@@ -453,4 +681,9 @@ if __name__ == '__main__':
             fig_linear_scaling()
         except Exception as e:
             print(f'[warn] fig6（需要 exp_scale 数据）: {e}')
+        try:
+            fig7a_liquidity_ratio()
+            fig7b_capital_capacity()
+        except Exception as e:
+            print(f'[warn] fig7 错误: {e}')
     print('完成。图表已保存至 docs/figures/')
