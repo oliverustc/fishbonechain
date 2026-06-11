@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Optional
+from typing import AsyncIterator, Optional
 
 
 @dataclass
@@ -64,6 +64,32 @@ class RemoteNode:
                 f"scp 失败 {local_path} → {self.ssh_host}:{remote_path}\n"
                 f"{stderr.decode(errors='replace')}"
             )
+
+    async def stream_lines(self, cmd: str) -> AsyncIterator[str]:
+        """通过系统 ssh 流式读取远程命令输出。"""
+        proc = await asyncio.create_subprocess_exec(
+            "ssh", "-o", "StrictHostKeyChecking=no",
+            "-o", "ConnectTimeout=10",
+            self.ssh_host, cmd,
+            stdin=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+        try:
+            assert proc.stdout is not None
+            while True:
+                line = await proc.stdout.readline()
+                if not line:
+                    break
+                yield line.decode(errors="replace").rstrip("\n")
+        finally:
+            if proc.returncode is None:
+                proc.terminate()
+                try:
+                    await asyncio.wait_for(proc.wait(), timeout=5)
+                except asyncio.TimeoutError:
+                    proc.kill()
+                    await proc.wait()
 
     async def write_file(self, path: str, content: str, sudo: bool = False) -> None:
         """把字符串内容写到远程文件（通过 stdin 传输）。"""

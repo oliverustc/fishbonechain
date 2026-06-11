@@ -21,18 +21,23 @@ NODE_COLORS = {
 }
 
 
-async def stream_log(remote: RemoteNode, node_id: str, log_path: str, stop_event: asyncio.Event):
+async def stream_log(
+    remote: RemoteNode,
+    node_id: str,
+    log_path: str,
+    stop_event: asyncio.Event,
+    lines: int = 20,
+):
     color = NODE_COLORS.get(node_id, "white")
     prefix = f"[{color}][{node_id}][/{color}]"
 
-    # 先打印最后 20 行，再 tail -f
-    async with remote._conn.create_process(f"tail -n 20 -f {log_path}") as proc:
-        async for line in proc.stdout:
-            line = line.rstrip()
-            if line:
-                console.print(f"{prefix} {line}")
-            if stop_event.is_set():
-                break
+    # 先打印最近 lines 行，再持续跟随。
+    async for line in remote.stream_lines(f"tail -n {lines} -f {log_path}"):
+        line = line.rstrip()
+        if line:
+            console.print(f"{prefix} {line}")
+        if stop_event.is_set():
+            break
 
 
 @app.command()
@@ -60,7 +65,7 @@ def logs(
     async def _run():
         async with connect_all(target_nodes, cfg.sudo_pass) as remotes:
             tasks = [
-                stream_log(remotes[n.id], n.id, log_path_template, stop_event)
+                stream_log(remotes[n.id], n.id, log_path_template, stop_event, lines)
                 for n in target_nodes
                 if n.id in remotes
             ]

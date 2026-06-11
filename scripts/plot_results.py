@@ -26,9 +26,16 @@ plt.rcParams.update({
     'axes.labelsize': 11,
     'legend.fontsize': 10,
     'figure.dpi': 150,
+    'savefig.dpi': 220,
     'savefig.bbox': 'tight',
     'savefig.pad_inches': 0.1,
 })
+
+PPT_TITLE_SIZE = 18
+PPT_LABEL_SIZE = 15
+PPT_TICK_SIZE = 13
+PPT_LEGEND_SIZE = 13
+PPT_ANNOT_SIZE = 13
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -337,7 +344,7 @@ def fig_epoch1_snapshot():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 图6：实验D — N=1/2/4链线性扩展验证
+# 多链并发吞吐量线性扩展
 # ─────────────────────────────────────────────────────────────────────────────
 def fig_linear_scaling(csv_path=None):
     if csv_path is None:
@@ -350,7 +357,7 @@ def fig_linear_scaling(csv_path=None):
     with open(csv_path) as f:
         rows = list(csv.DictReader(f))
     if not rows:
-        print('[warn] fig6: 无数据')
+        print('[warn] 线性扩展图表：无数据')
         return
 
     # N=1: child4; N=2: child4+child1; N=3: child4+child1+child6
@@ -402,7 +409,7 @@ def fig_linear_scaling(csv_path=None):
         (3, n3_vals, 'child4+child1+child6', '#E65100'),
     ]
 
-    fig, ax = plt.subplots(figsize=(8, 5.5))
+    fig, ax = plt.subplots(figsize=(10, 6.4))
 
     # 散点：每个 epoch 一个点（加随机 x 抖动以免重叠）
     rng = np.random.default_rng(42)
@@ -415,7 +422,7 @@ def fig_linear_scaling(csv_path=None):
         std_v  = np.std(vals)
         ax.errorbar(n, mean_v, yerr=std_v, fmt='o', color=color,
                     markersize=10, linewidth=2, capsize=6, zorder=5,
-                    label=f'N={n}  ({label})\n均值={mean_v:.0f}，σ={std_v:.1f}')
+                    label=f'N={n} ({label})\n均值 {mean_v:.0f}，σ {std_v:.1f}')
         all_means.append(mean_v)
 
     # 理想线性参考线（过原点，斜率 = N=1 均值）
@@ -434,25 +441,26 @@ def fig_linear_scaling(csv_path=None):
     r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 1.0
     ax.plot(x_ref, np.polyval(coeffs, x_ref), color='#880E4F',
             linewidth=1.6, linestyle='-.', alpha=0.7,
-            label=f'线性拟合  R²={r2:.4f}')
+            label=f'线性拟合 R²={r2:.4f}')
 
     # 扩展倍率标注
     for n, mean_v in zip([1, 2, 3], all_means):
         ratio = mean_v / baseline
         ax.annotate(f'{mean_v:.0f}\n({ratio:.2f}×)',
                     xy=(n, mean_v), xytext=(n + 0.12, mean_v + baseline * 0.05),
-                    fontsize=9, color='#333', fontweight='bold')
+                    fontsize=PPT_ANNOT_SIZE, color='#333', fontweight='bold')
 
     ax.set_xticks([1, 2, 3])
-    ax.set_xticklabels(['N=1\n(child4)', 'N=2\n(child4+child1)', 'N=3\n(全部三链)'], fontsize=10)
-    ax.set_xlabel('并发子链数量 (N)', fontsize=12)
-    ax.set_ylabel('聚合吞吐量（提交次数 / Epoch）', fontsize=12)
+    ax.set_xticklabels(['N=1\nchild4', 'N=2\nchild4+child1', 'N=3\n三链并发'],
+                       fontsize=PPT_TICK_SIZE)
+    ax.tick_params(axis='y', labelsize=PPT_TICK_SIZE)
+    ax.set_xlabel('并发子链数量', fontsize=PPT_LABEL_SIZE)
+    ax.set_ylabel('聚合吞吐量（提交次数 / Epoch）', fontsize=PPT_LABEL_SIZE)
     ax.set_xlim(0.5, 3.8)
     ax.set_ylim(0, max(all_means) * 1.35)
-    ax.set_title(f'实验D：多链并发吞吐量线性扩展验证\n'
-                 f'各链 50 workers（场景d配置）× {n_ep} 个稳态 Epoch，R²={r2:.4f}',
-                 fontsize=11, fontweight='bold')
-    ax.legend(loc='upper left', fontsize=9, framealpha=0.92)
+    ax.set_title('多链并发吞吐量线性扩展',
+                 fontsize=PPT_TITLE_SIZE, fontweight='bold', pad=16)
+    ax.legend(loc='upper left', fontsize=PPT_LEGEND_SIZE, framealpha=0.92)
     ax.grid(alpha=0.3)
 
     plt.tight_layout()
@@ -463,7 +471,7 @@ def fig_linear_scaling(csv_path=None):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 图7a：实验E — 资金锁定比例时序对比
+# 锁定资金比例时序对比
 # ─────────────────────────────────────────────────────────────────────────────
 def fig7a_liquidity_ratio(csv_path=None):
     if csv_path is None:
@@ -474,7 +482,7 @@ def fig7a_liquidity_ratio(csv_path=None):
     with open(csv_path) as f:
         rows = list(csv.DictReader(f))
     if not rows:
-        print('[warn] fig7a: 无数据')
+        print('[warn] 锁定资金比例时序对比：无数据')
         return
 
     # ── 常量 ──────────────────────────────────────────────────────────────────
@@ -522,11 +530,11 @@ def fig7a_liquidity_ratio(csv_path=None):
     trad_cut     = trad_ratio[:cut]
 
     # ── 绘图 ──────────────────────────────────────────────────────────────────
-    fig, ax = plt.subplots(figsize=(11, 5))
+    fig, ax = plt.subplots(figsize=(13, 6.4))
 
-    ax.plot(elapsed_cut, fb_ratio_cut, color='#1565C0', linewidth=2.2,
+    ax.plot(elapsed_cut, fb_ratio_cut, color='#1565C0', linewidth=3.0,
             label='FishboneChain', zorder=3)
-    ax.step(elapsed_cut, trad_cut, where='post', color='#E65100', linewidth=2.2,
+    ax.step(elapsed_cut, trad_cut, where='post', color='#E65100', linewidth=3.0,
             linestyle='--', label='传统预锁方案', zorder=3)
 
     # 节省空间填充
@@ -548,29 +556,27 @@ def fig7a_liquidity_ratio(csv_path=None):
         if t_ev > x_max:
             continue
         clr = CHAIN_COLORS[chain]
-        ax.axvline(x=t_ev, color=clr, linewidth=1.1, alpha=0.6, linestyle=':')
+        ax.axvline(x=t_ev, color=clr, linewidth=1.4, alpha=0.6, linestyle=':')
         labeled.add(chain)
 
     # T=3 完成线
-    ax.axvline(x=t_end, color='gray', linewidth=1.3, linestyle='-.', alpha=0.7, zorder=2)
-    ax.text(t_end + 0.2, 95, 'T=3 完成', fontsize=8, color='gray', va='top')
+    ax.axvline(x=t_end, color='gray', linewidth=1.6, linestyle='-.', alpha=0.7, zorder=2)
 
     # 改善比标注（初始时刻）
     ax.annotate('', xy=(0.5, fb_ratio_cut[0] + 1), xytext=(0.5, trad_cut[0] - 1),
                 arrowprops=dict(arrowstyle='<->', color='#555', lw=1.2))
     ax.text(1.0, (fb_ratio_cut[0] + trad_cut[0]) / 2,
-            f'3× 改善', fontsize=9, color='#555', va='center', fontweight='bold')
+            '3× 改善', fontsize=PPT_ANNOT_SIZE, color='#555',
+            va='center', fontweight='bold')
 
-    ax.set_xlabel('运行时长（分钟）', fontsize=12)
-    ax.set_ylabel('锁定资金占传统初始锁仓比例 (%)', fontsize=12)
-    ax.set_title(
-        '实验E：6 条并发子链  —  FishboneChain vs 传统预锁方案  锁定资金比例时序对比\n'
-        'C1:1,500U  C2:2U  C3:40,000U  C4:5,000U  C5:0.5U  C6:25,000U  '
-        '（Σ=71,502.5 U/epoch，T_planned=3）',
-        fontsize=10, fontweight='bold')
+    ax.set_xlabel('运行时长（分钟）', fontsize=PPT_LABEL_SIZE)
+    ax.set_ylabel('锁定资金比例（%）', fontsize=PPT_LABEL_SIZE)
+    ax.tick_params(axis='both', labelsize=PPT_TICK_SIZE)
+    ax.set_title('锁定资金比例时序对比',
+                 fontsize=PPT_TITLE_SIZE, fontweight='bold', pad=16)
     ax.set_xlim(0, x_max)
     ax.set_ylim(0, 108)
-    ax.legend(loc='upper right', fontsize=10, framealpha=0.92,
+    ax.legend(loc='upper right', fontsize=PPT_LEGEND_SIZE, framealpha=0.92,
               ncol=1, borderpad=0.8)
     ax.grid(axis='y', alpha=0.3)
     ax.grid(axis='x', alpha=0.15)
@@ -583,7 +589,7 @@ def fig7a_liquidity_ratio(csv_path=None):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 图7b：实验E — 相同总资金下的资金容量对比
+# 相同预算下的资金利用率对比
 # ─────────────────────────────────────────────────────────────────────────────
 def fig7b_capital_capacity():
     # 参考基准：传统方案一次性预锁 T×ΣB = 3×71502.5 = 214507.5 UNIT
@@ -599,7 +605,7 @@ def fig7b_capital_capacity():
 
     CHILD3_BUDGET = 40000   # 用最大规格（child3 医疗标注）作为额外任务单位
 
-    fig, ax = plt.subplots(figsize=(9, 3.5))
+    fig, ax = plt.subplots(figsize=(11, 5.6))
 
     methods     = ['FishboneChain', '传统预锁方案']
     locked_vals = [FB_LOCKED,  TRAD_LOCKED]
@@ -615,33 +621,36 @@ def fig7b_capital_capacity():
     # 传统方案仅在右边缘标锁定量
     ax.text(TRAD_LOCKED - TOTAL_DEPOSIT * 0.01, 1,
             f'{TRAD_LOCKED:,.0f} U (100%)',
-            ha='right', va='center', color='white', fontsize=9, fontweight='bold')
+            ha='right', va='center', color='white',
+            fontsize=PPT_ANNOT_SIZE, fontweight='bold')
     # FishboneChain 两段各自标注
     ax.text(FB_LOCKED / 2, 0, f'{FB_LOCKED:,.0f} U\n({FB_LOCKED/TOTAL_DEPOSIT*100:.1f}%)',
-            ha='center', va='center', color='white', fontsize=9, fontweight='bold')
+            ha='center', va='center', color='white',
+            fontsize=PPT_ANNOT_SIZE, fontweight='bold')
     ax.text(FB_LOCKED + FB_FREE / 2, 0,
             f'{FB_FREE:,.0f} U\n({FB_FREE/TOTAL_DEPOSIT*100:.1f}%)',
-            ha='center', va='center', color='#333', fontsize=9, fontweight='bold')
+            ha='center', va='center', color='#333',
+            fontsize=PPT_ANNOT_SIZE, fontweight='bold')
 
     # 可扩展任务标注
     new_tasks_fb = int(FB_FREE / CHILD3_BUDGET)
-    ax.annotate(f'可额外激活 {new_tasks_fb} 个 child3 规格任务\n（各 40,000 U/epoch）',
-                xy=(TOTAL_DEPOSIT, 0), xytext=(TOTAL_DEPOSIT * 0.65, -0.40),
-                arrowprops=dict(arrowstyle='->', color='#1565C0', lw=1.5),
-                fontsize=9, color='#1565C0', fontweight='bold')
+    ax.text(TOTAL_DEPOSIT * 0.62, 0.43,
+            f'剩余资金可再激活 {new_tasks_fb} 个 child3 规格任务',
+            ha='center', va='center', fontsize=PPT_ANNOT_SIZE,
+            color='#1565C0', fontweight='bold')
     # 传统方案：直接在条形内注明
     ax.text(TOTAL_DEPOSIT * 0.5, 1,
-            '无法激活任何新任务（资金全部锁定）',
-            ha='center', va='center', color='white', fontsize=9,
+            '资金全部锁定',
+            ha='center', va='center', color='white', fontsize=PPT_ANNOT_SIZE,
             fontstyle='italic', alpha=0.9)
 
-    ax.set_xlabel('资金量（UNIT）', fontsize=11)
-    ax.set_title(
-        f'实验E：相同总预算（{TOTAL_DEPOSIT:,.0f} UNIT = 3 epoch × Σ预算）下的资金利用率对比\n'
-        '（6 条子链并发：Σ=71,502.5 U/epoch）',
-        fontsize=10, fontweight='bold')
-    ax.set_xlim(0, TOTAL_DEPOSIT * 1.38)
-    ax.legend(loc='lower right', fontsize=10)
+    ax.set_xlabel('资金量（UNIT）', fontsize=PPT_LABEL_SIZE)
+    ax.tick_params(axis='both', labelsize=PPT_TICK_SIZE)
+    ax.set_title('相同预算下的资金利用率对比',
+                 fontsize=PPT_TITLE_SIZE, fontweight='bold', pad=16)
+    ax.set_xlim(0, TOTAL_DEPOSIT * 1.12)
+    ax.set_ylim(-0.65, 1.65)
+    ax.legend(loc='upper right', fontsize=PPT_LEGEND_SIZE)
     ax.grid(axis='x', alpha=0.3)
     ax.set_axisbelow(True)
 
@@ -658,11 +667,11 @@ if __name__ == '__main__':
     only_fig7 = '--fig7' in sys.argv
 
     if only_fig7:
-        print('生成图7（资金流动性）...')
+        print('生成资金流动性图表...')
         fig7a_liquidity_ratio()
         fig7b_capital_capacity()
     elif only_fig6:
-        print('生成图6（线性扩展）...')
+        print('生成线性扩展图表...')
         try:
             fig_linear_scaling()
         except Exception as e:

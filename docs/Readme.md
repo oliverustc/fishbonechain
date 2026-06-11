@@ -1,24 +1,36 @@
-# Fishbonechain 主链+多子链的灵活可扩展区块链系统
+# FishboneChain 文档索引
 
-基于substrate搭建。
+本目录保存 FishboneChain 的设计说明、实现记录、开发指南和实验文档。后续维护时请优先更新这里的索引，再更新具体文档。
 
-+ 主链 main chain
-+ 子链 child chain
+## 接管入口
 
-## 基础设置
+- [../agent.md](../agent.md)：Codex/agent 工作入口，包含当前状态、命令和维护边界
+- [developer-guide.md](developer-guide.md)：开发者指南，介绍 runtime、pallet、部署框架和开发流程
+- [implementation-record.md](implementation-record.md)：项目实现记录，覆盖当前 1 主链 + 6 子链实验系统
 
-主链提供安全性保障，负责保存子链状态，和结算子链资金
-子链负责性能提升和功能扩展，定期向主链同步最新状态
+## 设计文档
 
-## 数据众包场景：
-主链负责所有资金结算，数据收集任务发布在主链上，
-子链仅负责数据收集
-根据场景不同，可以调整子链的区块链参数，如区块大小、区块时间、共识算法选择，共识算法参数等。
+- [fishbonechain.md](fishbonechain.md)：FishboneChain 主链 + 多子链众包架构
+- [cdt.md](cdt.md)：可定制可验证数据交易协议
+- [cross_chain_proof.md](cross_chain_proof.md)：BPiano / 高效跨链状态证明
+- [implementation-plan.md](implementation-plan.md)：早期总体实现规划，已被当前实现记录覆盖的部分仅作历史参考
 
-## 数据交易场景：
+## 实验文档
 
-基于[已有论文和代码](./cdt.md)进行调整、实现和部署.
+- [experiment-report.md](experiment-report.md)：实验报告，包含吞吐量 A-D 和资金流动性 E 的正式整理
+- [liquidity-experiment.md](liquidity-experiment.md)：资金流动性实验数据、图表和口径说明
+- `plan/`：临时计划区，已加入 `.gitignore`，后续不作为正式事实来源
+- [figures/](figures/)：实验报告图表
 
-## 
+## 环境与参考
 
-基于[已有论文和代码](./cross_chain_proof.md)进行调整、实现和部署.
+- [rust-setup.md](rust-setup.md)：Rust/Substrate 环境说明
+- [../env-setup/README.md](../env-setup/README.md)：Nix/flake 环境配置
+- [../references/](../references/)：外部参考代码和文档，默认不修改
+
+## 更新约定
+
+- 实验数据和图表结论优先落在 `experiment-report.md`
+- 计划、执行状态、审阅发现可以先落在 `docs/plan/`，但任务完成后必须沉淀到 `docs/` 下的正式文档
+- 面向后续 agent 的操作约定优先落在根目录 `agent.md`
+- 旧规划和实际实现不一致时，以 `implementation-record.md`、`developer-guide.md`、`experiment-report.md` 与当前代码为准
