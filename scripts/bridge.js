@@ -94,22 +94,19 @@ async function submitToMainChain(mainApi, miners, chainId, epoch, merkleRoot, bi
   // bill_amounts 格式：[(AccountId, Balance), ...]
   const amounts = billAmounts.map(([addr, amt]) => [addr.toString(), amt.toString()]);
 
+  // 每个矿工依次投票直到全部提交。settled（inBlock）不等于 FMC 已结算——
+  // 实际结算由 pallet 在达到 2/3 阈值后自动触发 BillSettled 事件。
   let voteCount = 0;
   for (const miner of miners) {
-    const { skipped, settled } = await sendTx(
+    const { skipped } = await sendTx(
       mainApi,
       mainApi.tx.fmc.submitBill(REQUESTER, TASK_ID, epoch, amounts),
       miner,
       `fmc.submitBill(task=${TASK_ID}, epoch=${epoch}, miner=${miner.address.slice(0,8)}…)`
     );
     if (!skipped) voteCount++;
-    if (settled && voteCount > 0) {
-      // 检查是否已结算（pallet 里达到阈值后自动结算，不再需要继续投票）
-      log(`  账单结算完成（${voteCount}/${miners.length} 矿工已投票）`);
-      return;
-    }
   }
-  log(`  所有矿工投票完毕（${voteCount} 票有效），等待链上阈值达成`);
+  log(`  所有矿工投票完毕（${voteCount}/${miners.length} 票有效，阈值由 pallet 自动判断）`);
 }
 
 async function main() {
