@@ -35,15 +35,14 @@ async def push_binaries(remote: RemoteNode, cfg, node_id: str):
     dest_dir = str(Path(cfg.binary).parent)
     await remote.run(f"mkdir -p {dest_dir}")
 
-    async with await remote._conn.start_sftp_client() as sftp:
-        for remote_path in needed:
-            bin_name = Path(remote_path).name
-            local = BIN_DIR / bin_name
-            if local.exists():
-                await sftp.put(str(local), remote_path)
-                await remote.run(f"chmod +x {remote_path}")
-            else:
-                console.print(f"  [{node_id}] [yellow]⚠ 本地未找到 {local}，跳过[/yellow]")
+    for remote_path in sorted(needed):
+        bin_name = Path(remote_path).name
+        local = BIN_DIR / bin_name
+        if local.exists():
+            await remote.upload(str(local), remote_path)
+            await remote.run(f"chmod +x {remote_path}")
+        else:
+            console.print(f"  [{node_id}] [yellow]⚠ 本地未找到 {local}，跳过[/yellow]")
 
     console.print(f"  [{node_id}] ✓ binaries")
 
@@ -51,11 +50,10 @@ async def push_binaries(remote: RemoteNode, cfg, node_id: str):
 async def push_specs(remote: RemoteNode, cfg, node_id: str):
     spec_dir = f"{cfg.base_dir}/specs"
     await remote.run(f"mkdir -p {spec_dir}")
-    async with await remote._conn.start_sftp_client() as sftp:
-        for chain in cfg.chains:
-            local = SPECS_DIR / f"{chain}-custom-raw.json"
-            if local.exists():
-                await sftp.put(str(local), f"{spec_dir}/{chain}-custom-raw.json")
+    for chain in sorted(cfg.chains):
+        local = SPECS_DIR / f"{chain}-custom-raw.json"
+        if local.exists():
+            await remote.upload(str(local), f"{spec_dir}/{chain}-custom-raw.json")
     console.print(f"  [{node_id}] ✓ specs")
 
 

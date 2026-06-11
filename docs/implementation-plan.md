@@ -2,6 +2,8 @@
 
 > 在 Substrate/Polkadot 生态上整合三个方案：FishboneChain 多链众包基础设施、CDT 数据交易协议、BPiano 跨链状态证明
 
+> **状态说明（2026-06-11）**：本文是早期总体规划，包含 Relay+Parachain、HRMP/XCM、CDT 和 BPiano 的目标架构设想。当前已落地系统是多个独立 Substrate solo chain + 链下 bridge 的实验形态；当前事实以 [implementation-record.md](implementation-record.md)、[developer-guide.md](developer-guide.md) 和当前代码为准。本文保留为历史规划和后续演进参考。
+
 ---
 
 ## 一、整体架构决策

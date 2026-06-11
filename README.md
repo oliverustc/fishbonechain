@@ -1,64 +1,96 @@
 # FishboneChain
 
-基于 Substrate 实现的主链 + 多子链众包平台，集成可验证数据交易与高效跨链状态证明。
+FishboneChain 是一个基于 Substrate/Polkadot SDK 的主链 + 多子链众包实验系统，用于验证多条专用子链并行承载异构众包任务时的吞吐量扩展和资金流动性优势。
 
-> 文档持续更新中，待实现完成后补充完整。
+当前仓库已由 Codex 接管维护。面向后续 agent 协作的入口说明见 [agent.md](agent.md)。
+
+## 当前状态
+
+- 主链 runtime 已集成 `pallet-ccmc`、`pallet-fmc`、`pallet-crowdsource`
+- 默认 AURA 节点、1s/2s/10MB 变体、BABE 变体均已具备构建目标
+- `deploy/` 已包含 12 台 VM、1 主链 + 6 子链的部署框架和 chain spec
+- `scripts/` 已包含 worker、bridge、metrics、实验初始化、结果分析和绘图脚本
+- 吞吐量实验 A/B/C/D 已形成报告，资金流动性实验 E 已有采集数据和图表，正式结论仍在整理中
 
 ## 方案概述
 
-本项目实现三个相互关联的方案：
-
 | 方案 | 说明 | 文档 |
 |------|------|------|
-| **FishboneChain** | 主链 + 多子链众包基础设施（资金管理、任务分发、子链同步） | [docs/fishbonechain.md](docs/fishbonechain.md) |
-| **CDT** | 可定制可验证数据交易（zk-SNARK + 链下多轮交付协议） | [docs/cdt.md](docs/cdt.md) |
-| **BPiano** | 高效跨链状态证明（分布式 Plonk + 证明压缩/聚合） | [docs/cross_chain_proof.md](docs/cross_chain_proof.md) |
-
-实现规划见 [docs/implementation-plan.md](docs/implementation-plan.md)。
+| FishboneChain | 主链 + 多子链众包基础设施，主链管资金和摘要，子链管数据收集 | [docs/fishbonechain.md](docs/fishbonechain.md) |
+| CDT | 可定制可验证数据交易，作为后续可部署在子链上的数据交易协议 | [docs/cdt.md](docs/cdt.md) |
+| BPiano | 高效跨链状态证明，作为后续替换链下 bridge 信任假设的证明机制 | [docs/cross_chain_proof.md](docs/cross_chain_proof.md) |
 
 ## 技术栈
 
-- **区块链框架**：Substrate（AURA + GRANDPA，solo chain 模式，后续迁移至 Relay+Parachain）
-- **ZK 证明**：Rust 原生实现（ark-bn254、ark-groth16）
-- **链下服务**：Go（ZK 证明生成、IMT 构建、BPiano calldata 生成）
-- **Rust 版本**：stable 1.96+
+- 区块链框架：Substrate / Polkadot SDK，solo-chain 实验形态
+- 共识：AURA + GRANDPA，另有 BABE + GRANDPA 变体
+- Runtime：Rust FRAME pallet
+- 链下脚本：Node.js + `@polkadot/api`
+- 部署工具：Python + `uv` + systemd + SSH
+- Rust：`rust-toolchain.toml` 固定 stable 1.96
 
 ## 快速开始
 
 ```bash
-# 克隆（含 submodule）
-git clone --recurse-submodules <repo-url>
-cd fishbonechain
+# 安装依赖
+npm install
 
-# 编译
+# 编译默认 release 节点，并复制到 deploy/bin/
 make build-release
 
-# 启动本地三链网络（主链 + 子链1 + 子链2）
+# 编译实验用变体
+make build-2s
+make build-1s
+make build-10mb
+make build-babe
+
+# 本地启动三链开发网络
 bash scripts/start-network.sh
 
-# 查看出块状态
+# 查看本地出块状态
 bash scripts/check-blocks.sh
 ```
 
-本地节点 RPC 端口：主链 `9944`，子链1 `9945`，子链2 `9947`。
+本地开发 RPC 端口：主链 `9944`，子链 1 `9945`，子链 2 `9947`。
 
-通过 [Polkadot.js Apps](https://polkadot.js.org/apps) 连接（自定义端点 `ws://127.0.0.1:9944`）。
+## 常用验证命令
+
+```bash
+# 快速 Rust 检查，跳过 WASM 构建
+make check
+
+# 全量测试
+make test
+
+# 单 pallet 测试
+SKIP_WASM_BUILD=1 cargo test -p pallet-ccmc -p pallet-fmc -p pallet-crowdsource
+
+# Phase 1 E2E 验证
+node scripts/e2e-verify.js
+```
 
 ## 项目结构
 
-```
+```text
 fishbonechain/
-├── node/           # fishbone-node（节点启动器、chain spec）
-├── runtime/        # fishbone-runtime（FRAME runtime）
-├── pallets/        # 业务 pallet（CCMC、FMC 等，开发中）
-├── scripts/        # 本地网络启动/检查脚本
-├── docs/           # 设计文档与实现规划
-└── references/     # 参考资料（git submodule）
-    ├── polkadot-sdk-solochain-template/   # 本项目基础
-    ├── polkadot-sdk-parachain-template/   # parachain 迁移参考
-    ├── polkadot-sdk-minimal-template/     # 最小化 runtime 参考
-    ├── frontier-parachain-template/       # EVM 兼容参考（CDT 用）
-    ├── polkadot-cookbook/                 # 官方开发文档
-    ├── data_trade_code/                   # CDT 参考实现（Go + Solidity）
-    └── efficient_cross_chain_proof_code/  # BPiano 参考实现（Go）
+├── agent.md        # Codex/agent 接管指南
+├── node/           # fishbone-node，CLI、chain spec、AURA/BABE 服务
+├── runtime/        # fishbone-runtime，AURA/BABE runtime 分文件组织
+├── pallets/        # ccmc、fmc、crowdsource 和模板 pallet
+├── scripts/        # 本地网络、bridge、worker、metrics、实验脚本
+├── deploy/         # 12 VM 部署框架、spec、keys、二进制产物目录
+├── docs/           # 设计、实现记录、实验报告和规划
+└── references/     # 外部参考代码和论文实现，默认不在维护任务中修改
 ```
+
+## 文档入口
+
+- [agent.md](agent.md)：后续 agent 工作前必须先读的项目上下文
+- [docs/Readme.md](docs/Readme.md)：文档索引
+- [docs/implementation-record.md](docs/implementation-record.md)：当前实现记录
+- [docs/experiment-report.md](docs/experiment-report.md)：实验报告
+- [docs/liquidity-experiment.md](docs/liquidity-experiment.md)：资金流动性实验记录
+
+## 维护边界
+
+`references/` 是外部参考资料和上游模板快照。除非明确任务要求，后续维护应只修改本项目代码、脚本和文档，不改动参考子模块内容。
