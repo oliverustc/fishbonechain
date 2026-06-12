@@ -60,6 +60,13 @@ All API responses include:
 X-Fishbone-Monitor-Api-Version: 1
 ```
 
+API version 1 compatibility policy:
+
+- Additive response fields are allowed.
+- Existing field names and primitive types stay stable for version 1.
+- Breaking response changes require a new `/api/v2` path.
+- Documented Prometheus metric names and labels stay stable once shipped.
+
 ## Configuration
 
 Environment variables:
