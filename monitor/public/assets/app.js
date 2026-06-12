@@ -13,7 +13,17 @@ const els = {
   chainsBody: document.querySelector("#chainsBody"),
   nodesGrid: document.querySelector("#nodesGrid"),
   collectorsGrid: document.querySelector("#collectorsGrid"),
+  logStatus: document.querySelector("#logStatus"),
+  logNodeSelect: document.querySelector("#logNodeSelect"),
+  logChainSelect: document.querySelector("#logChainSelect"),
+  refreshLogButton: document.querySelector("#refreshLogButton"),
+  logMeta: document.querySelector("#logMeta"),
+  logContent: document.querySelector("#logContent"),
 };
+
+let logSummaries = [];
+let selectedLogNode = "";
+let selectedLogChain = "";
 
 async function getJson(path) {
   const response = await fetch(path, { cache: "no-store" });
@@ -23,20 +33,23 @@ async function getJson(path) {
 
 async function refresh() {
   try {
-    const [summary, inventory, chains, nodes, collectors] = await Promise.all([
+    const [summary, inventory, chains, nodes, collectors, logs] = await Promise.all([
       getJson("/api/status/summary"),
       getJson("/api/inventory"),
       getJson("/api/chains"),
       getJson("/api/nodes"),
       getJson("/api/collectors"),
+      getJson("/api/logs"),
     ]);
 
     renderSummary(summary, inventory);
     renderChains(chains);
     renderNodes(nodes, inventory);
     renderCollectors(collectors);
-    els.subtitle.textContent = `${inventory.name} via ${inventory.gateway?.ip ?? "monitor gateway"}`;
-    els.updatedAt.textContent = new Date().toLocaleString();
+    renderLogControls(logs);
+    els.subtitle.textContent = `${inventory.name} 经由 ${inventory.gateway?.ip ?? "monitor gateway"}`;
+    els.updatedAt.textContent = new Date().toLocaleString("zh-CN");
+    await loadSelectedLog();
   } catch (error) {
     els.subtitle.textContent = error instanceof Error ? error.message : String(error);
   }
@@ -51,10 +64,10 @@ function renderSummary(summary, inventory) {
 }
 
 function renderChains(chains) {
-  els.chainCount.textContent = `${chains.length} endpoints`;
+  els.chainCount.textContent = `${chains.length} 个端点`;
   els.chainsBody.innerHTML = "";
   if (chains.length === 0) {
-    els.chainsBody.innerHTML = `<tr><td colspan="8" class="empty">No chain data</td></tr>`;
+    els.chainsBody.innerHTML = `<tr><td colspan="8" class="empty">暂无子链状态</td></tr>`;
     return;
   }
 
@@ -67,7 +80,7 @@ function renderChains(chains) {
       <td>${formatNumber(item.bestBlock)}</td>
       <td>${formatNumber(item.finalizedBlock)}</td>
       <td>${formatNumber(item.peers)}</td>
-      <td>${item.isSyncing ? "yes" : "no"}</td>
+      <td>${item.isSyncing ? "是" : "否"}</td>
       <td>${escapeHtml(item.runtimeVersion ?? "-")}</td>
     `;
     els.chainsBody.appendChild(tr);
@@ -75,7 +88,7 @@ function renderChains(chains) {
 }
 
 function renderNodes(nodes, inventory) {
-  els.nodeCount.textContent = `${nodes.length || inventory.nodes?.length || 0} nodes`;
+  els.nodeCount.textContent = `${nodes.length || inventory.nodes?.length || 0} 个节点`;
   els.nodesGrid.innerHTML = "";
   const source = nodes.length > 0 ? nodes : (inventory.nodes ?? []).map((node) => ({
     id: node.id,
@@ -101,10 +114,10 @@ function renderNodes(nodes, inventory) {
 }
 
 function renderCollectors(collectors) {
-  els.collectorCount.textContent = `${collectors.length} collectors`;
+  els.collectorCount.textContent = `${collectors.length} 个采集器`;
   els.collectorsGrid.innerHTML = "";
   if (collectors.length === 0) {
-    els.collectorsGrid.innerHTML = `<div class="empty">No collector runs yet</div>`;
+    els.collectorsGrid.innerHTML = `<div class="empty">暂无采集记录</div>`;
     return;
   }
 
@@ -114,32 +127,107 @@ function renderCollectors(collectors) {
     div.innerHTML = `
       <div class="node-head">
         <span class="node-id">${escapeHtml(collector.name)}</span>
-        <span class="status ${collector.lastOk ? "ok" : "bad"}">${collector.lastOk ? "ok" : "error"}</span>
+        <span class="status ${collector.lastOk ? "ok" : "bad"}">${collector.lastOk ? "正常" : "异常"}</span>
       </div>
       <div class="chain-tags">
         <span class="tag">${formatNumber(collector.lastDurationMs)} ms</span>
-        <span class="tag">${escapeHtml(collector.lastFinishedAt ?? "-")}</span>
+        <span class="tag">${escapeHtml(formatTime(collector.lastFinishedAt))}</span>
       </div>
     `;
     els.collectorsGrid.appendChild(div);
   }
 }
 
+function renderLogControls(summaries) {
+  logSummaries = [...summaries].sort((a, b) => `${a.nodeId}/${a.chainKey}`.localeCompare(`${b.nodeId}/${b.chainKey}`));
+  const nodeIds = [...new Set(logSummaries.map((item) => item.nodeId))];
+
+  if (!nodeIds.includes(selectedLogNode)) {
+    selectedLogNode = nodeIds[0] ?? "";
+  }
+
+  const chainKeys = [...new Set(logSummaries.filter((item) => item.nodeId === selectedLogNode).map((item) => item.chainKey))];
+  if (!chainKeys.includes(selectedLogChain)) {
+    selectedLogChain = chainKeys[0] ?? "";
+  }
+
+  renderOptions(els.logNodeSelect, nodeIds, selectedLogNode, "暂无节点");
+  renderOptions(els.logChainSelect, chainKeys, selectedLogChain, "暂无子链");
+
+  if (logSummaries.length === 0) {
+    els.logStatus.textContent = "等待缓存";
+    els.logMeta.textContent = "暂无日志";
+    els.logContent.textContent = "暂无缓存日志";
+    return;
+  }
+
+  const current = findSelectedLogSummary();
+  els.logStatus.textContent = `${logSummaries.length} 份缓存`;
+  els.logMeta.textContent = current
+    ? `${current.ok ? "最近采集正常" : "最近采集异常"} · ${current.lineCount} 行 · ${formatTime(current.updatedAt)}`
+    : "请选择日志";
+}
+
+async function loadSelectedLog() {
+  if (!selectedLogNode || !selectedLogChain) return;
+
+  els.logContent.textContent = "正在读取缓存日志...";
+  try {
+    const snapshot = await getJson(`/api/logs/${encodeURIComponent(selectedLogNode)}/${encodeURIComponent(selectedLogChain)}`);
+    els.logMeta.textContent = `${snapshot.path} · ${snapshot.lines.length} 行 · ${formatTime(snapshot.updatedAt)}`;
+    els.logContent.textContent = snapshot.lines.length > 0
+      ? snapshot.lines.join("\n")
+      : (snapshot.ok ? "缓存日志为空" : snapshot.errors.join("\n") || "日志采集异常");
+  } catch (error) {
+    els.logContent.textContent = error instanceof Error ? error.message : String(error);
+  }
+}
+
+function renderOptions(select, values, selected, emptyText) {
+  select.innerHTML = "";
+  if (values.length === 0) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = emptyText;
+    select.appendChild(option);
+    select.disabled = true;
+    return;
+  }
+
+  select.disabled = false;
+  for (const value of values) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = value;
+    option.selected = value === selected;
+    select.appendChild(option);
+  }
+}
+
+function findSelectedLogSummary() {
+  return logSummaries.find((item) => item.nodeId === selectedLogNode && item.chainKey === selectedLogChain);
+}
+
 function statusBadge(item) {
   const state = item.stale ? "warn" : item.healthy ? "ok" : "bad";
-  const text = item.stale ? "stale" : item.healthy ? "healthy" : "down";
+  const text = item.stale ? "过期" : item.healthy ? "健康" : "离线";
   return `<span class="status ${state}">${text}</span>`;
 }
 
 function nodeBadge(node) {
-  if (node.stale) return `<span class="status warn">stale</span>`;
+  if (node.stale) return `<span class="status warn">过期</span>`;
   const healthy = Object.values(node.chains ?? {}).some((chain) => chain.healthy && !chain.stale);
-  return `<span class="status ${healthy ? "ok" : "bad"}">${healthy ? "healthy" : "down"}</span>`;
+  return `<span class="status ${healthy ? "ok" : "bad"}">${healthy ? "健康" : "离线"}</span>`;
 }
 
 function formatNumber(value) {
   if (value === null || value === undefined) return "-";
-  return Number(value).toLocaleString();
+  return Number(value).toLocaleString("zh-CN");
+}
+
+function formatTime(value) {
+  if (!value) return "-";
+  return new Date(value).toLocaleString("zh-CN");
 }
 
 function escapeHtml(value) {
@@ -153,6 +241,23 @@ function escapeHtml(value) {
 
 els.refreshButton.addEventListener("click", () => {
   void refresh();
+});
+
+els.logNodeSelect.addEventListener("change", () => {
+  selectedLogNode = els.logNodeSelect.value;
+  selectedLogChain = "";
+  renderLogControls(logSummaries);
+  void loadSelectedLog();
+});
+
+els.logChainSelect.addEventListener("change", () => {
+  selectedLogChain = els.logChainSelect.value;
+  renderLogControls(logSummaries);
+  void loadSelectedLog();
+});
+
+els.refreshLogButton.addEventListener("click", () => {
+  void loadSelectedLog();
 });
 
 void refresh();

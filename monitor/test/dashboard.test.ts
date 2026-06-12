@@ -26,13 +26,16 @@ test("serves the static dashboard shell and assets", async () => {
   const page = await app.inject({ method: "GET", url: "/" });
   assert.equal(page.statusCode, 200);
   assert.equal(page.headers["content-type"], "text/html; charset=utf-8");
-  assert.match(page.body, /Fishbone Monitor/);
+  assert.match(page.body, /FishboneChain 监控/);
+  assert.match(page.body, /运行日志/);
   assert.match(page.body, /assets\/app.js/);
 
   const script = await app.inject({ method: "GET", url: "/assets/app.js" });
   assert.equal(script.statusCode, 200);
   assert.equal(script.headers["content-type"], "text/javascript; charset=utf-8");
   assert.match(script.body, /\/api\/status\/summary/);
+  assert.match(script.body, /\/api\/logs/);
+  assert.match(script.body, /子链状态/);
 
   const css = await app.inject({ method: "GET", url: "/assets/styles.css" });
   assert.equal(css.statusCode, 200);
