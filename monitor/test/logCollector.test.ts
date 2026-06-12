@@ -32,7 +32,7 @@ test("collects bounded log snapshots for node chain roles", async () => {
     inventory,
     maxLines: 3,
     runCommand: async (host, command) => {
-      assert.equal(host, "f1");
+      assert.equal(host, "debian@10.2.2.11");
       assert.equal(command, "tail -n 3 /home/debian/fishbone/logs/main.log");
       return { code: 0, stdout: "a\nb\n", stderr: "" };
     },
@@ -42,6 +42,19 @@ test("collects bounded log snapshots for node chain roles", async () => {
   assert.deepEqual(result.errors, []);
   assert.equal(result.snapshots[0]?.ok, true);
   assert.deepEqual(result.snapshots[0]?.lines, ["a", "b"]);
+});
+
+test("allows overriding the ssh user while still using inventory ip addresses", async () => {
+  await collectLogs({
+    inventory,
+    maxLines: 1,
+    sshUser: "fishbone",
+    runCommand: async (host) => {
+      assert.equal(host, "fishbone@10.2.2.11");
+      return { code: 0, stdout: "", stderr: "" };
+    },
+    now: () => "2026-06-12T00:00:00.000Z",
+  });
 });
 
 test("stores failed log collection as a cache snapshot", async () => {
