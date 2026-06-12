@@ -97,3 +97,40 @@ test("scheduler collects logs on a slower interval than status polling", async (
 
   assert.equal(logCollections, 2);
 });
+
+test("scheduler does not overlap polls when a run exceeds the interval", async () => {
+  let activeHealthCalls = 0;
+  let peakHealthCalls = 0;
+  const slowRpcClient: RpcClient = {
+    async systemHealth() {
+      activeHealthCalls += 1;
+      peakHealthCalls = Math.max(peakHealthCalls, activeHealthCalls);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      activeHealthCalls -= 1;
+      return { peers: 1, isSyncing: false, shouldHavePeers: true };
+    },
+    async chainHeader() {
+      return { number: 12 };
+    },
+    async finalizedHeader() {
+      return { number: 10 };
+    },
+    async runtimeVersion() {
+      return "fishbone-1";
+    },
+  };
+  const scheduler = createScheduler({
+    inventory,
+    store: new MonitorStore({ staleAfterMs: 15_000 }),
+    pollIntervalMs: 1,
+    logCollectionIntervalMs: 60_000,
+    createRpcClient: () => slowRpcClient,
+    collectLogs: async () => ({ snapshots: [], errors: [] }),
+  });
+
+  scheduler.start();
+  await new Promise((resolve) => setTimeout(resolve, 45));
+  scheduler.stop();
+
+  assert.equal(peakHealthCalls, 1);
+});

@@ -32,6 +32,7 @@ export type MonitorScheduler = {
 
 export function createScheduler(options: SchedulerOptions): MonitorScheduler {
   let timer: NodeJS.Timeout | null = null;
+  let inFlight: Promise<void> | null = null;
   const createRpcClient = options.createRpcClient ?? createHttpJsonRpcClient;
   const collectLogSnapshots = options.collectLogs ?? collectLogs;
   const nowMs = options.nowMs ?? Date.now;
@@ -40,7 +41,7 @@ export function createScheduler(options: SchedulerOptions): MonitorScheduler {
   const logMaxConcurrency = options.logMaxConcurrency ?? 4;
   let lastLogCollectedAtMs: number | null = null;
 
-  async function pollOnce(): Promise<void> {
+  async function runPollOnce(): Promise<void> {
     const startedAt = nowMs();
     const errors: string[] = [];
 
@@ -108,6 +109,14 @@ export function createScheduler(options: SchedulerOptions): MonitorScheduler {
       lastOk: errors.length === 0,
       errors,
     });
+  }
+
+  function pollOnce(): Promise<void> {
+    if (inFlight) return inFlight;
+    inFlight = runPollOnce().finally(() => {
+      inFlight = null;
+    });
+    return inFlight;
   }
 
   return {
