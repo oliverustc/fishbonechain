@@ -3,6 +3,7 @@ import {
   createHttpJsonRpcClient,
   type RpcClient,
 } from "./collectors/substrateRpc.js";
+import { collectLogs, type CollectLogsResult } from "./collectors/logCollector.js";
 import { collectSubstratePrometheus } from "./collectors/substratePrometheus.js";
 import type { InventorySnapshot } from "./inventory/types.js";
 import type { MonitorStore } from "./state/store.js";
@@ -12,6 +13,8 @@ export type SchedulerOptions = {
   store: MonitorStore;
   pollIntervalMs: number;
   createRpcClient?: (endpoint: string) => RpcClient;
+  collectLogs?: (input: { inventory: InventorySnapshot; maxLines: number }) => Promise<CollectLogsResult>;
+  logMaxLines?: number;
 };
 
 export type MonitorScheduler = {
@@ -23,6 +26,8 @@ export type MonitorScheduler = {
 export function createScheduler(options: SchedulerOptions): MonitorScheduler {
   let timer: NodeJS.Timeout | null = null;
   const createRpcClient = options.createRpcClient ?? createHttpJsonRpcClient;
+  const collectLogSnapshots = options.collectLogs ?? collectLogs;
+  const logMaxLines = options.logMaxLines ?? 300;
 
   async function pollOnce(): Promise<void> {
     const startedAt = Date.now();
@@ -68,6 +73,15 @@ export function createScheduler(options: SchedulerOptions): MonitorScheduler {
         }),
       ),
     );
+
+    const logResult = await collectLogSnapshots({
+      inventory: options.inventory,
+      maxLines: logMaxLines,
+    });
+    for (const snapshot of logResult.snapshots) {
+      options.store.upsertLogSnapshot(snapshot);
+    }
+    errors.push(...logResult.errors);
 
     options.store.recordCollectorHealth({
       name: "scheduler",
