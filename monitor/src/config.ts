@@ -6,6 +6,8 @@ export type MonitorConfig = {
   configPath: string;
   pollIntervalMs: number;
   staleAfterMs: number;
+  logCollectionIntervalMs: number;
+  logMaxConcurrency: number;
 };
 
 export function loadMonitorConfig(
@@ -19,6 +21,8 @@ export function loadMonitorConfig(
     configPath: isAbsolute(configPath) ? configPath : resolve(cwd, configPath),
     pollIntervalMs: readPositiveInt(env, "FISHBONE_POLL_INTERVAL_MS", 5000),
     staleAfterMs: readPositiveInt(env, "FISHBONE_STALE_AFTER_MS", 15000),
+    logCollectionIntervalMs: readPositiveInt(env, "FISHBONE_LOG_COLLECTION_INTERVAL_MS", 60_000),
+    logMaxConcurrency: readPositiveInt(env, "FISHBONE_LOG_MAX_CONCURRENCY", 4),
   };
 }
 

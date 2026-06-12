@@ -71,3 +71,29 @@ test("scheduler stores cached logs collected during poll", async () => {
 
   assert.deepEqual(store.getLogSnapshot("f1", "main")?.lines, ["cached line"]);
 });
+
+test("scheduler collects logs on a slower interval than status polling", async () => {
+  let now = 0;
+  let logCollections = 0;
+  const store = new MonitorStore({ staleAfterMs: 15_000 });
+  const scheduler = createScheduler({
+    inventory,
+    store,
+    pollIntervalMs: 5000,
+    logCollectionIntervalMs: 60_000,
+    nowMs: () => now,
+    createRpcClient: () => rpcClient,
+    collectLogs: async () => {
+      logCollections += 1;
+      return { snapshots: [], errors: [] };
+    },
+  });
+
+  await scheduler.pollOnce();
+  now = 5000;
+  await scheduler.pollOnce();
+  now = 60_000;
+  await scheduler.pollOnce();
+
+  assert.equal(logCollections, 2);
+});

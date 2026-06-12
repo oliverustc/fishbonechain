@@ -98,9 +98,14 @@ ssh -i ~/.ssh/debian-dev debian@<node ip> 'tail -n 300 <log path>'
 The collector uses the node IPs from `deploy/config.toml`, not workstation SSH
 aliases such as `f1`. The SSH user defaults to `debian`, and the identity file
 defaults to `$HOME/.ssh/debian-dev` on `bcg`. The collector clamps requested line
-counts between 1 and 1000 lines. Browser requests to `/api/logs` and
-`/api/logs/:nodeId/:chainKey` only read the cached data already held by the
-monitor process.
+counts between 1 and 1000 lines.
+
+Status polling and log collection are intentionally separate. Status polling can
+run every 5 seconds, while log collection defaults to every 60 seconds and limits
+SSH concurrency to 4 commands at a time. This avoids periodic CPU spikes from
+starting one SSH process for every `node+chain` log on each status refresh.
+Browser requests to `/api/logs` and `/api/logs/:nodeId/:chainKey` only read the
+cached data already held by the monitor process.
 
 This boundary is intentional:
 
@@ -125,6 +130,8 @@ FISHBONE_MONITOR_PORT=18080
 FISHBONE_CONFIG_PATH=/home/debian/fishbone/deploy/config.toml
 FISHBONE_POLL_INTERVAL_MS=5000
 FISHBONE_STALE_AFTER_MS=15000
+FISHBONE_LOG_COLLECTION_INTERVAL_MS=60000
+FISHBONE_LOG_MAX_CONCURRENCY=4
 FISHBONE_VM_SSH_USER=debian
 FISHBONE_VM_SSH_IDENTITY_FILE=/home/debian/.ssh/debian-dev
 ```

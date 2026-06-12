@@ -12,6 +12,8 @@ test("loads monitor config defaults", () => {
   assert.equal(config.configPath, resolve("/repo/monitor", "..", "deploy", "config.toml"));
   assert.equal(config.pollIntervalMs, 5000);
   assert.equal(config.staleAfterMs, 15000);
+  assert.equal(config.logCollectionIntervalMs, 60_000);
+  assert.equal(config.logMaxConcurrency, 4);
 });
 
 test("loads monitor config from environment", () => {
@@ -22,6 +24,8 @@ test("loads monitor config from environment", () => {
       FISHBONE_CONFIG_PATH: "/tmp/config.toml",
       FISHBONE_POLL_INTERVAL_MS: "1000",
       FISHBONE_STALE_AFTER_MS: "3000",
+      FISHBONE_LOG_COLLECTION_INTERVAL_MS: "120000",
+      FISHBONE_LOG_MAX_CONCURRENCY: "2",
     },
     "/repo/monitor",
   );
@@ -31,6 +35,8 @@ test("loads monitor config from environment", () => {
   assert.equal(config.configPath, "/tmp/config.toml");
   assert.equal(config.pollIntervalMs, 1000);
   assert.equal(config.staleAfterMs, 3000);
+  assert.equal(config.logCollectionIntervalMs, 120_000);
+  assert.equal(config.logMaxConcurrency, 2);
 });
 
 test("rejects invalid numeric config", () => {

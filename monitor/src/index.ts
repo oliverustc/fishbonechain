@@ -15,6 +15,8 @@ export async function createMonitorRuntime(config: MonitorConfig) {
     inventory,
     store,
     pollIntervalMs: config.pollIntervalMs,
+    logCollectionIntervalMs: config.logCollectionIntervalMs,
+    logMaxConcurrency: config.logMaxConcurrency,
   });
   const server = buildServer({ inventory, store, metrics });
 

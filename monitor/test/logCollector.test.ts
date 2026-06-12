@@ -57,6 +57,33 @@ test("allows overriding the ssh user while still using inventory ip addresses", 
   });
 });
 
+test("limits concurrent ssh commands while collecting logs", async () => {
+  let active = 0;
+  let peak = 0;
+  const result = await collectLogs({
+    inventory: {
+      ...inventory,
+      nodes: [
+        { id: "f1", ip: "10.2.2.11", ssh: "f1", roles: ["main", "child1"] },
+        { id: "f2", ip: "10.2.2.12", ssh: "f2", roles: ["main", "child1"] },
+      ],
+    },
+    maxLines: 1,
+    maxConcurrency: 2,
+    runCommand: async () => {
+      active += 1;
+      peak = Math.max(peak, active);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      active -= 1;
+      return { code: 0, stdout: "", stderr: "" };
+    },
+    now: () => "2026-06-12T00:00:00.000Z",
+  });
+
+  assert.equal(result.snapshots.length, 4);
+  assert.equal(peak, 2);
+});
+
 test("stores failed log collection as a cache snapshot", async () => {
   const result = await collectLogs({
     inventory,
