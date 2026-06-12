@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Fishbone Monitor</title>
+    <link rel="stylesheet" href="/assets/styles.css">
+    <script type="module" src="/assets/app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>Fishbone Monitor</h1>
+        <p id="subtitle">Loading cluster state</p>
+      </div>
+      <div class="topbar-actions">
+        <span id="updatedAt" class="timestamp">Not updated</span>
+        <button id="refreshButton" type="button">Refresh</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="summary-grid" aria-label="Cluster summary">
+        <div class="metric">
+          <span class="metric-label">Chains</span>
+          <strong id="totalChains">0</strong>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Healthy Chains</span>
+          <strong id="healthyChains">0</strong>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Nodes</span>
+          <strong id="totalNodes">0</strong>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Healthy Nodes</span>
+          <strong id="healthyNodes">0</strong>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Errors</span>
+          <strong id="errorCount">0</strong>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <h2>Chains</h2>
+          <span id="chainCount" class="muted">0 endpoints</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Chain</th>
+                <th>Node</th>
+                <th>Status</th>
+                <th>Best</th>
+                <th>Finalized</th>
+                <th>Peers</th>
+                <th>Syncing</th>
+                <th>Runtime</th>
+              </tr>
+            </thead>
+            <tbody id="chainsBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <h2>Nodes</h2>
+          <span id="nodeCount" class="muted">0 nodes</span>
+        </div>
+        <div id="nodesGrid" class="nodes-grid"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <h2>Collectors</h2>
+          <span id="collectorCount" class="muted">0 collectors</span>
+        </div>
+        <div id="collectorsGrid" class="collectors-grid"></div>
+      </section>
+    </main>
+  </body>
+</html>
