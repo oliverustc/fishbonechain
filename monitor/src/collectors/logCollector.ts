@@ -1,4 +1,6 @@
 import { execFile } from "node:child_process";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { promisify } from "node:util";
 
 import type { InventorySnapshot } from "../inventory/types.js";
@@ -17,6 +19,7 @@ export type CommandRunner = (host: string, command: string) => Promise<CommandRe
 export type CollectLogsInput = {
   inventory: InventorySnapshot;
   maxLines: number;
+  sshUser?: string;
   runCommand?: CommandRunner;
   now?: () => string;
 };
@@ -30,6 +33,7 @@ export async function collectLogs(input: CollectLogsInput): Promise<CollectLogsR
   const runCommand = input.runCommand ?? runSshCommand;
   const now = input.now ?? (() => new Date().toISOString());
   const maxLines = Math.max(1, Math.min(input.maxLines, 1000));
+  const sshUser = input.sshUser ?? process.env.FISHBONE_VM_SSH_USER ?? "debian";
   const snapshots: LogSnapshot[] = [];
   const errors: string[] = [];
 
@@ -38,10 +42,11 @@ export async function collectLogs(input: CollectLogsInput): Promise<CollectLogsR
       node.roles.map(async (chainKey) => {
         const path = `${input.inventory.logDir}/${chainKey}.log`;
         const command = `tail -n ${maxLines} ${path}`;
+        const host = `${sshUser}@${node.ip}`;
         const updatedAt = now();
 
         try {
-          const result = await runCommand(node.ssh, command);
+          const result = await runCommand(host, command);
           const error = result.stderr.trim() || `command exited with code ${result.code}`;
           const snapshot: LogSnapshot = {
             nodeId: node.id,
@@ -78,15 +83,22 @@ export async function collectLogs(input: CollectLogsInput): Promise<CollectLogsR
 }
 
 async function runSshCommand(host: string, command: string): Promise<CommandResult> {
+  const identityFile = process.env.FISHBONE_VM_SSH_IDENTITY_FILE ?? join(homedir(), ".ssh", "debian-dev");
+  const args = [
+    "-o",
+    "StrictHostKeyChecking=no",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=5",
+  ];
+  if (identityFile) {
+    args.push("-i", identityFile, "-o", "IdentitiesOnly=yes");
+  }
+  args.push(host, command);
+
   try {
-    const result = await execFileAsync("ssh", [
-      "-o",
-      "StrictHostKeyChecking=no",
-      "-o",
-      "ConnectTimeout=5",
-      host,
-      command,
-    ]);
+    const result = await execFileAsync("ssh", args);
     return { code: 0, stdout: result.stdout, stderr: result.stderr };
   } catch (error) {
     const maybe = error as { code?: number; stdout?: string; stderr?: string; message?: string };
