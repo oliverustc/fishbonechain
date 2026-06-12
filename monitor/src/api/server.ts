@@ -1,4 +1,4 @@
-import Fastify from "fastify";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 
 import type { InventorySnapshot } from "../inventory/types.js";
 import { renderPrometheusMetrics, type MetricsRegistry } from "../metrics/prometheus.js";
@@ -6,61 +6,135 @@ import type { MonitorStore } from "../state/store.js";
 
 export const API_VERSION = "1";
 
+export type InjectResponse = {
+  statusCode: number;
+  headers: Record<string, string>;
+  body: string;
+};
+
+export type MonitorServer = {
+  inject(request: { method: string; url: string }): Promise<InjectResponse>;
+  listen(options: { host: string; port: number }): Promise<void>;
+  close(): Promise<void>;
+};
+
 export function buildServer(deps: {
   inventory: InventorySnapshot;
   store: MonitorStore;
   metrics: MetricsRegistry;
-}) {
-  const app = Fastify({ logger: false });
+}): MonitorServer {
+  let server: Server | null = null;
 
-  app.addHook("onSend", async (_request, reply, payload) => {
-    reply.header("x-fishbone-monitor-api-version", API_VERSION);
-    return payload;
-  });
-
-  app.get("/healthz", async () => ({ ok: true, name: "fishbone-monitor" }));
-  app.get("/api/inventory", async () => deps.inventory);
-  app.get("/api/status/summary", async () => deps.store.getSummary());
-  app.get("/api/nodes", async () => deps.store.getNodes());
-  app.get("/api/chains", async () => deps.store.getChains());
-  app.get("/api/collectors", async () => deps.store.getCollectorHealth());
-
-  app.get<{ Params: { nodeId: string } }>("/api/nodes/:nodeId", async (request, reply) => {
-    const node = deps.store.getNodes().find((item) => item.id === request.params.nodeId);
-    if (!node) {
-      return reply.code(404).send({ error: "node not found" });
+  async function dispatch(method: string, rawUrl: string): Promise<InjectResponse> {
+    if (method !== "GET") {
+      return json(405, { error: "method not allowed" });
     }
-    return node;
-  });
 
-  app.get<{ Params: { chainKey: string } }>("/api/chains/:chainKey", async (request, reply) => {
-    const statuses = deps.store.getChains().filter((item) => item.key === request.params.chainKey);
-    if (statuses.length === 0) {
-      return reply.code(404).send({ error: "chain not found" });
+    const pathname = new URL(rawUrl, "http://monitor.local").pathname;
+    if (pathname === "/healthz") {
+      return json(200, { ok: true, name: "fishbone-monitor" });
     }
-    return statuses;
-  });
+    if (pathname === "/api/inventory") {
+      return json(200, deps.inventory);
+    }
+    if (pathname === "/api/status/summary") {
+      return json(200, deps.store.getSummary());
+    }
+    if (pathname === "/api/nodes") {
+      return json(200, deps.store.getNodes());
+    }
+    if (pathname.startsWith("/api/nodes/")) {
+      const nodeId = decodeURIComponent(pathname.slice("/api/nodes/".length));
+      const node = deps.store.getNodes().find((item) => item.id === nodeId);
+      return node ? json(200, node) : json(404, { error: "node not found" });
+    }
+    if (pathname === "/api/chains") {
+      return json(200, deps.store.getChains());
+    }
+    if (pathname.startsWith("/api/chains/")) {
+      const chainKey = decodeURIComponent(pathname.slice("/api/chains/".length));
+      const statuses = deps.store.getChains().filter((item) => item.key === chainKey);
+      return statuses.length > 0 ? json(200, statuses) : json(404, { error: "chain not found" });
+    }
+    if (pathname === "/api/collectors") {
+      return json(200, deps.store.getCollectorHealth());
+    }
+    if (pathname === "/metrics") {
+      return text(200, await renderPrometheusMetrics(deps.metrics, deps.inventory, deps.store), {
+        "content-type": "text/plain; version=0.0.4",
+      });
+    }
 
-  app.get("/metrics", async (_request, reply) => {
-    const text = await renderPrometheusMetrics(deps.metrics, deps.inventory, deps.store);
-    return reply.type("text/plain; version=0.0.4").send(text);
-  });
+    return json(404, { error: "not found" });
+  }
 
-  app.get("/api/events", async (_request, reply) => {
-    reply.raw.writeHead(200, {
+  return {
+    inject(request) {
+      return dispatch(request.method, request.url);
+    },
+    listen(options) {
+      server = createServer((request, response) => {
+        void handleHttpRequest(deps, dispatch, request, response);
+      });
+      return new Promise((resolve, reject) => {
+        server?.once("error", reject);
+        server?.listen(options.port, options.host, () => resolve());
+      });
+    },
+    close() {
+      return new Promise((resolve, reject) => {
+        if (!server) {
+          resolve();
+          return;
+        }
+        server.close((error) => (error ? reject(error) : resolve()));
+        server = null;
+      });
+    },
+  };
+}
+
+async function handleHttpRequest(
+  deps: { store: MonitorStore },
+  dispatch: (method: string, rawUrl: string) => Promise<InjectResponse>,
+  request: IncomingMessage,
+  response: ServerResponse,
+): Promise<void> {
+  if (request.url === "/api/events") {
+    response.writeHead(200, {
       "content-type": "text/event-stream",
       "cache-control": "no-cache",
       connection: "keep-alive",
+      "x-fishbone-monitor-api-version": API_VERSION,
     });
-
     const writeStatus = () => {
-      reply.raw.write(`event: status\n`);
-      reply.raw.write(`data: ${JSON.stringify({ updatedAt: new Date().toISOString(), summary: deps.store.getSummary() })}\n\n`);
+      response.write("event: status\n");
+      response.write(
+        `data: ${JSON.stringify({ updatedAt: new Date().toISOString(), summary: deps.store.getSummary() })}\n\n`,
+      );
     };
     writeStatus();
     const interval = setInterval(writeStatus, 3000);
-    reply.raw.on("close", () => clearInterval(interval));
-  });
+    request.on("close", () => clearInterval(interval));
+    return;
+  }
 
-  return app;
+  const result = await dispatch(request.method ?? "GET", request.url ?? "/");
+  response.writeHead(result.statusCode, result.headers);
+  response.end(result.body);
+}
+
+function json(statusCode: number, body: unknown): InjectResponse {
+  return text(statusCode, JSON.stringify(body), { "content-type": "application/json" });
+}
+
+function text(statusCode: number, body: string, extraHeaders: Record<string, string> = {}): InjectResponse {
+  return {
+    statusCode,
+    headers: {
+      "x-fishbone-monitor-api-version": API_VERSION,
+      ...extraHeaders,
+    },
+    body,
+  };
 }
