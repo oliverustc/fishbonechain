@@ -1,4 +1,5 @@
 import type { CollectorHealth } from "../collectors/types.js";
+import type { LogSnapshot, LogSummary } from "../logs/types.js";
 import type { ChainStatus, NodeStatus } from "../status/types.js";
 
 export type ClusterSummary = {
@@ -20,6 +21,7 @@ export class MonitorStore {
   private readonly nowMs: () => number;
   private readonly statuses = new Map<string, ChainStatus>();
   private readonly collectorHealth = new Map<string, CollectorHealth>();
+  private readonly logs = new Map<string, LogSnapshot>();
 
   constructor(options: MonitorStoreOptions) {
     this.staleAfterMs = options.staleAfterMs;
@@ -32,6 +34,35 @@ export class MonitorStore {
 
   recordCollectorHealth(health: CollectorHealth): void {
     this.collectorHealth.set(health.name, { ...health, errors: [...health.errors] });
+  }
+
+  upsertLogSnapshot(snapshot: LogSnapshot): void {
+    this.logs.set(this.key(snapshot.chainKey, snapshot.nodeId), {
+      ...snapshot,
+      lines: [...snapshot.lines],
+      errors: [...snapshot.errors],
+    });
+  }
+
+  getLogSnapshot(nodeId: string, chainKey: string): LogSnapshot | undefined {
+    const snapshot = this.logs.get(this.key(chainKey, nodeId));
+    return snapshot
+      ? { ...snapshot, lines: [...snapshot.lines], errors: [...snapshot.errors] }
+      : undefined;
+  }
+
+  getLogSummaries(): LogSummary[] {
+    return [...this.logs.values()]
+      .map((snapshot) => ({
+        nodeId: snapshot.nodeId,
+        chainKey: snapshot.chainKey,
+        path: snapshot.path,
+        updatedAt: snapshot.updatedAt,
+        ok: snapshot.ok,
+        lineCount: snapshot.lines.length,
+        errors: [...snapshot.errors],
+      }))
+      .sort((a, b) => `${a.chainKey}:${a.nodeId}`.localeCompare(`${b.chainKey}:${b.nodeId}`));
   }
 
   getSummary(): ClusterSummary {

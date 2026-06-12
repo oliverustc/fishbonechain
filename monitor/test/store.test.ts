@@ -66,3 +66,30 @@ test("summarizes cluster health", () => {
     errorCount: 1,
   });
 });
+
+test("stores and summarizes cached log snapshots", () => {
+  const store = new MonitorStore({ staleAfterMs: 15_000 });
+
+  store.upsertLogSnapshot({
+    nodeId: "f1",
+    chainKey: "main",
+    path: "/home/debian/fishbone/logs/main.log",
+    updatedAt: "2026-06-12T00:00:00.000Z",
+    ok: true,
+    lines: ["line 1", "line 2"],
+    errors: [],
+  });
+
+  assert.deepEqual(store.getLogSummaries(), [
+    {
+      nodeId: "f1",
+      chainKey: "main",
+      path: "/home/debian/fishbone/logs/main.log",
+      updatedAt: "2026-06-12T00:00:00.000Z",
+      ok: true,
+      lineCount: 2,
+      errors: [],
+    },
+  ]);
+  assert.equal(store.getLogSnapshot("f1", "main")?.lines.length, 2);
+});
