@@ -13,8 +13,15 @@ export type SchedulerOptions = {
   store: MonitorStore;
   pollIntervalMs: number;
   createRpcClient?: (endpoint: string) => RpcClient;
-  collectLogs?: (input: { inventory: InventorySnapshot; maxLines: number }) => Promise<CollectLogsResult>;
+  collectLogs?: (input: {
+    inventory: InventorySnapshot;
+    maxLines: number;
+    maxConcurrency: number;
+  }) => Promise<CollectLogsResult>;
+  logCollectionIntervalMs?: number;
   logMaxLines?: number;
+  logMaxConcurrency?: number;
+  nowMs?: () => number;
 };
 
 export type MonitorScheduler = {
@@ -27,10 +34,14 @@ export function createScheduler(options: SchedulerOptions): MonitorScheduler {
   let timer: NodeJS.Timeout | null = null;
   const createRpcClient = options.createRpcClient ?? createHttpJsonRpcClient;
   const collectLogSnapshots = options.collectLogs ?? collectLogs;
+  const nowMs = options.nowMs ?? Date.now;
+  const logCollectionIntervalMs = options.logCollectionIntervalMs ?? 60_000;
   const logMaxLines = options.logMaxLines ?? 300;
+  const logMaxConcurrency = options.logMaxConcurrency ?? 4;
+  let lastLogCollectedAtMs: number | null = null;
 
   async function pollOnce(): Promise<void> {
-    const startedAt = Date.now();
+    const startedAt = nowMs();
     const errors: string[] = [];
 
     await Promise.all(
@@ -74,20 +85,26 @@ export function createScheduler(options: SchedulerOptions): MonitorScheduler {
       ),
     );
 
-    const logResult = await collectLogSnapshots({
-      inventory: options.inventory,
-      maxLines: logMaxLines,
-    });
-    for (const snapshot of logResult.snapshots) {
-      options.store.upsertLogSnapshot(snapshot);
+    const shouldCollectLogs =
+      lastLogCollectedAtMs === null || startedAt - lastLogCollectedAtMs >= logCollectionIntervalMs;
+    if (shouldCollectLogs) {
+      lastLogCollectedAtMs = startedAt;
+      const logResult = await collectLogSnapshots({
+        inventory: options.inventory,
+        maxLines: logMaxLines,
+        maxConcurrency: logMaxConcurrency,
+      });
+      for (const snapshot of logResult.snapshots) {
+        options.store.upsertLogSnapshot(snapshot);
+      }
+      errors.push(...logResult.errors);
     }
-    errors.push(...logResult.errors);
 
     options.store.recordCollectorHealth({
       name: "scheduler",
       lastStartedAt: new Date(startedAt).toISOString(),
       lastFinishedAt: new Date().toISOString(),
-      lastDurationMs: Date.now() - startedAt,
+      lastDurationMs: nowMs() - startedAt,
       lastOk: errors.length === 0,
       errors,
     });

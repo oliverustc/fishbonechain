@@ -19,6 +19,7 @@ export type CommandRunner = (host: string, command: string) => Promise<CommandRe
 export type CollectLogsInput = {
   inventory: InventorySnapshot;
   maxLines: number;
+  maxConcurrency?: number;
   sshUser?: string;
   runCommand?: CommandRunner;
   now?: () => string;
@@ -33,13 +34,14 @@ export async function collectLogs(input: CollectLogsInput): Promise<CollectLogsR
   const runCommand = input.runCommand ?? runSshCommand;
   const now = input.now ?? (() => new Date().toISOString());
   const maxLines = Math.max(1, Math.min(input.maxLines, 1000));
+  const maxConcurrency = Math.max(1, input.maxConcurrency ?? 4);
   const sshUser = input.sshUser ?? process.env.FISHBONE_VM_SSH_USER ?? "debian";
   const snapshots: LogSnapshot[] = [];
   const errors: string[] = [];
 
-  await Promise.all(
-    input.inventory.nodes.flatMap((node) =>
-      node.roles.map(async (chainKey) => {
+  const jobs = input.inventory.nodes.flatMap((node) =>
+    node.roles.map(
+      (chainKey) => async () => {
         const path = `${input.inventory.logDir}/${chainKey}.log`;
         const command = `tail -n ${maxLines} ${path}`;
         const host = `${sshUser}@${node.ip}`;
@@ -74,12 +76,25 @@ export async function collectLogs(input: CollectLogsInput): Promise<CollectLogsR
           });
           errors.push(`${node.id}:${chainKey}:${message}`);
         }
-      }),
+      },
     ),
   );
+  await runLimited(jobs, maxConcurrency);
 
   snapshots.sort((a, b) => `${a.chainKey}:${a.nodeId}`.localeCompare(`${b.chainKey}:${b.nodeId}`));
   return { snapshots, errors };
+}
+
+async function runLimited(jobs: Array<() => Promise<void>>, maxConcurrency: number): Promise<void> {
+  let next = 0;
+  const workers = Array.from({ length: Math.min(maxConcurrency, jobs.length) }, async () => {
+    while (next < jobs.length) {
+      const job = jobs[next];
+      next += 1;
+      await job();
+    }
+  });
+  await Promise.all(workers);
 }
 
 async function runSshCommand(host: string, command: string): Promise<CommandResult> {

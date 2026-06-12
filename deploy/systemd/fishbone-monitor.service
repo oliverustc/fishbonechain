@@ -13,6 +13,8 @@ Environment=FISHBONE_MONITOR_PORT=18080
 Environment=FISHBONE_CONFIG_PATH=/home/debian/fishbone/deploy/config.toml
 Environment=FISHBONE_POLL_INTERVAL_MS=5000
 Environment=FISHBONE_STALE_AFTER_MS=15000
+Environment=FISHBONE_LOG_COLLECTION_INTERVAL_MS=60000
+Environment=FISHBONE_LOG_MAX_CONCURRENCY=4
 ExecStart=/usr/bin/node /home/debian/fishbone/monitor/dist/src/index.js
 Restart=always
 RestartSec=5
