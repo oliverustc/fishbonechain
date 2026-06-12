@@ -1,4 +1,6 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 
 import type { InventorySnapshot } from "../inventory/types.js";
 import { renderPrometheusMetrics, type MetricsRegistry } from "../metrics/prometheus.js";
@@ -24,6 +26,7 @@ export function buildServer(deps: {
   metrics: MetricsRegistry;
 }): MonitorServer {
   let server: Server | null = null;
+  const publicDir = resolve(process.cwd(), "public");
 
   async function dispatch(method: string, rawUrl: string): Promise<InjectResponse> {
     if (method !== "GET") {
@@ -31,6 +34,9 @@ export function buildServer(deps: {
     }
 
     const pathname = new URL(rawUrl, "http://monitor.local").pathname;
+    const staticResponse = await tryStaticAsset(publicDir, pathname);
+    if (staticResponse) return staticResponse;
+
     if (pathname === "/healthz") {
       return json(200, { ok: true, name: "fishbone-monitor" });
     }
@@ -92,6 +98,23 @@ export function buildServer(deps: {
       });
     },
   };
+}
+
+async function tryStaticAsset(publicDir: string, pathname: string): Promise<InjectResponse | null> {
+  const assets: Record<string, { file: string; contentType: string }> = {
+    "/": { file: "index.html", contentType: "text/html; charset=utf-8" },
+    "/assets/app.js": { file: "assets/app.js", contentType: "text/javascript; charset=utf-8" },
+    "/assets/styles.css": { file: "assets/styles.css", contentType: "text/css; charset=utf-8" },
+  };
+  const asset = assets[pathname];
+  if (!asset) return null;
+
+  try {
+    const body = await readFile(resolve(publicDir, asset.file), "utf8");
+    return text(200, body, { "content-type": asset.contentType });
+  } catch {
+    return null;
+  }
 }
 
 async function handleHttpRequest(
