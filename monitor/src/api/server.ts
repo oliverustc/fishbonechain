@@ -65,6 +65,16 @@ export function buildServer(deps: {
     if (pathname === "/api/collectors") {
       return json(200, deps.store.getCollectorHealth());
     }
+    if (pathname === "/api/logs") {
+      return json(200, deps.store.getLogSummaries());
+    }
+    if (pathname.startsWith("/api/logs/")) {
+      const segments = pathname.slice("/api/logs/".length).split("/");
+      const nodeId = decodeURIComponent(segments[0] ?? "");
+      const chainKey = decodeURIComponent(segments[1] ?? "");
+      const snapshot = deps.store.getLogSnapshot(nodeId, chainKey);
+      return snapshot ? json(200, snapshot) : json(404, { error: "log cache not found" });
+    }
     if (pathname === "/metrics") {
       return text(200, await renderPrometheusMetrics(deps.metrics, deps.inventory, deps.store), {
         "content-type": "text/plain; version=0.0.4",
