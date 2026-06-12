@@ -51,6 +51,8 @@ Expected inventory shape:
 - `GET /api/chains`: latest status grouped by chain endpoint.
 - `GET /api/chains/:chainKey`: latest status for one chain.
 - `GET /api/collectors`: last collector run metadata.
+- `GET /api/logs`: cached VM log summaries collected by the scheduler.
+- `GET /api/logs/:nodeId/:chainKey`: one cached VM log snapshot.
 - `GET /api/events`: SSE stream for dashboard updates.
 - `GET /metrics`: Prometheus-compatible metrics.
 
@@ -67,6 +69,52 @@ API version 1 compatibility policy:
 - Breaking response changes require a new `/api/v2` path.
 - Documented Prometheus metric names and labels stay stable once shipped.
 
+## Cached VM Logs
+
+Each VM remains responsible for writing its own local chain logs. The monitor does
+not ask a VM to run work when a browser opens the dashboard. Instead, the scheduler
+running on `bcg` periodically reads bounded recent lines from each VM log file and
+stores the result in the monitor's in-memory cache.
+
+Current log path convention:
+
+```text
+<inventory.logDir>/<chainKey>.log
+```
+
+With the current deployment config this means paths such as:
+
+```text
+/home/debian/fishbone/logs/main.log
+/home/debian/fishbone/logs/child1.log
+```
+
+The default collector command is:
+
+```bash
+ssh -i ~/.ssh/debian-dev debian@<node ip> 'tail -n 300 <log path>'
+```
+
+The collector uses the node IPs from `deploy/config.toml`, not workstation SSH
+aliases such as `f1`. The SSH user defaults to `debian`, and the identity file
+defaults to `$HOME/.ssh/debian-dev` on `bcg`. The collector clamps requested line
+counts between 1 and 1000 lines. Browser requests to `/api/logs` and
+`/api/logs/:nodeId/:chainKey` only read the cached data already held by the
+monitor process.
+
+This boundary is intentional:
+
+- Dashboard refreshes do not trigger SSH commands on VMs.
+- A slow or missing VM log file affects the background collector, not the request
+  path serving the dashboard.
+- Log APIs are read-only cache APIs and should stay that way.
+
+Future interactive VM operations, such as restarting a chain, collecting a one-off
+diagnostic bundle, or running an administrative command, should be implemented as
+a separate `actions` boundary and API namespace. That path should include explicit
+authentication, authorization, audit logging, timeouts, rate limits, and command
+allowlists before it is exposed.
+
 ## Configuration
 
 Environment variables:
@@ -77,6 +125,8 @@ FISHBONE_MONITOR_PORT=18080
 FISHBONE_CONFIG_PATH=/home/debian/fishbone/deploy/config.toml
 FISHBONE_POLL_INTERVAL_MS=5000
 FISHBONE_STALE_AFTER_MS=15000
+FISHBONE_VM_SSH_USER=debian
+FISHBONE_VM_SSH_IDENTITY_FILE=/home/debian/.ssh/debian-dev
 ```
 
 For a stricter access boundary, bind to localhost and use SSH forwarding:
