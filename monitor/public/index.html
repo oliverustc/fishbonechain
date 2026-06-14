@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FishboneChain 监控</title>
+    <link rel="stylesheet" href="/assets/styles.css">
+    <script type="module" src="/assets/app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>FishboneChain 监控</h1>
+        <p id="subtitle">正在加载集群状态</p>
+      </div>
+      <div class="topbar-actions">
+        <span id="updatedAt" class="timestamp">尚未更新</span>
+        <button id="refreshButton" type="button">刷新</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="summary-grid" aria-label="集群概览">
+        <div class="metric">
+          <span class="metric-label">子链数量</span>
+          <strong id="totalChains">0</strong>
+        </div>
+        <div class="metric">
+          <span class="metric-label">健康子链</span>
+          <strong id="healthyChains">0</strong>
+        </div>
+        <div class="metric">
+          <span class="metric-label">节点数量</span>
+          <strong id="totalNodes">0</strong>
+        </div>
+        <div class="metric">
+          <span class="metric-label">健康节点</span>
+          <strong id="healthyNodes">0</strong>
+        </div>
+        <div class="metric">
+          <span class="metric-label">异常数量</span>
+          <strong id="errorCount">0</strong>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <h2>子链状态</h2>
+          <span id="chainCount" class="muted">0 个端点</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>子链</th>
+                <th>节点</th>
+                <th>状态</th>
+                <th>最高区块</th>
+                <th>最终确认区块</th>
+                <th>连接数</th>
+                <th>同步中</th>
+                <th>运行时版本</th>
+              </tr>
+            </thead>
+            <tbody id="chainsBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <h2>运行日志</h2>
+          <span id="logStatus" class="muted">等待缓存</span>
+        </div>
+        <div class="log-toolbar">
+          <label>
+            节点
+            <select id="logNodeSelect"></select>
+          </label>
+          <label>
+            子链
+            <select id="logChainSelect"></select>
+          </label>
+          <button id="refreshLogButton" type="button">刷新日志</button>
+          <span id="logMeta" class="timestamp">暂无日志</span>
+        </div>
+        <pre id="logContent" class="log-view">暂无缓存日志</pre>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <h2>节点状态</h2>
+          <span id="nodeCount" class="muted">0 个节点</span>
+        </div>
+        <div id="nodesGrid" class="nodes-grid"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <h2>采集器</h2>
+          <span id="collectorCount" class="muted">0 个采集器</span>
+        </div>
+        <div id="collectorsGrid" class="collectors-grid"></div>
+      </section>
+    </main>
+  </body>
+</html>
