@@ -40,7 +40,8 @@ test("normalizes child chain validators and endpoints", async () => {
   const child6 = inventory.chains.find((chain) => chain.key === "child6");
   assert.ok(child6);
   assert.deepEqual(child6.validators, ["f1", "f2", "f3", "f4", "f5"]);
-  assert.equal(child6.binary, "/home/debian/fishbone/bin/fishbone-node-babe");
+  assert.equal(child6.chainId, "fishbone_child_6");
+  assert.equal(child6.binary, undefined);
   assert.equal(child6.wsEndpoints[0], "ws://10.2.2.11:9950");
   assert.equal(child6.prometheusEndpoints[0], "http://10.2.2.11:9621/metrics");
 });
