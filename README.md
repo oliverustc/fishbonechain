@@ -1,12 +1,14 @@
 # FishboneChain
 
-FishboneChain 是一个基于 Substrate/Polkadot SDK 的主链 + 多子链众包实验系统，用于验证多条专用子链并行承载异构众包任务时的吞吐量扩展和资金流动性优势。
+FishboneChain 是一个基于 Substrate/Polkadot SDK 的安全可扩展数据流通平台。数据众包是已经实现的第一个场景，数据交易是下一阶段场景；不同场景可以部署到不同子链，并通过链上 profile 声明场景类型和结算模式。
 
 当前仓库已由 Codex 接管维护。面向后续 agent 协作的入口说明见 [agent.md](agent.md)。
 
 ## 当前状态
 
-- 主链 runtime 已集成 `pallet-ccmc`、`pallet-fmc`、`pallet-crowdsource`
+- runtime 已支持平台主链、数据众包子链和数据交易子链 profile
+- 平台层已集成 `pallet-ccmc`、`pallet-fmc`、`pallet-chain-profile`
+- 场景层已有 `pallet-crowdsource`、`pallet-data-registry`、`pallet-trade-session`
 - 默认 AURA 节点、1s/2s/10MB 变体、BABE 变体均已具备构建目标
 - `deploy/` 已包含 12 台 VM、1 主链 + 6 子链的部署框架和 chain spec
 - `scripts/` 已包含 worker、bridge、metrics、实验初始化、结果分析和绘图脚本
@@ -16,8 +18,9 @@ FishboneChain 是一个基于 Substrate/Polkadot SDK 的主链 + 多子链众包
 
 | 方案 | 说明 | 文档 |
 |------|------|------|
-| FishboneChain | 主链 + 多子链众包基础设施，主链管资金和摘要，子链管数据收集 | [docs/architecture/fishbonechain.md](docs/architecture/fishbonechain.md) |
-| CDT | 可定制可验证数据交易，作为后续可部署在子链上的数据交易协议 | [docs/architecture/cdt.md](docs/architecture/cdt.md) |
+| FishboneChain 平台 | 安全可扩展的数据流通平台，平台层管理链身份、摘要和可选资金模块 | [docs/architecture/platform-architecture.md](docs/architecture/platform-architecture.md) |
+| 数据众包 | 已实现的第一个场景，使用 Crowdsource + FMC 账单模式 | [docs/architecture/fishbonechain.md](docs/architecture/fishbonechain.md) |
+| CDT | 可定制可验证数据交易，部署在数据交易子链，第一版使用 MainEscrow | [docs/architecture/cdt.md](docs/architecture/cdt.md) |
 | BPiano | 高效跨链状态证明，作为后续替换链下 bridge 信任假设的证明机制 | [docs/architecture/cross-chain-proof.md](docs/architecture/cross-chain-proof.md) |
 
 ## 技术栈
@@ -75,8 +78,8 @@ node scripts/e2e-verify.js
 fishbonechain/
 ├── agent.md        # Codex/agent 接管指南
 ├── node/           # fishbone-node，CLI、chain spec、AURA/BABE 服务
-├── runtime/        # fishbone-runtime，AURA/BABE runtime 分文件组织
-├── pallets/        # ccmc、fmc、crowdsource 和模板 pallet
+├── runtime/        # fishbone-runtime，按平台/场景 profile 组织
+├── pallets/        # 平台 pallet 与 crowdsource/data-trade 场景 pallet
 ├── scripts/        # 本地网络、bridge、worker、metrics、实验脚本
 ├── deploy/         # 12 VM 部署框架、spec、keys、二进制产物目录
 ├── docs/           # 分类后的架构、实现、开发、运维和实验文档

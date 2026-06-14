@@ -29,7 +29,12 @@
  *     将下方 CHAINS 每项的 miners 改为 ["alice"]。
  */
 
+import { readFileSync } from "fs";
 import { ApiPromise, WsProvider, Keyring } from "@polkadot/api";
+
+const CHAIN_PROFILES = JSON.parse(
+  readFileSync(new URL("./profiles/chains.json", import.meta.url), "utf8")
+);
 
 const DRY_RUN   = process.argv.includes("--dry-run");
 const ONLY_STEP = process.argv.includes("--step")
@@ -133,12 +138,66 @@ const CHAINS = [
     description: "Data market (BABE-5, 200-slot Epoch)",
     workers: 500,
   },
-];
+].map((chain) => {
+  const profileKey = `child${chain.chain_id + 1}`;
+  const profile = CHAIN_PROFILES[profileKey];
+  if (!profile) {
+    throw new Error(`missing chain profile: ${profileKey}`);
+  }
+  return { ...chain, profileKey, profile };
+});
 
 // ── 工具函数 ────────────────────────────────────────────────────────────────
 
 function log(msg) { console.log(`[setup ${new Date().toISOString()}] ${msg}`); }
 function skip(step) { return ONLY_STEP !== null && ONLY_STEP !== step; }
+
+function printDryRunPlan() {
+  if (!skip(1)) log("Step 1: 给 f1-f12 验证人账户充值 100 UNIT");
+  if (!skip(2)) log("Step 2: Alice 向 FMC 充值 500,000 UNIT");
+  if (!skip(3)) {
+    log("Step 3: 注册子链到 CCMC");
+    for (const chain of CHAINS) {
+      log(`  ${chain.profileKey}: scene=${chain.profile.scene}, settlement=${chain.profile.settlement}, expected_chain_id=${chain.chain_id}`);
+    }
+  }
+  if (!skip(4)) {
+    log("Step 4: 矿工账户加入各自子链");
+    for (const chain of CHAINS) {
+      log(`  ${chain.profileKey}: miners=${chain.miners.join(",")}`);
+    }
+  }
+  if (!skip(5)) {
+    log("Step 5: 创建并激活 FMC 众包任务");
+    for (const chain of CHAINS) {
+      if (chain.profile.scene !== "Crowdsource" || chain.profile.settlement !== "FmcTaskBill") {
+        log(`  ${chain.profileKey}: skip FMC crowdsource task for scene=${chain.profile.scene}, settlement=${chain.profile.settlement}`);
+      } else {
+        log(`  ${chain.profileKey}: create/activate task_id=${chain.task_id}`);
+      }
+    }
+  }
+  if (!skip(6)) {
+    log("Step 6: 向众包子链同步任务");
+    for (const chain of CHAINS) {
+      log(
+        chain.profile.scene === "Crowdsource"
+          ? `  ${chain.profileKey}: sync crowdsource task_id=${chain.task_id}`
+          : `  ${chain.profileKey}: skip crowdsource sync for scene=${chain.profile.scene}`
+      );
+    }
+  }
+  if (!skip(7)) {
+    log("Step 7: 给众包 worker 账户充值");
+    for (const chain of CHAINS) {
+      log(
+        chain.profile.scene === "Crowdsource"
+          ? `  ${chain.profileKey}: fund ${chain.workers} workers`
+          : `  ${chain.profileKey}: skip crowdsource worker funding for scene=${chain.profile.scene}`
+      );
+    }
+  }
+}
 
 async function sendTx(api, tx, signer, label) {
   if (DRY_RUN) {
@@ -196,6 +255,11 @@ async function main() {
   log("=== FishboneChain 实验初始化 ===");
   if (DRY_RUN) log(">>> DRY RUN 模式：只打印不执行 <<<");
   if (ONLY_STEP !== null) log(`>>> 仅执行 Step ${ONLY_STEP} <<<`);
+  if (DRY_RUN) {
+    printDryRunPlan();
+    log("\n=== dry-run 完成 ===");
+    return;
+  }
 
   // ── 连接主链 ────────────────────────────────────────────────────────────
   log(`\n连接主链 ${MAIN_WS}...`);
@@ -266,6 +330,10 @@ async function main() {
   if (!skip(5)) {
     log("\n── Step 5：Alice 创建并激活 6 个任务");
     for (const chain of CHAINS) {
+      if (chain.profile.scene !== "Crowdsource" || chain.profile.settlement !== "FmcTaskBill") {
+        log(`  ${chain.profileKey}: skip FMC crowdsource task for scene=${chain.profile.scene}, settlement=${chain.profile.settlement}`);
+        continue;
+      }
       const descBytes = Array.from(new TextEncoder().encode(chain.description));
       await sendTx(
         mainApi,
@@ -288,6 +356,10 @@ async function main() {
   if (!skip(6)) {
     log("\n── Step 6：向各子链同步任务（Alice 调用 crowdsource.sync_task）");
     for (const chain of CHAINS) {
+      if (chain.profile.scene !== "Crowdsource") {
+        log(`  ${chain.profileKey}: skip crowdsource sync for scene=${chain.profile.scene}`);
+        continue;
+      }
       log(`  连接 ${chain.ws}...`);
       const api = await ApiPromise.create({ provider: new WsProvider(chain.ws) });
       const descBytes = Array.from(new TextEncoder().encode(chain.description));
@@ -310,6 +382,10 @@ async function main() {
   if (!skip(7)) {
     log("\n── Step 7：给工作者账户充值（各子链，每账户 10 UNIT）");
     for (const chain of CHAINS) {
+      if (chain.profile.scene !== "Crowdsource") {
+        log(`  ${chain.profileKey}: skip crowdsource worker funding for scene=${chain.profile.scene}`);
+        continue;
+      }
       log(`  连接 ${chain.ws}（${chain.workers} 个 //Worker 账户）...`);
       const api = await ApiPromise.create({ provider: new WsProvider(chain.ws) });
 

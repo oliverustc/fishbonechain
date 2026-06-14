@@ -1,22 +1,27 @@
 # FishboneChain 开发者指南
 
 > 适用对象：接手本项目的 Rust/Substrate、脚本和实验维护者  
-> 当前范围：1 条主链 + 6 条子链的 solo-chain 实验系统，含 CCMC/FMC/Crowdsource pallet、AURA/BABE 节点变体和链下实验脚本。
+> 当前范围：1 条主链 + 多条场景子链的 solo-chain 实验系统，含平台 pallet、数据众包场景、数据交易场景骨架、AURA/BABE 节点变体和链下脚本。
 
 ## 当前架构
 
-FishboneChain 当前实现的是主链 + 多子链的实验形态，不是 Relay+Parachain/XCM 形态。
+FishboneChain 是安全可扩展的数据流通平台。当前实现的是主链 + 多子链的实验形态，不是 Relay+Parachain/XCM 形态。
 
 ```text
 主链 fishbone_main
   ├── pallet-ccmc：子链注册、矿工管理、Epoch 摘要确认
-  └── pallet-fmc：任务资金托管、账单投票、奖励结算
+  ├── pallet-fmc：可选任务资金托管、账单投票、奖励结算
+  └── pallet-chain-profile：链身份、场景类型和结算模式
 
-子链 child1-child6
+众包子链
   └── pallet-crowdsource：任务同步、数据提交、Epoch 结算、Merkle root 和账单事件
 
+数据交易子链
+  ├── pallet-data-registry：数据 listing、IMT root 和描述
+  └── pallet-trade-session：MainEscrow 会话、锁资、押金和哈希链 claim
+
 链下 bridge
-  └── scripts/bridge.js：监听子链 EpochFinalized，向主链提交 ccmc digest 和 fmc bill
+  └── scripts/bridges/：按场景拆分 bridge adapter
 ```
 
 主链和子链通过独立 Substrate 节点运行。跨链动作由 Node.js bridge 完成，不依赖原生 XCM。
@@ -25,10 +30,12 @@ FishboneChain 当前实现的是主链 + 多子链的实验形态，不是 Relay
 
 ```text
 node/                   fishbone-node CLI、chain spec、AURA/BABE service
-runtime/                fishbone-runtime，AURA/BABE runtime 分文件组织
+runtime/                fishbone-runtime，按平台/场景 profile 分文件组织
 pallets/ccmc/           子链管理 pallet
 pallets/fmc/            资金管理 pallet
-pallets/crowdsource/    子链众包 pallet
+pallets/crowdsource/    数据众包场景 pallet
+pallets/data-registry/  数据交易 listing pallet
+pallets/trade-session/  数据交易会话/锁资 pallet
 scripts/                worker、bridge、metrics、setup、plot、runtime upgrade
 deploy/                 12 VM 部署配置、spec、keys、Python 管理框架
 docs/                   正式项目文档和实验报告

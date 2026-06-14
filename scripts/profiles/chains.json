@@ -1,0 +1,8 @@
+{
+  "child1": { "chainId": 0, "scene": "Crowdsource", "settlement": "FmcTaskBill" },
+  "child2": { "chainId": 1, "scene": "Crowdsource", "settlement": "FmcTaskBill" },
+  "child3": { "chainId": 2, "scene": "Crowdsource", "settlement": "FmcTaskBill" },
+  "child4": { "chainId": 3, "scene": "Crowdsource", "settlement": "FmcTaskBill" },
+  "child5": { "chainId": 4, "scene": "Crowdsource", "settlement": "FmcTaskBill" },
+  "child6": { "chainId": 5, "scene": "DataTrade", "settlement": "MainEscrow" }
+}

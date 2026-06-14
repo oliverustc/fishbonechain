@@ -42,13 +42,13 @@ use sp_runtime::{
 use sp_version::RuntimeVersion;
 
 // Local module imports
-use super::{
-	AccountId, Balance, Block, Executive, Grandpa, InherentDataExt, Nonce, Runtime,
-	RuntimeCall, RuntimeGenesisConfig, SessionKeys, System, TransactionPayment, VERSION,
-};
 use super::Aura;
 #[cfg(feature = "babe")]
 use super::Babe;
+use super::{
+	AccountId, Balance, Block, Executive, Grandpa, InherentDataExt, Nonce, Runtime, RuntimeCall,
+	RuntimeGenesisConfig, SessionKeys, System, TransactionPayment, VERSION,
+};
 #[cfg(feature = "babe")]
 use pallet_babe;
 
