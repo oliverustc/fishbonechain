@@ -89,6 +89,7 @@ fishbonechain/
 - [docs/Readme.md](docs/Readme.md)：文档索引
 - [docs/implementation-record.md](docs/implementation-record.md)：当前实现记录
 - [docs/experiment-report.md](docs/experiment-report.md)：实验报告
+- [docs/linear-scaling-mainchain-load.md](docs/linear-scaling-mainchain-load.md)：N=1..6 子链线性扩展与主链负载实验
 - [docs/liquidity-experiment.md](docs/liquidity-experiment.md)：资金流动性实验记录
 
 ## 维护边界

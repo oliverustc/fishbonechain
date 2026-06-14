@@ -218,10 +218,10 @@ impl pallet_fmc::Config for Runtime {
 
 /// Configure pallet-crowdsource (Child Chain Crowdsourcing).
 /// ChainId = 0：子链注册时主链 CCMC 分配的 ChainId（测试环境默认 0）
-/// Slots: CollectingSlot=100 blocks (~10min), SyncingSlot=20 blocks (~2min)
+/// Slots: CollectingSlot=600 blocks (~60min), SyncingSlot=20 blocks (~2min)
 parameter_types! {
 	pub const CrowdsourceChainId: pallet_ccmc::types::ChainId = 0;
-	pub const CollectingSlotBlocks: u32 = 100;
+	pub const CollectingSlotBlocks: u32 = 600;
 	pub const SyncingSlotBlocks: u32    = 20;
 }
 
@@ -231,7 +231,7 @@ impl pallet_crowdsource::Config for Runtime {
 	type ChainId                = CrowdsourceChainId;
 	type CollectingSlotBlocks   = CollectingSlotBlocks;
 	type SyncingSlotBlocks      = SyncingSlotBlocks;
-	type MaxSubmissionsPerEpoch = frame_support::traits::ConstU32<1000>;
+	type MaxSubmissionsPerEpoch = frame_support::traits::ConstU32<10000>;
 	type DataValidator          = pallet_crowdsource::AlwaysValidate;
 	type WeightInfo             = ();
 }

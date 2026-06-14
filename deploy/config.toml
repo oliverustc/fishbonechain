@@ -14,7 +14,7 @@ ssh        = "bcg"             # SSH Host alias
 ip         = "192.168.8.41"
 
 # ── 链定义 ───────────────────────────────────────────────────────────────────
-# binary: 可选，不填则使用 cluster.binary；子链 2/3/5/6 需要专用 binary
+# binary: 可选，不填则使用 cluster.binary；容量线性扩展实验中 1..6 子链统一使用默认 binary
 
 [chains.main]
 id       = "fishbone_main"
@@ -33,21 +33,19 @@ rpc_port = 9945
 prom_port = 9616
 
 [chains.child2]
-# 实时城市交通感知（高频微任务，AURA-3，2s 出块，5min Sc）
-# 验证人：f4 f5 f6 | binary: fishbone-node-2s
+# 实时城市交通感知（容量线性扩展实验：AURA-3，默认 runtime）
+# 验证人：f4 f5 f6
 id       = "fishbone_child_2"
 spec     = "specs/child2-custom-raw.json"
-binary   = "/home/debian/fishbone/bin/fishbone-node-2s"
 p2p_port = 30335
 rpc_port = 9946
 prom_port = 9617
 
 [chains.child3]
-# 专业医疗影像标注（长周期高价值，AURA-3，6s 出块，30min Sc，10MB 区块）
-# 验证人：f7 f8 f9 | binary: fishbone-node-10mb
+# 专业医疗影像标注（容量线性扩展实验：AURA-3，默认 runtime）
+# 验证人：f7 f8 f9
 id       = "fishbone_child_3"
 spec     = "specs/child3-custom-raw.json"
-binary   = "/home/debian/fishbone/bin/fishbone-node-10mb"
 p2p_port = 30336
 rpc_port = 9947
 prom_port = 9618
@@ -62,21 +60,18 @@ rpc_port = 9948
 prom_port = 9619
 
 [chains.child5]
-# 野外科学传感器网络（超高频 IoT，AURA-3，1s 出块，60s Sc）
-# 验证人：f10 f11 f12 | binary: fishbone-node-1s
+# 野外科学传感器网络（容量线性扩展实验：AURA-3，默认 runtime）
+# 验证人：f10 f11 f12
 id       = "fishbone_child_5"
 spec     = "specs/child5-custom-raw.json"
-binary   = "/home/debian/fishbone/bin/fishbone-node-1s"
 p2p_port = 30338
 rpc_port = 9949
 prom_port = 9620
 
 [chains.child6]
-# 去中心化数据市场（BABE-5，6s 出块，200-slot epoch）
-# 使用 fishbone-node-babe binary（--features fishbone-runtime/babe 编译）
-id       = "fishbone_child_6_babe"
+# 去中心化数据市场（AURA-5，6s 出块）
+id       = "fishbone_child_6"
 spec     = "specs/child6-custom-raw.json"
-binary   = "/home/debian/fishbone/bin/fishbone-node-babe"
 p2p_port = 30339
 rpc_port = 9950
 prom_port = 9621

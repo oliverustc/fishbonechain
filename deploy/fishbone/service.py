@@ -43,11 +43,11 @@ WantedBy=multi-user.target
 _CHAIN_LABELS: dict[str, str] = {
     "main":   "Main Chain",
     "child1": "Child-1 (Delivery Crowdsource)",
-    "child2": "Child-2 (Traffic Sensing, 2s)",
-    "child3": "Child-3 (Medical Annotation, 10MB)",
+    "child2": "Child-2 (Traffic Sensing, AURA)",
+    "child3": "Child-3 (Medical Annotation, AURA)",
     "child4": "Child-4 (Financial Verification, 7-val)",
-    "child5": "Child-5 (IoT Sensor Network, 1s)",
-    "child6": "Child-6 (Data Market, BABE)",
+    "child5": "Child-5 (IoT Sensor Network, AURA)",
+    "child6": "Child-6 (Data Market, AURA-5)",
 }
 
 

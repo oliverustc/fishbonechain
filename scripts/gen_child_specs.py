@@ -75,12 +75,33 @@ def inject_validators(spec: dict, aura_ss58: list[str], gran_ss58: list[str], ke
 def main():
     SPECS.mkdir(parents=True, exist_ok=True)
 
-    # ── 各子链配置 ────────────────────────────────────────────────────────────
+    # ── 主链 + 各子链配置 ─────────────────────────────────────────────────────
     chains = [
+        {
+            "name":     "main",
+            "chain_id": "main-local",
+            "binary":   BIN_DIR / "fishbone-node",
+            "validators": [f"f{i}" for i in range(1, 13)],
+            "out":      SPECS / "main-custom-raw.json",
+        },
+        {
+            "name":     "child1",
+            "chain_id": "child1-local",
+            "binary":   BIN_DIR / "fishbone-node",
+            "validators": ["f1", "f2", "f3"],
+            "out":      SPECS / "child1-custom-raw.json",
+        },
+        {
+            "name":     "child2",
+            "chain_id": "child2-local",
+            "binary":   BIN_DIR / "fishbone-node",
+            "validators": ["f4", "f5", "f6"],
+            "out":      SPECS / "child2-custom-raw.json",
+        },
         {
             "name":     "child3",
             "chain_id": "child3-local",
-            "binary":   BIN_DIR / "fishbone-node-10mb",
+            "binary":   BIN_DIR / "fishbone-node",
             "validators": ["f7", "f8", "f9"],
             "out":      SPECS / "child3-custom-raw.json",
         },
@@ -94,17 +115,16 @@ def main():
         {
             "name":     "child5",
             "chain_id": "child5-local",
-            "binary":   BIN_DIR / "fishbone-node-1s",
+            "binary":   BIN_DIR / "fishbone-node",
             "validators": ["f10", "f11", "f12"],
             "out":      SPECS / "child5-custom-raw.json",
         },
         {
             "name":     "child6",
-            "chain_id": "child6-babe",
-            "binary":   BIN_DIR / "fishbone-node-babe",
+            "chain_id": "child6-local",
+            "binary":   BIN_DIR / "fishbone-node",
             "validators": ["f1", "f2", "f3", "f4", "f5"],
             "out":      SPECS / "child6-custom-raw.json",
-            "key_type": "babe",  # key type for block authoring
         },
     ]
 
