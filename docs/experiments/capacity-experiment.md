@@ -18,12 +18,14 @@
 
 ## 数据口径
 
+早期容量计划使用默认 runtime 口径估算过 `MaxSubmissionsPerEpoch=1000` 的 time-to-fill；该口径只适合解释“默认部署的 Epoch 上限”，不作为最终容量图表数据。正式容量实验改用 `MaxSubmissionsPerEpoch=10000` 的实验构建，并以链上接受时间计算吞吐。
+
 输出文件：
 
-- `docs/figures/data/exp_capacity_summary.csv`
-- `docs/figures/fig_capacity_scaling.png`
-- `docs/figures/data/raw/capacity_10000_sameconfig_final/`
-- `docs/figures/data/raw/capacity_10000_sameconfig_final_logs/`
+- `docs/experiments/figures/data/exp_capacity_summary.csv`
+- `docs/experiments/figures/fig_capacity_scaling.png`
+- `docs/experiments/figures/data/raw/capacity_10000_sameconfig_final/`
+- `docs/experiments/figures/data/raw/capacity_10000_sameconfig_final_logs/`
 
 CSV 中保留两个 TPS 口径：
 
@@ -47,7 +49,7 @@ CSV 中保留两个 TPS 口径：
 
 在 6 条子链并发时，系统总链上接受吞吐达到 `396.12 TPS`，约为单链基准的 `4.47x`。N=6 没有继续接近理想 6x，主要受 child5 和 child3 的单链吞吐拖尾影响；这属于子链局部瓶颈，不是主链吞吐被占满。
 
-该图适合用于说明：新增子链可以显著提高系统总吞吐，高频 worker 提交留在子链处理；主链负载是否充裕应结合 `docs/linear-scaling-mainchain-load.md` 中的主链负载占比实验说明。
+该图适合用于说明：新增子链可以显著提高系统总吞吐，高频 worker 提交留在子链处理；主链负载是否充裕应结合 [linear-scaling-mainchain-load.md](linear-scaling-mainchain-load.md) 中的主链负载占比实验说明。
 
 ## 复现实验
 

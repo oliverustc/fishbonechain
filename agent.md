@@ -33,8 +33,8 @@ pallets/fmc/            资金管理 pallet
 pallets/crowdsource/    子链众包 pallet
 scripts/                Node/Python 实验与运维脚本
 deploy/                 VM 部署框架、spec、keys、bin
-docs/                   设计、实现记录、实验报告、实验计划
-docs/plan/              临时计划区，已加入 .gitignore
+docs/                   分类后的架构、实现、开发、运维和实验文档
+docs/internal/          需要保留的 agent 过程记录，不作为当前事实来源
 references/             外部参考代码，默认不要修改
 ```
 
@@ -66,19 +66,19 @@ bash scripts/check-blocks.sh
 
 ## 文档阅读顺序
 
-1. [docs/Readme.md](docs/Readme.md)：文档索引
-2. [docs/developer-guide.md](docs/developer-guide.md)：代码结构和核心 pallet 说明
-3. [docs/implementation-record.md](docs/implementation-record.md)：阶段实现记录
-4. [docs/experiment-report.md](docs/experiment-report.md)：吞吐量实验结果
-5. [docs/liquidity-experiment.md](docs/liquidity-experiment.md)：资金实验记录
+1. [docs/README.md](docs/README.md)：文档索引
+2. [docs/development/developer-guide.md](docs/development/developer-guide.md)：代码结构和核心 pallet 说明
+3. [docs/implementation/implementation-record.md](docs/implementation/implementation-record.md)：阶段实现记录
+4. [docs/experiments/experiment-report.md](docs/experiments/experiment-report.md)：吞吐量实验结果
+5. [docs/experiments/liquidity-experiment.md](docs/experiments/liquidity-experiment.md)：资金实验记录
 
 ## 文档生命周期
 
-- `docs/plan/` 是临时计划区，用于任务拆解、审阅发现、执行 checklist 和阶段性草稿；该目录已加入 `.gitignore`，后续不作为版本化事实来源。
-- 每个 plan 执行完成后，必须把结论、代码行为、实验结果、运行方式或踩坑记录沉淀到 `docs/` 下的正式文档，例如 `docs/developer-guide.md`、`docs/experiment-report.md`、`docs/implementation-plan.md` 或专题文档。
-- 正式文档应写当前事实和可复现信息；历史计划、废弃方案和中间判断留在 `docs/plan/`，不要让它们继续承担项目说明职责。
-- 如果计划执行改变了命令、部署方式、实验口径或已知限制，完成前必须同步更新对应正式文档和 [docs/Readme.md](docs/Readme.md) 的索引说明。
-- 后续判断项目状态时，以 `agent.md`、`README.md`、`docs/Readme.md`、`docs/developer-guide.md`、`docs/experiment-report.md` 和当前代码为准；`docs/plan/` 仅供追溯执行过程。
+- `docs/internal/agent-plans/` 只保存仍需版本化的 agent 实施计划和过程记录，不作为当前事实来源。
+- 每个 plan 执行完成后，必须把结论、代码行为、实验结果、运行方式或踩坑记录沉淀到 `docs/` 下的正式文档，例如 `docs/development/developer-guide.md`、`docs/experiments/experiment-report.md`、`docs/implementation/implementation-plan.md` 或专题文档。
+- 正式文档应写当前事实和可复现信息；历史计划、废弃方案和中间判断可以留在 `docs/internal/agent-plans/`，不要让它们继续承担项目说明职责。
+- 如果计划执行改变了命令、部署方式、实验口径或已知限制，完成前必须同步更新对应正式文档和 [docs/README.md](docs/README.md) 的索引说明。
+- 后续判断项目状态时，以 `agent.md`、`README.md`、`docs/README.md`、`docs/development/developer-guide.md`、`docs/experiments/experiment-report.md` 和当前代码为准；过程记录仅供追溯执行过程。
 
 ## 工作约定
 
@@ -88,7 +88,7 @@ bash scripts/check-blocks.sh
 - `deploy/keys/*.env`、`deploy/specs/*.json`、`deploy/bin/*` 可能包含环境产物；改动前确认是否真是任务需要。
 - 不要随意清理 `target/`、`node_modules/`、`deploy/.venv/` 等本地构建目录。
 - Rust 改动后至少运行相关 crate 的 `cargo test` 或 `cargo check`；脚本改动后尽量运行 dry-run、help 或静态检查。
-- 文档里涉及实验结论时，优先引用正式 `docs/` 文档和当前代码，不要凭记忆改数值；如果旧 `docs/plan/` 内容与正式文档冲突，以正式文档为准。
+- 文档里涉及实验结论时，优先引用正式 `docs/` 文档和当前代码，不要凭记忆改数值；如果过程记录与正式文档冲突，以正式文档为准。
 
 ## 后续重点
 

@@ -107,7 +107,7 @@ timestamp,block_number,block_hash,extrinsics_total,bridge_extrinsics,ccmc_digest
 完成 `N=1..6` 后，整理为：
 
 ```text
-docs/figures/data/exp_scale_mainchain_summary.csv
+docs/experiments/figures/data/exp_scale_mainchain_summary.csv
 ```
 
 CSV schema：
@@ -141,7 +141,7 @@ n,active_chains,child_subs_tps,main_bridge_tps,main_total_tps,main_bridge_to_chi
 python3 scripts/summarize_scale_mainchain.py \
   --raw-dir /tmp/fishbone_scale_mainchain_<RUN_ID> \
   --log-dir ~/exp_scale_mainchain_logs/<RUN_ID> \
-  --out docs/figures/data/exp_scale_mainchain_summary.csv
+  --out docs/experiments/figures/data/exp_scale_mainchain_summary.csv
 ```
 
 主链负载解释应优先使用 `child_subs_tps`、`main_bridge_tps` 和 `main_bridge_to_child_tps_pct`。不要把 `main_bridge_share_of_observed_main_tx_pct` 写成主链容量占用率；若要声明“占主链容量 X%”，需要额外进行主链压力测试或采集 block weight 使用率。
@@ -155,7 +155,7 @@ python3 scripts/plot_results.py --fig-scale-main
 输出：
 
 ```text
-docs/figures/fig_scale_mainchain_load.png
+docs/experiments/figures/fig_scale_mainchain_load.png
 ```
 
 图中左侧展示子链聚合成功提交 TPS 与理想线性参考线，右侧展示主链桥接 TPS、主链总 TPS 以及桥接 TPS 相对子链 TPS 的占比。推荐标题为：

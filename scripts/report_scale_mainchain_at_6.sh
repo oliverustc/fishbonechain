@@ -25,9 +25,9 @@ LOCAL_BASE="${LOCAL_BASE:-/tmp/fishbone_scale_mainchain_reports/${RUN_ID}}"
 LOCAL_RAW_DIR="${LOCAL_BASE}/raw"
 LOCAL_LOG_DIR="${LOCAL_BASE}/logs"
 
-SUMMARY_CSV="${REPO_DIR}/docs/figures/data/exp_scale_mainchain_summary.csv"
-REPORT_MD="${REPO_DIR}/docs/plan/scale-mainchain-6am-report-${RUN_ID}.md"
-FIGURE="${REPO_DIR}/docs/figures/fig_scale_mainchain_load.png"
+SUMMARY_CSV="${REPO_DIR}/docs/experiments/figures/data/exp_scale_mainchain_summary.csv"
+REPORT_MD="${REPO_DIR}/docs/internal/agent-plans/scale-mainchain-6am-report-${RUN_ID}.md"
+FIGURE="${REPO_DIR}/docs/experiments/figures/fig_scale_mainchain_load.png"
 
 log() {
   printf '[6am-report %s] %s\n' "$(date --iso-8601=seconds)" "$*"

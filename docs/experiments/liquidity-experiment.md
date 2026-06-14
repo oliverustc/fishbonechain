@@ -1,7 +1,7 @@
 # 资金流动性实验记录
 
-**最后更新**：2026-06-11  
-**状态**：已有采集脚本、链上数据和图表；正式结论仍应以复查后的 `docs/experiment-report.md` 为准。
+**最后更新**：2026-06-14  
+**状态**：已有采集脚本、链上数据和图表；正式结论仍应以复查后的 [experiment-report.md](experiment-report.md) 为准。
 
 ## 实验目标
 
@@ -30,8 +30,8 @@
 
 主要数据文件：
 
-- `docs/figures/data/exp_e_fund_state_v5.csv`
-- `docs/figures/data/exp_liquidity_horizon_summary.csv`
+- `docs/experiments/figures/data/exp_e_fund_state_v5.csv`
+- `docs/experiments/figures/data/exp_liquidity_horizon_summary.csv`
 
 当前数据概况：
 
@@ -49,9 +49,9 @@
 
 ## 图表
 
-- `docs/figures/fig7a_liquidity_ratio.png`：锁定资金比例时序对比
-- `docs/figures/fig7b_capital_capacity.png`：相同总预算下的可用资金对比
-- `docs/figures/fig_liquidity_horizon.png`：T=3/10/20 长周期资金锁定对比
+- `docs/experiments/figures/fig7a_liquidity_ratio.png`：锁定资金比例时序对比
+- `docs/experiments/figures/fig7b_capital_capacity.png`：相同总预算下的可用资金对比
+- `docs/experiments/figures/fig_liquidity_horizon.png`：T=3/10/20 长周期资金锁定对比
 
 这些图分别由以下命令生成：
 
@@ -65,4 +65,4 @@ python3 scripts/plot_results.py --fig-liquidity-horizon
 - `fig7a/fig7b` 使用 `T=3` 采样展示窗口，改善约 3x。
 - `fig_liquidity_horizon` 使用相同 `ΣB` 对 T=10/T=20 做计划周期反事实分析，用于展示资金锁定模型随 T 伸缩到 10x/20x。
 - 早期 plan 文档里还出现过 3 任务、31.5K、630K 的图示口径；当前正式图表按 6 任务 `ΣB=71,502.5` 生成。
-- 后续如果重新运行更长周期资金实验，应更新本文件、`docs/experiment-report.md` 和 fig7 数据/图表。
+- 后续如果重新运行更长周期资金实验，应更新本文件、[experiment-report.md](experiment-report.md) 和 fig7 数据/图表。

@@ -1,0 +1,54 @@
+{
+  "start_ms": 1781307631500,
+  "finished_at_ms": 1781307743667,
+  "cap": 10000,
+  "baseline": {
+    "ws://10.2.2.11:9948": {
+      "block": 16,
+      "epoch": 0,
+      "phase": "Collecting",
+      "subs": 0
+    },
+    "ws://10.2.2.11:9945": {
+      "block": 15,
+      "epoch": 0,
+      "phase": "Collecting",
+      "subs": 0
+    },
+    "ws://10.2.2.11:9950": {
+      "block": 15,
+      "epoch": 0,
+      "phase": "Collecting",
+      "subs": 0
+    }
+  },
+  "hit_summary": {
+    "ws://10.2.2.11:9948": {
+      "hit_at_ms": 1781307740858,
+      "elapsed_s": 109.358,
+      "initial_subs": 0,
+      "cap_subs": 10000,
+      "accepted_delta": 10000,
+      "block_number": 34,
+      "epoch_id": 0
+    },
+    "ws://10.2.2.11:9945": {
+      "hit_at_ms": 1781307740858,
+      "elapsed_s": 109.358,
+      "initial_subs": 0,
+      "cap_subs": 10000,
+      "accepted_delta": 10000,
+      "block_number": 33,
+      "epoch_id": 0
+    },
+    "ws://10.2.2.11:9950": {
+      "hit_at_ms": 1781307742840,
+      "elapsed_s": 111.34,
+      "initial_subs": 0,
+      "cap_subs": 10000,
+      "accepted_delta": 10000,
+      "block_number": 33,
+      "epoch_id": 0
+    }
+  }
+}

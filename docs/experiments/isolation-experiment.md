@@ -6,8 +6,8 @@
 
 ## 数据文件
 
-- `docs/figures/data/exp_isolation_summary.csv`
-- `docs/figures/fig_isolation_comparison.png`
+- `docs/experiments/figures/data/exp_isolation_summary.csv`
+- `docs/experiments/figures/fig_isolation_comparison.png`
 
 ## 口径
 

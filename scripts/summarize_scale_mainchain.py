@@ -118,7 +118,7 @@ def main() -> None:
     parser.add_argument("--log-dir", help="Directory containing n*_worker_*.log")
     parser.add_argument(
         "--out",
-        default="docs/figures/data/exp_scale_mainchain_summary.csv",
+        default="docs/experiments/figures/data/exp_scale_mainchain_summary.csv",
         help="Output summary CSV path",
     )
     args = parser.parse_args()

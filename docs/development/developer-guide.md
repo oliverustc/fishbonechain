@@ -32,7 +32,7 @@ pallets/crowdsource/    子链众包 pallet
 scripts/                worker、bridge、metrics、setup、plot、runtime upgrade
 deploy/                 12 VM 部署配置、spec、keys、Python 管理框架
 docs/                   正式项目文档和实验报告
-docs/plan/              临时计划区，已加入 .gitignore，不作为事实来源
+docs/internal/          agent 过程记录和非事实来源资料
 references/             外部参考代码，默认不要修改
 ```
 
@@ -171,11 +171,11 @@ bash scripts/check-blocks.sh
 
 ## 文档维护规则
 
-`docs/plan/` 只用于临时计划和执行 checklist。任务完成后，必须把可复现结论写入正式文档：
+`docs/internal/agent-plans/` 只用于需要保留的 agent 实施计划和执行 checklist。任务完成后，必须把可复现结论写入正式文档；旧的 `docs/plan/` 已清理，不再作为事实来源。
 
 - 代码结构和运行方式：更新本文档
-- 实现阶段和当前状态：更新 `docs/implementation-record.md`
-- 实验结果和图表：更新 `docs/experiment-report.md`
-- 旧规划和实际实现差异：更新 `docs/implementation-plan.md`
+- 实现阶段和当前状态：更新 `docs/implementation/implementation-record.md`
+- 实验结果和图表：更新 `docs/experiments/experiment-report.md`
+- 旧规划和实际实现差异：更新 `docs/implementation/implementation-plan.md`
 
-如果正式文档和 `docs/plan/` 内容冲突，以正式文档和当前代码为准。
+如果过程记录和正式文档内容冲突，以正式文档和当前代码为准。

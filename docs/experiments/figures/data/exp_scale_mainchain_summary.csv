@@ -1,0 +1,7 @@
+n,active_chains,child_subs_tps,main_bridge_tps,main_total_tps,main_bridge_to_child_tps_pct,main_bridge_share_of_observed_main_tx_pct,child_subs_per_min,child_ok_total,worker_duration_min,child_subs_per_epoch,main_bridge_tx_per_epoch,main_bridge_tx_per_min,main_tx_per_min
+1,child4,0.2069,0.0025,0.1695,1.23,1.50,12.42,807,65.00,147.00,2.50,0.15,10.17
+2,child4+child1,0.4056,0.0056,0.1725,1.38,3.24,24.34,1582,65.00,294.15,4.89,0.34,10.35
+3,child4+child1+child6,0.6203,0.0081,0.1751,1.31,4.64,37.22,2419,65.00,441.60,7.38,0.49,10.50
+4,child4+child1+child6+child3,0.8251,0.0112,0.1781,1.35,6.26,49.51,4703,95.00,588.57,9.14,0.67,10.69
+5,child4+child1+child6+child3+child2,1.0025,0.0146,0.1814,1.46,8.07,60.15,5714,95.00,777.89,13.12,0.88,10.89
+6,child4+child1+child6+child3+child2+child5,1.2189,0.0202,0.1870,1.66,10.81,73.14,6948,95.00,938.04,17.85,1.21,11.22
