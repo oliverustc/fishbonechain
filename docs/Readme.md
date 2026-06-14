@@ -18,6 +18,9 @@
 ## 实验文档
 
 - [experiment-report.md](experiment-report.md)：实验报告，包含吞吐量 A-D 和资金流动性 E 的正式整理
+- [isolation-experiment.md](isolation-experiment.md)：跨场景隔离实验数据口径、图表和结论
+- [linear-scaling-mainchain-load.md](linear-scaling-mainchain-load.md)：N=1..6 子链线性扩展与主链负载实验规划、采集口径和绘图说明
+- [capacity-experiment.md](capacity-experiment.md)：MaxSubmissions=10000 高压容量实验、最终 TPS 数据和复现方法
 - [liquidity-experiment.md](liquidity-experiment.md)：资金流动性实验数据、图表和口径说明
 - `plan/`：临时计划区，已加入 `.gitignore`，后续不作为正式事实来源
 - [figures/](figures/)：实验报告图表

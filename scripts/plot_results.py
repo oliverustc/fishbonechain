@@ -12,6 +12,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
+from matplotlib.ticker import FuncFormatter
 import numpy as np
 
 OUT_DIR = os.path.join(os.path.dirname(__file__), '..', 'docs', 'figures')
@@ -471,6 +472,327 @@ def fig_linear_scaling(csv_path=None):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 子链吞吐线性扩展与主链负载
+# ─────────────────────────────────────────────────────────────────────────────
+def fig_scale_mainchain_load(csv_path=None):
+    if csv_path is None:
+        csv_path = os.path.join(os.path.dirname(__file__), '..', 'docs', 'figures', 'data',
+                                'exp_scale_mainchain_summary.csv')
+        if not os.path.exists(csv_path):
+            print('[warn] 主链负载线性扩展图：缺少 docs/figures/data/exp_scale_mainchain_summary.csv')
+            print('[warn] 需要列：n,active_chains,child_subs_tps,main_bridge_tps,main_total_tps,main_bridge_to_child_tps_pct')
+            return
+
+    rows = []
+    with open(csv_path) as f:
+        rows = list(csv.DictReader(f))
+    if not rows:
+        print('[warn] 主链负载线性扩展图：无数据')
+        return
+
+    data = []
+    for r in rows:
+        try:
+            data.append({
+                'n': int(r['n']),
+                'active_chains': r.get('active_chains', ''),
+                'child_subs_tps': float(r.get('child_subs_tps') or 0),
+                'main_bridge_tps': float(r.get('main_bridge_tps') or 0),
+                'main_total_tps': float(r.get('main_total_tps') or 0),
+                'bridge_to_child_pct': float(r.get('main_bridge_to_child_tps_pct') or 0),
+                'bridge_share_pct': float(r.get('main_bridge_share_of_observed_main_tx_pct') or 0),
+                'child_subs_per_min': float(r.get('child_subs_per_min') or r.get('child_subs_per_epoch') or 0),
+                'main_bridge_tx_per_min': float(r.get('main_bridge_tx_per_min') or r.get('main_bridge_tx_per_epoch') or 0),
+                'main_tx_per_min': float(r.get('main_tx_per_min') or 0),
+            })
+        except (KeyError, ValueError) as e:
+            print(f'[warn] 跳过异常行：{r} ({e})')
+
+    data.sort(key=lambda r: r['n'])
+    if not data:
+        print('[warn] 主链负载线性扩展图：无可用数据')
+        return
+
+    ns = np.array([r['n'] for r in data], dtype=float)
+    child_tps = np.array([
+        r['child_subs_tps'] if r['child_subs_tps'] > 0 else r['child_subs_per_min'] / 60
+        for r in data
+    ], dtype=float)
+    bridge_tps = np.array([
+        r['main_bridge_tps'] if r['main_bridge_tps'] > 0 else r['main_bridge_tx_per_min'] / 60
+        for r in data
+    ], dtype=float)
+    main_total_tps = np.array([
+        r['main_total_tps'] if r['main_total_tps'] > 0 else r['main_tx_per_min'] / 60
+        for r in data
+    ], dtype=float)
+    bridge_to_child_pct = np.array([
+        r['bridge_to_child_pct'] if r['bridge_to_child_pct'] > 0
+        else (r['main_bridge_tx_per_min'] / r['child_subs_per_min'] * 100 if r['child_subs_per_min'] else 0)
+        for r in data
+    ], dtype=float)
+
+    baseline = child_tps[0]
+    ideal = baseline * ns
+    ratios = child_tps / baseline
+
+    fig, axes = plt.subplots(1, 2, figsize=(13.2, 5.8))
+    ax = axes[0]
+
+    ax.plot(ns, child_tps, marker='o', markersize=8, linewidth=2.4,
+            color='#1565C0', label='实测聚合吞吐量')
+    ax.plot(ns, ideal, linestyle='--', linewidth=1.8,
+            color='#555555', label=f'理想线性 ({baseline:.2f}×N)')
+    for n, y, ratio in zip(ns, child_tps, ratios):
+        ax.annotate(f'{y:.2f}\n{ratio:.2f}×',
+                    xy=(n, y), xytext=(0, 10), textcoords='offset points',
+                    ha='center', fontsize=PPT_ANNOT_SIZE, fontweight='bold')
+
+    ax.set_xlabel('并发子链数量 N', fontsize=PPT_LABEL_SIZE)
+    ax.set_ylabel('聚合吞吐量（TPS）', fontsize=PPT_LABEL_SIZE)
+    ax.set_xticks(ns)
+    ax.tick_params(axis='both', labelsize=PPT_TICK_SIZE)
+    ax.set_ylim(0, max(child_tps.max(), ideal.max()) * 1.22)
+    ax.grid(alpha=0.3)
+    ax.legend(loc='upper left', fontsize=PPT_LEGEND_SIZE, framealpha=0.92)
+
+    ax = axes[1]
+    bars = ax.bar(ns, bridge_tps, width=0.58, color='#2E7D32',
+                  label='主链桥接 TPS')
+    ax.plot(ns, main_total_tps, marker='D', markersize=6, linewidth=2,
+            color='#E65100', label='主链总 TPS')
+    for bar, v in zip(bars, bridge_tps):
+        ax.text(bar.get_x() + bar.get_width() / 2, v + max(bridge_tps.max(), 0.01) * 0.05,
+                f'{v:.3f}', ha='center', va='bottom',
+                fontsize=PPT_ANNOT_SIZE, fontweight='bold')
+
+    ax2 = ax.twinx()
+    ax2.plot(ns, bridge_to_child_pct, marker='s', markersize=6, linewidth=2,
+             color='#6A1B9A', label='桥接/子链吞吐占比')
+
+    ax.set_xlabel('并发子链数量 N', fontsize=PPT_LABEL_SIZE)
+    ax.set_ylabel('主链交易速率（TPS）', fontsize=PPT_LABEL_SIZE)
+    ax2.set_ylabel('桥接 TPS / 子链 TPS（%）', fontsize=PPT_LABEL_SIZE)
+    ax.set_xticks(ns)
+    ax.tick_params(axis='both', labelsize=PPT_TICK_SIZE)
+    ax2.tick_params(axis='y', labelsize=PPT_TICK_SIZE)
+    ax.set_ylim(0, max(main_total_tps.max(), bridge_tps.max(), 0.01) * 1.35)
+    ax2.set_ylim(0, max(bridge_to_child_pct.max(), 1) * 1.35)
+    ax.grid(axis='y', alpha=0.3)
+
+    h1, l1 = ax.get_legend_handles_labels()
+    h2, l2 = ax2.get_legend_handles_labels()
+    ax.legend(h1 + h2, l1 + l2, loc='upper left',
+              fontsize=PPT_LEGEND_SIZE, framealpha=0.92)
+
+    fig.suptitle('子链吞吐线性扩展与主链负载',
+                 fontsize=PPT_TITLE_SIZE, fontweight='bold', y=0.98)
+    plt.tight_layout(rect=[0, 0, 1, 0.94])
+    out = os.path.join(OUT_DIR, 'fig_scale_mainchain_load.png')
+    fig.savefig(out)
+    plt.close()
+    print(f'[saved] {out}')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 最大吞吐容量扩展
+# ─────────────────────────────────────────────────────────────────────────────
+def fig_capacity_scaling(csv_path=None):
+    if csv_path is None:
+        csv_path = os.path.join(os.path.dirname(__file__), '..', 'docs', 'figures', 'data',
+                                'exp_capacity_summary.csv')
+        if not os.path.exists(csv_path):
+            print('[warn] 最大吞吐容量图：缺少 docs/figures/data/exp_capacity_summary.csv')
+            return
+
+    with open(csv_path) as f:
+        rows = list(csv.DictReader(f))
+    if not rows:
+        print('[warn] 最大吞吐容量图：无数据')
+        return
+
+    data = []
+    for r in rows:
+        try:
+            conservative_tps = float(r['aggregate_chain_accepted_tps'])
+            total_tps = float(r.get('sum_individual_chain_tps') or conservative_tps)
+            data.append({
+                'n': int(r['n']),
+                'tps': total_tps,
+                'conservative_tps': conservative_tps,
+                'delta': float(r['aggregate_chain_accepted_delta']),
+                'hit_caps': int(r['chains_hit_cap']),
+                'time_to_all_caps_s': float(r['time_to_all_caps_s']),
+            })
+        except (KeyError, ValueError) as e:
+            print(f'[warn] 跳过异常行：{r} ({e})')
+    data.sort(key=lambda r: r['n'])
+    if not data:
+        return
+
+    ns = np.array([r['n'] for r in data], dtype=float)
+    tps = np.array([r['tps'] for r in data], dtype=float)
+    conservative = np.array([r['conservative_tps'] for r in data], dtype=float)
+    baseline = tps[0]
+    ideal = baseline * ns
+    ratios = tps / baseline if baseline > 0 else np.zeros_like(tps)
+
+    fig, ax = plt.subplots(figsize=(10.5, 6.2))
+    ax.plot(ns, tps, marker='o', markersize=9, linewidth=2.6,
+            color='#1565C0', label='子链总吞吐（TPS求和）')
+    ax.plot(ns, conservative, marker='s', markersize=6, linewidth=1.8,
+            color='#7E8A97', alpha=0.78, label='全链完成保守口径')
+    ax.plot(ns, ideal, linestyle='--', linewidth=1.8,
+            color='#555555', label=f'理想线性 ({baseline:.1f}×N)')
+
+    for r, ratio in zip(data, ratios):
+        label = f"{r['tps']:.1f} TPS\n{ratio:.2f}×"
+        if r['hit_caps'] < r['n']:
+            label += f"\n{r['hit_caps']}/{r['n']} hit cap"
+        ax.annotate(label,
+                    xy=(r['n'], r['tps']), xytext=(0, 12), textcoords='offset points',
+                    ha='center', fontsize=PPT_ANNOT_SIZE, fontweight='bold')
+
+    ax.set_xlabel('并发子链数量 N', fontsize=PPT_LABEL_SIZE)
+    ax.set_ylabel('链上接受吞吐量 (TPS)', fontsize=PPT_LABEL_SIZE)
+    ax.set_xticks(ns)
+    ax.tick_params(axis='both', labelsize=PPT_TICK_SIZE)
+    ax.set_ylim(0, max(tps.max(), ideal.max(), conservative.max()) * 1.25)
+    ax.set_title('最大吞吐扩展能力',
+                 fontsize=PPT_TITLE_SIZE, fontweight='bold', pad=16)
+    ax.legend(loc='upper left', fontsize=PPT_LEGEND_SIZE, framealpha=0.92)
+    ax.grid(alpha=0.3)
+
+    plt.tight_layout()
+    out = os.path.join(OUT_DIR, 'fig_capacity_scaling.png')
+    fig.savefig(out)
+    plt.close()
+    print(f'[saved] {out}')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 跨场景隔离效果对比
+# ─────────────────────────────────────────────────────────────────────────────
+def fig_isolation_comparison(csv_path=None):
+    if csv_path is None:
+        csv_path = os.path.join(os.path.dirname(__file__), '..', 'docs', 'figures', 'data',
+                                'exp_isolation_summary.csv')
+        if not os.path.exists(csv_path):
+            print('[warn] 跨场景隔离图：缺少 docs/figures/data/exp_isolation_summary.csv')
+            return
+
+    with open(csv_path) as f:
+        rows = list(csv.DictReader(f))
+    if not rows:
+        print('[warn] 跨场景隔离图：无数据')
+        return
+
+    labels = [f"{r['scenario']}\n{r['scenario_name']}" for r in rows]
+    single = np.array([float(r['single_chain_success_rate']) for r in rows])
+    dedicated = np.array([float(r['dedicated_chain_success_rate']) for r in rows])
+    improvement = [float(r['improvement_x']) for r in rows]
+
+    x = np.arange(len(rows))
+    width = 0.36
+    fig, ax = plt.subplots(figsize=(11.5, 6.2))
+
+    bars1 = ax.bar(x - width / 2, single, width,
+                   color='#E76F51', label='单链混跑')
+    bars2 = ax.bar(x + width / 2, dedicated, width,
+                   color='#2A9D8F', label='多子链隔离（独享容量）')
+
+    for bar, value in zip(bars1, single):
+        ax.text(bar.get_x() + bar.get_width() / 2, value + 2,
+                f'{value:.1f}%', ha='center', va='bottom',
+                fontsize=PPT_ANNOT_SIZE, fontweight='bold')
+    for bar, value, imp in zip(bars2, dedicated, improvement):
+        ax.text(bar.get_x() + bar.get_width() / 2, value + 2,
+                f'{value:.0f}%\n{imp:.1f}x', ha='center', va='bottom',
+                fontsize=PPT_ANNOT_SIZE, fontweight='bold')
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, fontsize=PPT_TICK_SIZE)
+    ax.set_ylabel('提交成功率 / 独享容量归一化 (%)', fontsize=PPT_LABEL_SIZE)
+    ax.tick_params(axis='y', labelsize=PPT_TICK_SIZE)
+    ax.set_ylim(0, 125)
+    ax.set_title('跨场景隔离效果对比',
+                 fontsize=PPT_TITLE_SIZE, fontweight='bold', pad=16)
+    ax.legend(loc='upper left', fontsize=PPT_LEGEND_SIZE, framealpha=0.92)
+    ax.grid(axis='y', alpha=0.3)
+    ax.set_axisbelow(True)
+
+    plt.tight_layout()
+    out = os.path.join(OUT_DIR, 'fig_isolation_comparison.png')
+    fig.savefig(out)
+    plt.close()
+    print(f'[saved] {out}')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# T=10/T=20 长周期资金锁定对比
+# ─────────────────────────────────────────────────────────────────────────────
+def fig_liquidity_horizon(csv_path=None):
+    if csv_path is None:
+        csv_path = os.path.join(os.path.dirname(__file__), '..', 'docs', 'figures', 'data',
+                                'exp_liquidity_horizon_summary.csv')
+        if not os.path.exists(csv_path):
+            print('[warn] 长周期资金锁定图：缺少 docs/figures/data/exp_liquidity_horizon_summary.csv')
+            return
+
+    with open(csv_path) as f:
+        rows = list(csv.DictReader(f))
+    if not rows:
+        print('[warn] 长周期资金锁定图：无数据')
+        return
+
+    horizons = np.array([int(r['horizon_epochs']) for r in rows])
+    fb_locked = np.array([float(r['fishbone_locked_unit']) for r in rows])
+    trad_locked = np.array([float(r['traditional_locked_unit']) for r in rows])
+    reduction = np.array([float(r['locked_reduction_x']) for r in rows])
+
+    x = np.arange(len(rows))
+    width = 0.38
+    fig, ax = plt.subplots(figsize=(11.5, 6.2))
+
+    ax.bar(x - width / 2, fb_locked, width,
+           color='#1565C0', label='FishboneChain')
+    ax.bar(x + width / 2, trad_locked, width,
+           color='#E65100', label='传统预锁方案')
+
+    y_pad = trad_locked.max() * 0.025
+    for i, (fb, trad, imp) in enumerate(zip(fb_locked, trad_locked, reduction)):
+        ax.text(i - width / 2, fb + y_pad,
+                f'{fb:,.0f} U', ha='center', va='bottom',
+                fontsize=PPT_ANNOT_SIZE, fontweight='bold', color='#1565C0')
+        ax.text(i + width / 2, trad + y_pad,
+                f'{trad:,.0f} U', ha='center', va='bottom',
+                fontsize=PPT_ANNOT_SIZE, fontweight='bold', color='#E65100')
+        ax.annotate(f'{imp:.0f}x 降低',
+                    xy=(i, max(fb, trad) * 0.52),
+                    ha='center', va='center',
+                    fontsize=PPT_ANNOT_SIZE, fontweight='bold',
+                    color='#333')
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([f'T={h}' for h in horizons], fontsize=PPT_TICK_SIZE)
+    ax.set_ylabel('初始锁定资金 (UNIT)', fontsize=PPT_LABEL_SIZE)
+    ax.tick_params(axis='y', labelsize=PPT_TICK_SIZE)
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda value, _: f'{value/1000:.0f}k'))
+    ax.set_ylim(0, trad_locked.max() * 1.2)
+    ax.set_title('长周期任务资金锁定对比',
+                 fontsize=PPT_TITLE_SIZE, fontweight='bold', pad=16)
+    ax.legend(loc='upper left', fontsize=PPT_LEGEND_SIZE, framealpha=0.92)
+    ax.grid(axis='y', alpha=0.3)
+    ax.set_axisbelow(True)
+
+    plt.tight_layout()
+    out = os.path.join(OUT_DIR, 'fig_liquidity_horizon.png')
+    fig.savefig(out)
+    plt.close()
+    print(f'[saved] {out}')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 锁定资金比例时序对比
 # ─────────────────────────────────────────────────────────────────────────────
 def fig7a_liquidity_ratio(csv_path=None):
@@ -665,11 +987,27 @@ if __name__ == '__main__':
     import sys
     only_fig6 = '--fig6' in sys.argv
     only_fig7 = '--fig7' in sys.argv
+    only_scale_main = '--fig-scale-main' in sys.argv
+    only_capacity = '--fig-capacity' in sys.argv
+    only_isolation = '--fig-isolation' in sys.argv
+    only_liquidity_horizon = '--fig-liquidity-horizon' in sys.argv
 
     if only_fig7:
         print('生成资金流动性图表...')
         fig7a_liquidity_ratio()
         fig7b_capital_capacity()
+    elif only_isolation:
+        print('生成跨场景隔离图表...')
+        fig_isolation_comparison()
+    elif only_liquidity_horizon:
+        print('生成长周期资金锁定图表...')
+        fig_liquidity_horizon()
+    elif only_capacity:
+        print('生成最大吞吐容量图表...')
+        fig_capacity_scaling()
+    elif only_scale_main:
+        print('生成子链吞吐线性扩展与主链负载图表...')
+        fig_scale_mainchain_load()
     elif only_fig6:
         print('生成线性扩展图表...')
         try:
@@ -690,6 +1028,22 @@ if __name__ == '__main__':
             fig_linear_scaling()
         except Exception as e:
             print(f'[warn] fig6（需要 exp_scale 数据）: {e}')
+        try:
+            fig_scale_mainchain_load()
+        except Exception as e:
+            print(f'[warn] 主链负载线性扩展图错误: {e}')
+        try:
+            fig_capacity_scaling()
+        except Exception as e:
+            print(f'[warn] 最大吞吐容量图错误: {e}')
+        try:
+            fig_isolation_comparison()
+        except Exception as e:
+            print(f'[warn] 跨场景隔离图错误: {e}')
+        try:
+            fig_liquidity_horizon()
+        except Exception as e:
+            print(f'[warn] 长周期资金锁定图错误: {e}')
         try:
             fig7a_liquidity_ratio()
             fig7b_capital_capacity()

@@ -31,6 +31,7 @@
 主要数据文件：
 
 - `docs/figures/data/exp_e_fund_state_v5.csv`
+- `docs/figures/data/exp_liquidity_horizon_summary.csv`
 
 当前数据概况：
 
@@ -43,16 +44,25 @@
 - 传统预锁基线初始值：214,507.5 UNIT
 - FishboneChain 初始工作锁定：71,502.5 UNIT
 - 初始资金锁定改善：约 3x
+- T=10 反事实初始锁定改善：约 10x
+- T=20 反事实初始锁定改善：约 20x
 
 ## 图表
 
 - `docs/figures/fig7a_liquidity_ratio.png`：锁定资金比例时序对比
 - `docs/figures/fig7b_capital_capacity.png`：相同总预算下的可用资金对比
+- `docs/figures/fig_liquidity_horizon.png`：T=3/10/20 长周期资金锁定对比
 
-这些图由 `scripts/plot_results.py --fig7` 生成。
+这些图分别由以下命令生成：
+
+```bash
+python3 scripts/plot_results.py --fig7
+python3 scripts/plot_results.py --fig-liquidity-horizon
+```
 
 ## 注意事项
 
-- 早期 plan 文档里使用过 `T=20`、改善约 20x 的规划口径；当前正式图表使用 `T=3` 展示窗口，改善约 3x。
+- `fig7a/fig7b` 使用 `T=3` 采样展示窗口，改善约 3x。
+- `fig_liquidity_horizon` 使用相同 `ΣB` 对 T=10/T=20 做计划周期反事实分析，用于展示资金锁定模型随 T 伸缩到 10x/20x。
 - 早期 plan 文档里还出现过 3 任务、31.5K、630K 的图示口径；当前正式图表按 6 任务 `ΣB=71,502.5` 生成。
 - 后续如果重新运行更长周期资金实验，应更新本文件、`docs/experiment-report.md` 和 fig7 数据/图表。

@@ -182,6 +182,7 @@ async function main() {
     clearInterval(statsInterval);
     await api.disconnect();
     console.log("[worker] 完成");
+    process.exit(0);
   } else {
     process.on("SIGINT", async () => {
       running = false;

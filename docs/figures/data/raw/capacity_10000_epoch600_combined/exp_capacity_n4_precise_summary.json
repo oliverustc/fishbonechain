@@ -1,0 +1,69 @@
+{
+  "start_ms": 1781308471482,
+  "finished_at_ms": 1781308660488,
+  "cap": 10000,
+  "baseline": {
+    "ws://10.2.2.11:9948": {
+      "block": 18,
+      "epoch": 0,
+      "phase": "Collecting",
+      "subs": 0
+    },
+    "ws://10.2.2.11:9945": {
+      "block": 17,
+      "epoch": 0,
+      "phase": "Collecting",
+      "subs": 0
+    },
+    "ws://10.2.2.11:9950": {
+      "block": 17,
+      "epoch": 0,
+      "phase": "Collecting",
+      "subs": 0
+    },
+    "ws://10.2.2.17:9947": {
+      "block": 15,
+      "epoch": 0,
+      "phase": "Collecting",
+      "subs": 0
+    }
+  },
+  "hit_summary": {
+    "ws://10.2.2.11:9948": {
+      "hit_at_ms": 1781308650123,
+      "elapsed_s": 178.641,
+      "initial_subs": 0,
+      "cap_subs": 10000,
+      "accepted_delta": 10000,
+      "block_number": 47,
+      "epoch_id": 0
+    },
+    "ws://10.2.2.11:9945": {
+      "hit_at_ms": 1781308650123,
+      "elapsed_s": 178.641,
+      "initial_subs": 0,
+      "cap_subs": 10000,
+      "accepted_delta": 10000,
+      "block_number": 46,
+      "epoch_id": 0
+    },
+    "ws://10.2.2.11:9950": {
+      "hit_at_ms": 1781308648717,
+      "elapsed_s": 177.235,
+      "initial_subs": 0,
+      "cap_subs": 10000,
+      "accepted_delta": 10000,
+      "block_number": 46,
+      "epoch_id": 0
+    },
+    "ws://10.2.2.17:9947": {
+      "hit_at_ms": 1781308659099,
+      "elapsed_s": 187.617,
+      "initial_subs": 0,
+      "cap_subs": 10000,
+      "accepted_delta": 10000,
+      "block_number": 46,
+      "epoch_id": 0
+    }
+  }
+}

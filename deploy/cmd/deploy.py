@@ -39,8 +39,9 @@ async def push_binaries(remote: RemoteNode, cfg, node_id: str):
         bin_name = Path(remote_path).name
         local = BIN_DIR / bin_name
         if local.exists():
-            await remote.upload(str(local), remote_path)
-            await remote.run(f"chmod +x {remote_path}")
+            tmp_path = f"{remote_path}.new"
+            await remote.upload(str(local), tmp_path)
+            await remote.run(f"chmod +x {tmp_path} && mv -f {tmp_path} {remote_path}")
         else:
             console.print(f"  [{node_id}] [yellow]⚠ 本地未找到 {local}，跳过[/yellow]")
 
