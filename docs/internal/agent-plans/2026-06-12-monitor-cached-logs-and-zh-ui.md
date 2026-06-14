@@ -32,7 +32,7 @@
 - Create `monitor/test/logCollector.test.ts`: collector behavior tests.
 - Create `monitor/test/logApi.test.ts`: cached log API tests.
 - Modify `monitor/test/dashboard.test.ts`: Chinese dashboard and static asset expectations.
-- Modify `docs/fishbone-monitor.md`: document cached logs and non-interactive boundary.
+- Modify `docs/operations/fishbone-monitor.md`: document cached logs and non-interactive boundary.
 
 ## API Contract
 
@@ -332,7 +332,7 @@ git commit -m "feat(monitor): localize dashboard and show cached logs"
 ## Task 6: Docs, Verification, Deployment
 
 **Files:**
-- Modify: `docs/fishbone-monitor.md`
+- Modify: `docs/operations/fishbone-monitor.md`
 
 - [x] **Step 1: Document cached logs**
 
@@ -371,7 +371,7 @@ curl -sf http://192.168.8.41:18080/api/status/summary
 - [x] **Step 5: Commit docs**
 
 ```bash
-git add docs/fishbone-monitor.md
+git add docs/operations/fishbone-monitor.md
 git commit -m "docs(monitor): document cached log collection"
 ```
 

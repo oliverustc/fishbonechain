@@ -4,8 +4,8 @@
 
 输出文件：
 
-- `docs/figures/fishbone_topology_workload.svg`
-- `docs/figures/fishbone_topology_workload.png`
+- `docs/experiments/figures/fishbone_topology_workload.svg`
+- `docs/experiments/figures/fishbone_topology_workload.png`
 
 生成脚本：
 

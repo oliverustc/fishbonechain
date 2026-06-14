@@ -16,9 +16,9 @@ FishboneChain 是一个基于 Substrate/Polkadot SDK 的主链 + 多子链众包
 
 | 方案 | 说明 | 文档 |
 |------|------|------|
-| FishboneChain | 主链 + 多子链众包基础设施，主链管资金和摘要，子链管数据收集 | [docs/fishbonechain.md](docs/fishbonechain.md) |
-| CDT | 可定制可验证数据交易，作为后续可部署在子链上的数据交易协议 | [docs/cdt.md](docs/cdt.md) |
-| BPiano | 高效跨链状态证明，作为后续替换链下 bridge 信任假设的证明机制 | [docs/cross_chain_proof.md](docs/cross_chain_proof.md) |
+| FishboneChain | 主链 + 多子链众包基础设施，主链管资金和摘要，子链管数据收集 | [docs/architecture/fishbonechain.md](docs/architecture/fishbonechain.md) |
+| CDT | 可定制可验证数据交易，作为后续可部署在子链上的数据交易协议 | [docs/architecture/cdt.md](docs/architecture/cdt.md) |
+| BPiano | 高效跨链状态证明，作为后续替换链下 bridge 信任假设的证明机制 | [docs/architecture/cross-chain-proof.md](docs/architecture/cross-chain-proof.md) |
 
 ## 技术栈
 
@@ -79,18 +79,18 @@ fishbonechain/
 ├── pallets/        # ccmc、fmc、crowdsource 和模板 pallet
 ├── scripts/        # 本地网络、bridge、worker、metrics、实验脚本
 ├── deploy/         # 12 VM 部署框架、spec、keys、二进制产物目录
-├── docs/           # 设计、实现记录、实验报告和规划
+├── docs/           # 分类后的架构、实现、开发、运维和实验文档
 └── references/     # 外部参考代码和论文实现，默认不在维护任务中修改
 ```
 
 ## 文档入口
 
 - [agent.md](agent.md)：后续 agent 工作前必须先读的项目上下文
-- [docs/Readme.md](docs/Readme.md)：文档索引
-- [docs/implementation-record.md](docs/implementation-record.md)：当前实现记录
-- [docs/experiment-report.md](docs/experiment-report.md)：实验报告
-- [docs/linear-scaling-mainchain-load.md](docs/linear-scaling-mainchain-load.md)：N=1..6 子链线性扩展与主链负载实验
-- [docs/liquidity-experiment.md](docs/liquidity-experiment.md)：资金流动性实验记录
+- [docs/README.md](docs/README.md)：文档索引
+- [docs/implementation/implementation-record.md](docs/implementation/implementation-record.md)：当前实现记录
+- [docs/experiments/experiment-report.md](docs/experiments/experiment-report.md)：实验报告
+- [docs/experiments/linear-scaling-mainchain-load.md](docs/experiments/linear-scaling-mainchain-load.md)：N=1..6 子链线性扩展与主链负载实验
+- [docs/experiments/liquidity-experiment.md](docs/experiments/liquidity-experiment.md)：资金流动性实验记录
 
 ## 维护边界
 

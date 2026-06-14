@@ -118,7 +118,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--raw-dir", required=True)
     parser.add_argument("--log-dir", required=True)
-    parser.add_argument("--out", default="docs/figures/data/exp_capacity_summary.csv")
+    parser.add_argument("--out", default="docs/experiments/figures/data/exp_capacity_summary.csv")
     args = parser.parse_args()
 
     raw_dir = Path(args.raw_dir)

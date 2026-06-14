@@ -1,6 +1,6 @@
 # FishboneChain 实现记录
 
-**最后更新**：2026-06-11  
+**最后更新**：2026-06-14  
 **当前状态**：1 条主链 + 6 条子链实验系统已实现并完成吞吐量实验；资金流动性实验已有采集脚本、数据和图表，仍需继续完善结论口径。
 
 ## 当前架构
@@ -63,17 +63,17 @@ make build-babe       # child6
 
 - 主链和子链当前使用同一套业务 runtime，通过 chain spec、二进制 feature 和部署配置区分角色。
 - `pallet-crowdsource` 的默认 Epoch 为 `100 Collecting + 20 Syncing` blocks。
-- `MaxSubmissionsPerEpoch` 当前固定为 1000。
+- 常规 runtime 的 `MaxSubmissionsPerEpoch` 为 1000；容量实验曾使用扩大到 10000、`CollectingSlotBlocks=600` 的实验构建，不应和默认部署口径混写。
 - 跨链摘要和账单通过链下 `bridge.js` 中继，不使用原生 XCM。
 - BABE 需要真实 `pallet_babe` 生成 `NextEpochData` digest；stub BabeApi 无法正常出块。
 - `Makefile` 中保留 `WASM_BUILD_RUSTFLAGS="-C link-arg=--allow-undefined"` 以兼容当前 WASM 构建。
 
 ## 实验产物
 
-- 吞吐量报告：[experiment-report.md](experiment-report.md)
-- 资金流动性记录：[liquidity-experiment.md](liquidity-experiment.md)
-- 图表：`docs/figures/`
-- 数据：`docs/figures/data/`
+- 吞吐量报告：[../experiments/experiment-report.md](../experiments/experiment-report.md)
+- 资金流动性记录：[../experiments/liquidity-experiment.md](../experiments/liquidity-experiment.md)
+- 图表：`docs/experiments/figures/`
+- 数据：`docs/experiments/figures/data/`
 
 ## 已知限制
 

@@ -15,7 +15,7 @@ import matplotlib.font_manager as fm
 from matplotlib.ticker import FuncFormatter
 import numpy as np
 
-OUT_DIR = os.path.join(os.path.dirname(__file__), '..', 'docs', 'figures')
+OUT_DIR = os.path.join(os.path.dirname(__file__), '..', 'docs', 'experiments', 'figures')
 os.makedirs(OUT_DIR, exist_ok=True)
 
 # 配置中文字体
@@ -479,7 +479,7 @@ def fig_scale_mainchain_load(csv_path=None):
         csv_path = os.path.join(os.path.dirname(__file__), '..', 'docs', 'figures', 'data',
                                 'exp_scale_mainchain_summary.csv')
         if not os.path.exists(csv_path):
-            print('[warn] 主链负载线性扩展图：缺少 docs/figures/data/exp_scale_mainchain_summary.csv')
+            print('[warn] 主链负载线性扩展图：缺少 docs/experiments/figures/data/exp_scale_mainchain_summary.csv')
             print('[warn] 需要列：n,active_chains,child_subs_tps,main_bridge_tps,main_total_tps,main_bridge_to_child_tps_pct')
             return
 
@@ -602,7 +602,7 @@ def fig_capacity_scaling(csv_path=None):
         csv_path = os.path.join(os.path.dirname(__file__), '..', 'docs', 'figures', 'data',
                                 'exp_capacity_summary.csv')
         if not os.path.exists(csv_path):
-            print('[warn] 最大吞吐容量图：缺少 docs/figures/data/exp_capacity_summary.csv')
+            print('[warn] 最大吞吐容量图：缺少 docs/experiments/figures/data/exp_capacity_summary.csv')
             return
 
     with open(csv_path) as f:
@@ -678,7 +678,7 @@ def fig_isolation_comparison(csv_path=None):
         csv_path = os.path.join(os.path.dirname(__file__), '..', 'docs', 'figures', 'data',
                                 'exp_isolation_summary.csv')
         if not os.path.exists(csv_path):
-            print('[warn] 跨场景隔离图：缺少 docs/figures/data/exp_isolation_summary.csv')
+            print('[warn] 跨场景隔离图：缺少 docs/experiments/figures/data/exp_isolation_summary.csv')
             return
 
     with open(csv_path) as f:
@@ -736,7 +736,7 @@ def fig_liquidity_horizon(csv_path=None):
         csv_path = os.path.join(os.path.dirname(__file__), '..', 'docs', 'figures', 'data',
                                 'exp_liquidity_horizon_summary.csv')
         if not os.path.exists(csv_path):
-            print('[warn] 长周期资金锁定图：缺少 docs/figures/data/exp_liquidity_horizon_summary.csv')
+            print('[warn] 长周期资金锁定图：缺少 docs/experiments/figures/data/exp_liquidity_horizon_summary.csv')
             return
 
     with open(csv_path) as f:
@@ -1049,4 +1049,4 @@ if __name__ == '__main__':
             fig7b_capital_capacity()
         except Exception as e:
             print(f'[warn] fig7 错误: {e}')
-    print('完成。图表已保存至 docs/figures/')
+    print('完成。图表已保存至 docs/experiments/figures/')

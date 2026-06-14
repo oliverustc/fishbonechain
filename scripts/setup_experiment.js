@@ -329,7 +329,7 @@ async function main() {
   log("可以开始运行 worker.js 和 metrics.js 了");
   log("\n下一步：");
   log("  实验 A（基准）： node scripts/worker.js --scenario a --ws ws://10.2.2.11:9945 --task-id 0");
-  log("  实验 C（并发）： 见 docs/plan/experiment-run-plan.md");
+  log("  实验 C（并发）： 见 docs/experiments/experiment-report.md");
 }
 
 main().catch(e => {

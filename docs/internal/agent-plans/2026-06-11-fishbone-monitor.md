@@ -42,7 +42,7 @@
 - Create `monitor/src/index.ts`: process entry point and scheduler wiring.
 - Create `monitor/test/*.test.ts`: unit tests for inventory, collectors, state, and metric rendering.
 - Create `deploy/systemd/fishbone-monitor.service`: systemd unit template for `bcg`.
-- Create `docs/fishbone-monitor.md`: operator guide and API reference.
+- Create `docs/operations/fishbone-monitor.md`: operator guide and API reference.
 
 ## Data Model
 
@@ -489,7 +489,7 @@ Expected: health check returns JSON and logs show polling attempts.
 
 **Files:**
 - Create: `deploy/systemd/fishbone-monitor.service`
-- Create: `docs/fishbone-monitor.md`
+- Create: `docs/operations/fishbone-monitor.md`
 
 - [ ] **Step 1: Add systemd unit**
 
@@ -543,7 +543,7 @@ Expected:
 ## Task 9: Frontend-Ready API Contract Freeze
 
 **Files:**
-- Modify: `docs/fishbone-monitor.md`
+- Modify: `docs/operations/fishbone-monitor.md`
 - Create: `monitor/test/apiContract.test.ts`
 
 - [ ] **Step 1: Add contract snapshot tests**
