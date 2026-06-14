@@ -1,5 +1,0 @@
-scenario,scenario_name,single_chain_ok,single_chain_reject,single_chain_success_rate,dedicated_chain_ok,dedicated_chain_reject,dedicated_chain_success_rate,improvement_x,note
-a,快递配送,251,1763,12.46,1000,0,100.00,8.03,单链混跑中与高频场景竞争;隔离后独享子链容量
-b,交通感知,690,5775,10.67,1000,0,100.00,9.37,高频场景在单链中快速耗尽共享上限;隔离后稳定打满自身 epoch
-c,医疗标注,47,261,15.26,1000,0,100.00,6.55,高价值低频任务在单链中被挤压;隔离后不受高频流量影响
-e,传感器网络,15,1082,1.37,1000,0,100.00,73.13,超高频微任务单链混跑下几乎被拒绝;隔离后容量独立
