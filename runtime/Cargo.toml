@@ -31,7 +31,10 @@ pallet-sudo.workspace = true
 pallet-fishbone-template.workspace = true
 pallet-ccmc.workspace        = true
 pallet-fmc.workspace         = true
-pallet-crowdsource.workspace = true
+pallet-crowdsource = { workspace = true, optional = true }
+pallet-chain-profile.workspace = true
+pallet-data-registry = { workspace = true, optional = true }
+pallet-trade-session = { workspace = true, optional = true }
 pallet-timestamp.workspace = true
 pallet-transaction-payment-rpc-runtime-api.workspace = true
 pallet-transaction-payment.workspace = true
@@ -77,7 +80,10 @@ std = [
 	"pallet-fishbone-template/std",
 	"pallet-ccmc/std",
 	"pallet-fmc/std",
-	"pallet-crowdsource/std",
+	"pallet-crowdsource?/std",
+	"pallet-chain-profile/std",
+	"pallet-data-registry?/std",
+	"pallet-trade-session?/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
@@ -112,7 +118,10 @@ runtime-benchmarks = [
 	"pallet-fishbone-template/runtime-benchmarks",
 	"pallet-ccmc/runtime-benchmarks",
 	"pallet-fmc/runtime-benchmarks",
-	"pallet-crowdsource/runtime-benchmarks",
+	"pallet-crowdsource?/runtime-benchmarks",
+	"pallet-chain-profile/runtime-benchmarks",
+	"pallet-data-registry?/runtime-benchmarks",
+	"pallet-trade-session?/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-transaction-payment/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
@@ -130,7 +139,10 @@ try-runtime = [
 	"pallet-fishbone-template/try-runtime",
 	"pallet-ccmc/try-runtime",
 	"pallet-fmc/try-runtime",
-	"pallet-crowdsource/try-runtime",
+	"pallet-crowdsource?/try-runtime",
+	"pallet-chain-profile/try-runtime",
+	"pallet-data-registry?/try-runtime",
+	"pallet-trade-session?/try-runtime",
 	"pallet-timestamp/try-runtime",
 	"pallet-transaction-payment/try-runtime",
 	"sp-runtime/try-runtime",
@@ -155,3 +167,6 @@ block-1s = []    # AURA 1s 出块，子链 5（传感器网络）
 block-10mb = []  # 10 MB 区块，子链 3（医疗影像标注）
 # `babe` feature: enables pallet_babe (pallet_authorship always present as non-optional)
 babe = ["pallet-babe"]
+role-main = []
+scene-crowdsource = ["pallet-crowdsource"]
+scene-data-trade = ["pallet-data-registry", "pallet-trade-session"]

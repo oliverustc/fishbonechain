@@ -9,7 +9,12 @@
  *   node setup_selected_child_chains.js --chains child4,child1,child6
  */
 
+import { readFileSync } from "fs";
 import { ApiPromise, WsProvider, Keyring } from "@polkadot/api";
+
+const CHAIN_PROFILES = JSON.parse(
+  readFileSync(new URL("./profiles/chains.json", import.meta.url), "utf8")
+);
 
 const UNIT = 1_000_000_000_000n;
 
@@ -128,6 +133,17 @@ async function setupChain(chain, cfg, keyring, alice, options) {
     api.rpc.chain.getHeader(),
   ]);
   log(`${chain}: chain=${chainName.toString()} block=${header.number.toString()}`);
+
+  const profile = CHAIN_PROFILES[chain];
+  if (!profile) {
+    await api.disconnect();
+    throw new Error(`missing chain profile: ${chain}`);
+  }
+  if (profile.scene !== "Crowdsource") {
+    log(`${chain}: skip crowdsource setup for scene=${profile.scene}`);
+    await api.disconnect();
+    return;
+  }
 
   const descBytes = Array.from(new TextEncoder().encode(cfg.description));
   const syncNonce = (await api.rpc.system.accountNextIndex(alice.address)).toNumber();

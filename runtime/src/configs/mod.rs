@@ -216,22 +216,41 @@ impl pallet_fmc::Config for Runtime {
 	type WeightInfo = ();
 }
 
-/// Configure pallet-crowdsource (Child Chain Crowdsourcing).
-/// ChainId = 0：子链注册时主链 CCMC 分配的 ChainId（测试环境默认 0）
-/// Slots: CollectingSlot=600 blocks (~60min), SyncingSlot=20 blocks (~2min)
+/// Configure pallet-chain-profile (chain identity and scene profile).
+impl pallet_chain_profile::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+}
+
+#[cfg(feature = "scene-crowdsource")]
+// Configure pallet-crowdsource (Child Chain Crowdsourcing).
+// Slots: CollectingSlot=600 blocks (~60min), SyncingSlot=20 blocks (~2min)
 parameter_types! {
-	pub const CrowdsourceChainId: pallet_ccmc::types::ChainId = 0;
 	pub const CollectingSlotBlocks: u32 = 600;
 	pub const SyncingSlotBlocks: u32    = 20;
 }
 
+#[cfg(feature = "scene-crowdsource")]
 impl pallet_crowdsource::Config for Runtime {
-	type RuntimeEvent           = RuntimeEvent;
-	type Currency               = Balances;
-	type ChainId                = CrowdsourceChainId;
-	type CollectingSlotBlocks   = CollectingSlotBlocks;
-	type SyncingSlotBlocks      = SyncingSlotBlocks;
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type ChainProfile = pallet_chain_profile::Pallet<Runtime>;
+	type CollectingSlotBlocks = CollectingSlotBlocks;
+	type SyncingSlotBlocks = SyncingSlotBlocks;
 	type MaxSubmissionsPerEpoch = frame_support::traits::ConstU32<10000>;
-	type DataValidator          = pallet_crowdsource::AlwaysValidate;
-	type WeightInfo             = ();
+	type DataValidator = pallet_crowdsource::AlwaysValidate;
+	type WeightInfo = ();
+}
+
+#[cfg(feature = "scene-data-trade")]
+impl pallet_data_registry::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+}
+
+#[cfg(feature = "scene-data-trade")]
+impl pallet_trade_session::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type WeightInfo = ();
 }

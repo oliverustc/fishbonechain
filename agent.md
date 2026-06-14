@@ -4,19 +4,21 @@
 
 ## 项目目标
 
-FishboneChain 用 Substrate 实现主链 + 多子链众包系统：
+FishboneChain 用 Substrate 实现安全可扩展的数据流通平台。数据众包是已经实现的第一个场景，数据交易是下一阶段场景；后续还可以承载 zk+机器学习可验证训练、zkVM 数据不出域分析等专用子链场景。
 
-- 主链负责子链登记、矿工管理、Epoch 摘要确认和任务资金托管
-- 子链负责众包任务同步、数据提交、Epoch 结算和 Merkle 摘要生成
-- 链下 bridge 监听子链事件，把摘要和账单提交到主链
-- 实验重点是异构工作负载下的多链吞吐量扩展，以及 FMC 周期性锁仓带来的资金流动性提升
+- 平台层负责子链登记、矿工管理、Epoch 摘要确认、链 profile 和可选资金能力
+- 数据众包子链负责任务同步、数据提交、Epoch 结算和 Merkle 摘要生成
+- 数据交易子链负责 listing、交易会话、主链锁资/押金和哈希链 claim
+- 链下 bridge 按场景拆分 adapter，不能把每条子链都按众包协议处理
 
 ## 当前实现状态
 
 - `pallet-ccmc`：子链管理、矿工加入/退出、Epoch digest 多数确认、slash 投票
 - `pallet-fmc`：资金池、任务创建/激活/终止、账单多数确认和结算
+- `pallet-chain-profile`：链身份、场景类型和结算模式
 - `pallet-crowdsource`：任务同步、数据提交、Epoch 生命周期、Merkle root 和账单事件
-- `runtime/`：默认 AURA runtime；`fishbone-runtime/babe` feature 切换到 BABE runtime
+- `pallet-data-registry`、`pallet-trade-session`：数据交易场景骨架
+- `runtime/`：支持 `role-main`、`scene-crowdsource`、`scene-data-trade` profile
 - `node/`：默认 AURA service 和 `service_babe.rs`
 - `scripts/`：worker、bridge、metrics、实验初始化、runtime 升级、结果分析和绘图
 - `deploy/`：12 台 VM、1 主链 + 6 子链部署配置和 raw spec
@@ -30,7 +32,9 @@ node/                   节点 CLI、chain spec、service、RPC
 runtime/                FRAME runtime，含 AURA/BABE 分支文件
 pallets/ccmc/           子链管理 pallet
 pallets/fmc/            资金管理 pallet
-pallets/crowdsource/    子链众包 pallet
+pallets/crowdsource/    数据众包场景 pallet
+pallets/data-registry/  数据交易 listing pallet
+pallets/trade-session/  数据交易会话/锁资 pallet
 scripts/                Node/Python 实验与运维脚本
 deploy/                 VM 部署框架、spec、keys、bin
 docs/                   分类后的架构、实现、开发、运维和实验文档
@@ -48,7 +52,7 @@ make check
 make test
 
 # 单独测试核心 pallet
-SKIP_WASM_BUILD=1 cargo test -p pallet-ccmc -p pallet-fmc -p pallet-crowdsource
+SKIP_WASM_BUILD=1 cargo test -p pallet-ccmc -p pallet-fmc -p pallet-chain-profile -p pallet-crowdsource -p pallet-data-registry -p pallet-trade-session
 
 # 构建 release 二进制
 make build-release
@@ -93,6 +97,6 @@ bash scripts/check-blocks.sh
 ## 后续重点
 
 - 完成资金流动性实验 E：验证 `BillSettled`、`locked/free` 动态变化、生成最终图表
-- 对 `scripts/bridge.js` 的多矿工、多链配置继续做可靠性检查
+- 对 `scripts/bridges/` 的多矿工、多链和多场景配置继续做可靠性检查
 - 梳理部署产物和源码产物边界，必要时调整 `.gitignore`
-- 将 CDT/BPiano 从设计文档推进到可运行子链模块或链下证明服务
+- 将 CDT/BPiano 从当前骨架推进到完整 verifier、争议和链下证明服务

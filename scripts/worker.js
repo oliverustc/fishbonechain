@@ -16,6 +16,7 @@
  *   --data-size <bytes>  随机数据大小（默认 256）
  *   --duration <s>       运行时长（默认无限）
  *   --scenario <a-f>     使用场景预设（覆盖以上参数）
+ *   --protocol <name>    负载协议（默认 crowdsource）
  *
  * 场景预设（对应 6 条子链）：
  *   a 快递物流:   300 workers, 0.02 req/s, 5 UNIT,     512B
@@ -59,6 +60,7 @@ function parseArgs() {
   }
 
   return {
+    protocol: get("--protocol", "crowdsource"),
     ws:       get("--ws",        "ws://127.0.0.1:9945"),
     taskId:   Number(get("--task-id",   "0")),
     workers:  Number(get("--workers",   preset?.workers  ?? 10)),
@@ -112,8 +114,12 @@ class Stats {
 
 async function main() {
   const cfg = parseArgs();
+  if (cfg.protocol !== "crowdsource") {
+    throw new Error("worker.js only supports protocol=crowdsource; use a scene-specific load generator");
+  }
 
   console.log(`[worker] 场景: ${cfg.scenario ?? "custom"}`);
+  console.log(`[worker] 协议: ${cfg.protocol}`);
   console.log(`[worker] 子链 RPC: ${cfg.ws}`);
   console.log(`[worker] 工作者数: ${cfg.workers}  请求率: ${cfg.rate} req/s  数据大小: ${cfg.dataSize}B`);
   console.log(`[worker] task_id=${cfg.taskId}  reward=${cfg.reward} planck`);

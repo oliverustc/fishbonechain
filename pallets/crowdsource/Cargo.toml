@@ -21,6 +21,7 @@ sp-io         = { workspace = true }
 # Cross-pallet type aliases only (no Config inheritance)
 pallet-ccmc = { workspace = true }
 pallet-fmc  = { workspace = true }
+pallet-chain-profile = { workspace = true }
 
 # Merkle tree
 binary-merkle-tree = { version = "16.0.0", default-features = false }
@@ -40,6 +41,7 @@ std = [
     "sp-io/std",
     "pallet-ccmc/std",
     "pallet-fmc/std",
+    "pallet-chain-profile/std",
     "binary-merkle-tree/std",
 ]
 runtime-benchmarks = [

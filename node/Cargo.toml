@@ -83,6 +83,7 @@ sp-runtime.default-features = true
 sp-runtime.workspace = true
 sp-timestamp.default-features = true
 sp-timestamp.workspace = true
+static_init.workspace = true
 substrate-frame-rpc-system.default-features = true
 substrate-frame-rpc-system.workspace = true
 

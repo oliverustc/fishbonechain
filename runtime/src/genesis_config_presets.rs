@@ -15,9 +15,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{AccountId, BalancesConfig, RuntimeGenesisConfig, SudoConfig};
+use crate::{AccountId, BalancesConfig, ChainProfileConfig, RuntimeGenesisConfig, SudoConfig};
 use alloc::{vec, vec::Vec};
 use frame_support::build_struct_json_patch;
+use pallet_chain_profile::{ChainProfileInfo, SceneKind, SettlementMode};
 use serde_json::Value;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_consensus_grandpa::AuthorityId as GrandpaId;
@@ -41,10 +42,18 @@ fn testnet_genesis(
 				.collect::<Vec<_>>(),
 		},
 		aura: pallet_aura::GenesisConfig {
-			authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect::<Vec<_>>(),
+			authorities: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 		},
 		grandpa: pallet_grandpa::GenesisConfig {
 			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect::<Vec<_>>(),
+		},
+		chain_profile: ChainProfileConfig {
+			profile: ChainProfileInfo {
+				chain_id: 0,
+				scene: SceneKind::PlatformOnly,
+				settlement: SettlementMode::None,
+				params_hash: Default::default(),
+			},
 		},
 		sudo: SudoConfig { key: Some(root) },
 	})
@@ -108,14 +117,9 @@ fn testnet_genesis(
 				.collect::<Vec<_>>(),
 		},
 		// AURA pallet is always compiled in; empty authorities = no AURA consensus
-		aura: pallet_aura::GenesisConfig {
-			authorities: vec![],
-		},
+		aura: pallet_aura::GenesisConfig { authorities: vec![] },
 		babe: pallet_babe::GenesisConfig {
-			authorities: initial_authorities
-				.iter()
-				.map(|x| (x.0.clone(), 1))
-				.collect::<Vec<_>>(),
+			authorities: initial_authorities.iter().map(|x| (x.0.clone(), 1)).collect::<Vec<_>>(),
 			epoch_config: sp_consensus_babe::BabeEpochConfiguration {
 				c: (1, 4),
 				allowed_slots: sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryVRFSlots,
@@ -123,6 +127,14 @@ fn testnet_genesis(
 		},
 		grandpa: pallet_grandpa::GenesisConfig {
 			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect::<Vec<_>>(),
+		},
+		chain_profile: ChainProfileConfig {
+			profile: ChainProfileInfo {
+				chain_id: 0,
+				scene: SceneKind::PlatformOnly,
+				settlement: SettlementMode::None,
+				params_hash: Default::default(),
+			},
 		},
 		sudo: SudoConfig { key: Some(root) },
 	})
@@ -133,8 +145,7 @@ pub fn development_config_genesis() -> Value {
 	use sp_core::crypto::ByteArray;
 	testnet_genesis(
 		vec![(
-			BabeId::from_slice(&sp_keyring::Sr25519Keyring::Alice.public().0)
-				.expect("valid key"),
+			BabeId::from_slice(&sp_keyring::Sr25519Keyring::Alice.public().0).expect("valid key"),
 			sp_keyring::Ed25519Keyring::Alice.public().into(),
 		)],
 		vec![
@@ -158,8 +169,7 @@ pub fn local_config_genesis() -> Value {
 				sp_keyring::Ed25519Keyring::Alice.public().into(),
 			),
 			(
-				BabeId::from_slice(&sp_keyring::Sr25519Keyring::Bob.public().0)
-					.expect("valid key"),
+				BabeId::from_slice(&sp_keyring::Sr25519Keyring::Bob.public().0).expect("valid key"),
 				sp_keyring::Ed25519Keyring::Bob.public().into(),
 			),
 		],

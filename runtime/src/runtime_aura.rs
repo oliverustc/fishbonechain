@@ -52,4 +52,7 @@ mod runtime {
 
 	#[runtime::pallet_index(10)]
 	pub type Crowdsource = pallet_crowdsource;
+
+	#[runtime::pallet_index(13)]
+	pub type ChainProfile = pallet_chain_profile;
 }

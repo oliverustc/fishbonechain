@@ -1,5 +1,14 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(all(
+	feature = "role-main",
+	any(feature = "scene-crowdsource", feature = "scene-data-trade")
+))]
+compile_error!("role-main cannot be combined with scene child-chain features");
+
+#[cfg(all(feature = "scene-crowdsource", feature = "scene-data-trade"))]
+compile_error!("select exactly one scene feature per child runtime build");
+
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
@@ -183,12 +192,22 @@ pub type Executive = frame_executive::Executive<
 	Migrations,
 >;
 
-// Runtime definition is split into two files to support optional BABE consensus:
-// - runtime_aura.rs: AURA-only (default)
-// - runtime_babe.rs: BABE + AURA pallets (--features babe)
-// `include!` is used because #[frame_support::runtime] strips #[cfg] attributes.
-#[cfg(not(feature = "babe"))]
-include!("runtime_aura.rs");
-
-#[cfg(feature = "babe")]
+#[cfg(all(feature = "babe", not(feature = "scene-data-trade")))]
 include!("runtime_babe.rs");
+
+#[cfg(all(feature = "role-main", not(feature = "babe")))]
+include!("runtime_main.rs");
+
+#[cfg(all(feature = "scene-crowdsource", not(feature = "babe")))]
+include!("runtime_crowdsource.rs");
+
+#[cfg(all(feature = "scene-data-trade", not(feature = "babe")))]
+include!("runtime_data_trade.rs");
+
+#[cfg(all(
+	not(feature = "role-main"),
+	not(feature = "scene-crowdsource"),
+	not(feature = "scene-data-trade"),
+	not(feature = "babe")
+))]
+include!("runtime_main.rs");

@@ -2,13 +2,12 @@ use crate::{
 	benchmarking::{inherent_benchmark_data, RemarkBuilder, TransferKeepAliveBuilder},
 	chain_spec,
 	cli::{Cli, Subcommand},
-	service,
-	service_babe,
+	service, service_babe,
 };
+use fishbone_runtime::{Block, EXISTENTIAL_DEPOSIT};
 use frame_benchmarking_cli::{BenchmarkCmd, ExtrinsicFactory, SUBSTRATE_REFERENCE_HARDWARE};
 use sc_cli::SubstrateCli;
 use sc_service::PartialComponents;
-use fishbone_runtime::{Block, EXISTENTIAL_DEPOSIT};
 use sp_keyring::Sr25519Keyring;
 
 impl SubstrateCli for Cli {
@@ -38,17 +37,18 @@ impl SubstrateCli for Cli {
 
 	fn load_spec(&self, id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
 		Ok(match id {
-			"dev" | "main-dev"         => Box::new(chain_spec::main_dev()?),
+			"dev" | "main-dev" => Box::new(chain_spec::main_dev()?),
 			"" | "local" | "main-local" => Box::new(chain_spec::main_local()?),
-			"child1-local"             => Box::new(chain_spec::child1_local()?),
-			"child2-local"             => Box::new(chain_spec::child2_local()?),
-			"child3-local"             => Box::new(chain_spec::child3_local()?),
-			"child4-local"             => Box::new(chain_spec::child4_local()?),
-			"child5-local"             => Box::new(chain_spec::child5_local()?),
-			"child6-local"             => Box::new(chain_spec::child6_local()?),
-			"child6-babe"              => Box::new(chain_spec::child6_babe_local()?),
-			path =>
-				Box::new(chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(path))?),
+			"child1-local" => Box::new(chain_spec::child1_local()?),
+			"child2-local" => Box::new(chain_spec::child2_local()?),
+			"child3-local" => Box::new(chain_spec::child3_local()?),
+			"child4-local" => Box::new(chain_spec::child4_local()?),
+			"child5-local" => Box::new(chain_spec::child5_local()?),
+			"child6-local" => Box::new(chain_spec::child6_local()?),
+			"child6-babe" => Box::new(chain_spec::child6_babe_local()?),
+			path => {
+				Box::new(chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(path))?)
+			},
 		})
 	}
 }
@@ -174,8 +174,9 @@ pub fn run() -> sc_cli::Result<()> {
 
 						cmd.run(client, inherent_benchmark_data()?, Vec::new(), &ext_factory)
 					},
-					BenchmarkCmd::Machine(cmd) =>
-						cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone()),
+					BenchmarkCmd::Machine(cmd) => {
+						cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone())
+					},
 				}
 			})
 		},

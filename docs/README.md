@@ -10,6 +10,7 @@
 
 ## 架构与设计
 
+- [architecture/platform-architecture.md](architecture/platform-architecture.md)：平台层/场景层边界、chain profile 与结算模式
 - [architecture/fishbonechain.md](architecture/fishbonechain.md)：FishboneChain 主链 + 多子链众包架构
 - [architecture/cdt.md](architecture/cdt.md)：可定制可验证数据交易协议
 - [architecture/cross-chain-proof.md](architecture/cross-chain-proof.md)：BPiano / 高效跨链状态证明
@@ -18,6 +19,7 @@
 ## 实现与开发
 
 - [implementation/implementation-record.md](implementation/implementation-record.md)：当前实现记录
+- [implementation/data-trade-implementation.md](implementation/data-trade-implementation.md)：数据交易场景实现记录
 - [implementation/implementation-plan.md](implementation/implementation-plan.md)：早期总体实现规划，已被当前实现记录覆盖的部分仅作历史参考
 - [development/developer-guide.md](development/developer-guide.md)：开发者指南
 - [development/rust-setup.md](development/rust-setup.md)：Rust/Substrate 环境说明

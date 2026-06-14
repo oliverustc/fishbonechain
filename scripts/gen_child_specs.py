@@ -72,6 +72,17 @@ def inject_validators(spec: dict, aura_ss58: list[str], gran_ss58: list[str], ke
     return spec
 
 
+def zero_hash() -> str:
+    return "0x" + "00" * 32
+
+
+def inject_chain_profile(spec: dict, profile: dict) -> dict:
+    """将链 profile 注入 genesis patch，供 runtime 的 pallet-chain-profile 初始化。"""
+    patch = spec["genesis"]["runtimeGenesis"]["patch"]
+    patch["chainProfile"] = {"profile": profile}
+    return spec
+
+
 def main():
     SPECS.mkdir(parents=True, exist_ok=True)
 
@@ -83,6 +94,12 @@ def main():
             "binary":   BIN_DIR / "fishbone-node",
             "validators": [f"f{i}" for i in range(1, 13)],
             "out":      SPECS / "main-custom-raw.json",
+            "profile": {
+                "chainId": 0,
+                "scene": "PlatformOnly",
+                "settlement": "None",
+                "paramsHash": zero_hash(),
+            },
         },
         {
             "name":     "child1",
@@ -90,6 +107,12 @@ def main():
             "binary":   BIN_DIR / "fishbone-node",
             "validators": ["f1", "f2", "f3"],
             "out":      SPECS / "child1-custom-raw.json",
+            "profile": {
+                "chainId": 0,
+                "scene": "Crowdsource",
+                "settlement": "FmcTaskBill",
+                "paramsHash": zero_hash(),
+            },
         },
         {
             "name":     "child2",
@@ -97,6 +120,12 @@ def main():
             "binary":   BIN_DIR / "fishbone-node",
             "validators": ["f4", "f5", "f6"],
             "out":      SPECS / "child2-custom-raw.json",
+            "profile": {
+                "chainId": 1,
+                "scene": "Crowdsource",
+                "settlement": "FmcTaskBill",
+                "paramsHash": zero_hash(),
+            },
         },
         {
             "name":     "child3",
@@ -104,6 +133,12 @@ def main():
             "binary":   BIN_DIR / "fishbone-node",
             "validators": ["f7", "f8", "f9"],
             "out":      SPECS / "child3-custom-raw.json",
+            "profile": {
+                "chainId": 2,
+                "scene": "Crowdsource",
+                "settlement": "FmcTaskBill",
+                "paramsHash": zero_hash(),
+            },
         },
         {
             "name":     "child4",
@@ -111,6 +146,12 @@ def main():
             "binary":   BIN_DIR / "fishbone-node",
             "validators": ["f1", "f2", "f3", "f4", "f5", "f6", "f7"],
             "out":      SPECS / "child4-custom-raw.json",
+            "profile": {
+                "chainId": 3,
+                "scene": "Crowdsource",
+                "settlement": "FmcTaskBill",
+                "paramsHash": zero_hash(),
+            },
         },
         {
             "name":     "child5",
@@ -118,6 +159,12 @@ def main():
             "binary":   BIN_DIR / "fishbone-node",
             "validators": ["f10", "f11", "f12"],
             "out":      SPECS / "child5-custom-raw.json",
+            "profile": {
+                "chainId": 4,
+                "scene": "Crowdsource",
+                "settlement": "FmcTaskBill",
+                "paramsHash": zero_hash(),
+            },
         },
         {
             "name":     "child6",
@@ -125,6 +172,12 @@ def main():
             "binary":   BIN_DIR / "fishbone-node",
             "validators": ["f1", "f2", "f3", "f4", "f5"],
             "out":      SPECS / "child6-custom-raw.json",
+            "profile": {
+                "chainId": 5,
+                "scene": "DataTrade",
+                "settlement": "MainEscrow",
+                "paramsHash": zero_hash(),
+            },
         },
     ]
 
@@ -155,6 +208,7 @@ def main():
         # 注入真实 validator 密钥
         key_type = cfg.get("key_type", "aura")
         spec = inject_validators(spec, aura_keys, gran_keys, key_type=key_type)
+        spec = inject_chain_profile(spec, cfg["profile"])
 
         # 转 raw 并写入
         print(f"  build-spec --raw ...")

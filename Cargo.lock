@@ -2713,6 +2713,7 @@ dependencies = [
  "sp-runtime",
  "sp-timestamp",
  "sp-transaction-storage-proof",
+ "static_init",
  "substrate-build-script-utils",
  "substrate-frame-rpc-system",
 ]
@@ -2734,12 +2735,15 @@ dependencies = [
  "pallet-babe",
  "pallet-balances",
  "pallet-ccmc",
+ "pallet-chain-profile",
  "pallet-crowdsource",
+ "pallet-data-registry",
  "pallet-fishbone-template",
  "pallet-fmc",
  "pallet-grandpa",
  "pallet-sudo",
  "pallet-timestamp",
+ "pallet-trade-session",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "parity-scale-codec",
@@ -6012,6 +6016,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-chain-profile"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-ccmc",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
 name = "pallet-crowdsource"
 version = "0.1.0"
 dependencies = [
@@ -6020,7 +6039,21 @@ dependencies = [
  "frame-system",
  "pallet-balances",
  "pallet-ccmc",
+ "pallet-chain-profile",
  "pallet-fmc",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-data-registry"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
@@ -6137,6 +6170,20 @@ dependencies = [
  "sp-runtime",
  "sp-storage",
  "sp-timestamp",
+]
+
+[[package]]
+name = "pallet-trade-session"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
 ]
 
 [[package]]
