@@ -245,11 +245,27 @@ impl pallet_crowdsource::Config for Runtime {
 #[cfg(feature = "scene-data-trade")]
 impl pallet_data_registry::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
 	type WeightInfo = ();
 }
 
 #[cfg(feature = "scene-data-trade")]
+parameter_types! {
+	pub VerifierAuthorityAccount: AccountId = sp_keyring::Sr25519Keyring::Charlie.to_account_id();
+}
+
+#[cfg(feature = "scene-data-trade")]
 impl pallet_trade_session::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type ListingProvider = crate::DataRegistry;
+	type ProofVerifier = pallet_trade_session::proof::AlwaysPassVerifier;
+	type VerifierAuthority = VerifierAuthorityAccount;
+	type WeightInfo = ();
+}
+
+#[cfg(feature = "role-main")]
+impl pallet_main_escrow::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type WeightInfo = ();

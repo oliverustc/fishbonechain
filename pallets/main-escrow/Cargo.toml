@@ -1,6 +1,6 @@
 [package]
-name = "pallet-data-registry"
-description = "FishboneChain data-trade listing registry pallet."
+name = "pallet-main-escrow"
+description = "FishboneChain main-chain escrow for data trade."
 version = "0.1.0"
 license = "MIT-0"
 authors.workspace = true
@@ -17,8 +17,8 @@ codec = { features = ["derive"], workspace = true }
 scale-info = { features = ["derive"], workspace = true }
 frame-support.workspace = true
 frame-system.workspace = true
-pallet-trade-session.workspace = true
 sp-runtime.workspace = true
+sp-core.workspace = true
 
 [dev-dependencies]
 pallet-balances = { workspace = true, default-features = true }
@@ -33,8 +33,8 @@ std = [
     "scale-info/std",
     "frame-support/std",
     "frame-system/std",
-    "pallet-trade-session/std",
     "sp-runtime/std",
+    "sp-core/std",
 ]
 runtime-benchmarks = [
     "frame-support/runtime-benchmarks",

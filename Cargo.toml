@@ -15,6 +15,7 @@ members = [
     "pallets/chain-profile",
     "pallets/data-registry",
     "pallets/trade-session",
+    "pallets/main-escrow",
     "runtime",
 ]
 resolver = "2"
@@ -38,6 +39,7 @@ pallet-crowdsource = { path = "./pallets/crowdsource", default-features = false 
 pallet-chain-profile = { path = "./pallets/chain-profile", default-features = false }
 pallet-data-registry = { path = "./pallets/data-registry", default-features = false }
 pallet-trade-session = { path = "./pallets/trade-session", default-features = false }
+pallet-main-escrow = { path = "./pallets/main-escrow", default-features = false }
 clap = { version = "4.5.13" }
 frame-benchmarking-cli = { version = "47.0.0", default-features = false }
 frame-metadata-hash-extension = { version = "0.8.0", default-features = false }
@@ -100,7 +102,7 @@ sp-storage = { version = "22.0.0", default-features = false }
 sp-transaction-pool = { version = "36.0.0", default-features = false }
 sp-version = { version = "39.0.0", default-features = false }
 static_init = { version = "1.0.3", default-features = false, features = ["parking_lot"] }
-substrate-wasm-builder = { version = "26.0.1", default-features = false }
+substrate-wasm-builder = { version = "33.0.0", default-features = false }
 
 [profile.release]
 opt-level = 3

@@ -1,23 +1,53 @@
 # 数据交易场景实现记录
 
-数据交易场景作为 CDT 的第一阶段工程骨架，部署在专用数据交易子链上，并通过 `SceneKind::DataTrade` 与 `SettlementMode::MainEscrow` 声明身份。
+数据交易场景作为 CDT 的第一阶段工程实现，部署在专用数据交易子链 (child6)，并通过 `SceneKind::DataTrade` 与 `SettlementMode::MainEscrow` 声明身份。
 
-## 当前实现
+## 当前实现 (2026-06-15 更新)
 
-- `pallet-data-registry`：数据拥有者发布 listing，记录 IMT root 和描述；只有 owner 可以更新 root。
-- `pallet-trade-session`：创建交易会话、DR 锁定资金、DO 锁定押金、DO 通过哈希链 preimage claim 资金。
-- `scripts/bridges/data_trade.js`：数据交易 bridge 骨架，只观察 `dataRegistry` 和 `tradeSession` 事件，不提交 FMC bill。
-- `scripts/profiles/chains.json`：`child6` 声明为 `DataTrade/MainEscrow`。
+### 已实现
 
-## 边界
+- **`pallet-data-registry`** (DC)：完整 listing 管理，含 `price_per_round`、`max_rounds`、`deposit_hint`、`request_schema_hash`、`proof_params_hash`、`ListingStatus` (Active/Suspended/Retired)。
+- **`pallet-trade-session`** (VC)：完整论文 VC 状态机 (12 extrinsics)：
+  - `create_session`、`accept_session`
+  - 轮次协议：`open_round` → `submit_payment_proof` → `submit_data_proof` → `submit_proof_signature` → `submit_data_delivery_hash` → `submit_payment_preimage`
+  - 结算：`claim_settlement`
+  - 争议：`dispute_invalid_proof`、`dispute_invalid_plaintext`
+  - 救济：`claim_last_payment`
+- **`pallet-main-escrow`** (Fund)：主链锁资/押金 pallet：
+  - `open_escrow`、`lock_funds`、`lock_deposit`
+  - `settle_by_preimage` (hash-chain 验证 + 按轮付款 + 退款)
+  - `punish_data_owner` (slash deposit)
+  - `claim_last_payment`
+- **跨 pallet 集成**：
+  - `data-registry` 实现 `ListingProvider` trait，供 `trade-session` 校验 listing
+  - `trade-session` 使用可插拔 `DataTradeProofVerifier` trait (Phase 1: mock)
+- **E2E 脚本** (`scripts/data_trade_flow.js`)：happy path + invalid-proof + requester-refuses-payment
+- **Bridge** (`scripts/bridges/data_trade.js`)：观察器 + 可选 `--execute --dev-keys` 协调器
+- **Runtime 配置**：`role-main` 包含 `MainEscrow`，`scene-data-trade` 包含 `DataRegistry` + `TradeSession` (不含 Crowdsource)
 
-- 数据交易场景独立于数据众包 pallet。
-- 第一版采用 `MainEscrow`，不会调用 FMC。
-- `FmcAssisted` 和 `Hybrid` 只作为后续模式保留，适合需要周期预算的交易、训练或分析服务。
-- ZK verifier 暂不接入，等会话状态机、资金状态机和争议入口稳定后再加入。
+### 仍未实现
+
+- 真实上链 zk-SNARK verifier（当前使用 `AlwaysPassVerifier` mock）
+- CCMC/Merkle proof 接入主链 escrow（trustless 跨链桥）
+- FmcAssisted / Hybrid 结算模式
+- 生产环境的 bridge 安全签名
+
+### 边界
+
+- 数据交易场景独立于数据众包 pallet
+- 第一版采用 `MainEscrow`，不调用 FMC
+- ZK verifier 当前为 mock，只在协议状态机层面工作
+
+## 测试状态
+
+```bash
+SKIP_WASM_BUILD=1 cargo test -p pallet-data-registry    # 12 passed
+SKIP_WASM_BUILD=1 cargo test -p pallet-trade-session    # 12 passed
+SKIP_WASM_BUILD=1 cargo test -p pallet-main-escrow      # 9 passed
+```
 
 ## 后续方向
 
-- 把论文中的 VC/Fund 争议流程映射到 `trade-session`。
-- 接入确定哈希函数和 ZK verifier。
-- 为不同数据交易类型生成不同子链 profile 和参数哈希。
+- 接入真实 ZK verifier (see `data-trade-zk-verifier-plan.md`)
+- 将 trustless CCMC/Merkle proof 接入主链 escrow 验证
+- 不同数据交易类型的子链 profile 和参数哈希

@@ -1,6 +1,6 @@
-# sp-io 28.x (polkadot-sdk 2512) + Rust >= 1.82 需要此标志
+# sp-io host functions must stay unresolved imports in runtime WASM.
 # 待升级到修复版 SDK 后可移除
-WASM_FLAGS := -C link-arg=--allow-undefined
+WASM_FLAGS := -C link-arg=--import-undefined
 
 .PHONY: build build-release build-node build-runtime build-main build-crowdsource-child build-data-trade-child build-2s build-1s build-10mb build-babe check test clean
 

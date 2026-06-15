@@ -22,12 +22,12 @@ BIN_DIR = ROOT / "deploy" / "bin"
 # ── 子链→binary 映射 ──────────────────────────────────────────────────────────
 CHAIN_BINARY = {
     "main":   "fishbone-node",
-    "child1": "fishbone-node",
+    "child1": "fishbone-node-crowdsource",
     "child2": "fishbone-node-2s",
     "child3": "fishbone-node-10mb",
-    "child4": "fishbone-node",
+    "child4": "fishbone-node-crowdsource",
     "child5": "fishbone-node-1s",
-    "child6": "fishbone-node-babe",
+    "child6": "fishbone-node-data-trade",
 }
 
 # 各节点参与的子链（与 config.toml 一致）
@@ -180,17 +180,7 @@ def inject_keys(node: str) -> None:
             f"--scheme ed25519 --key-type gran "
             f"--suri '{gran_phrase}' 2>/dev/null"
         )
-        # child6 (BABE) 额外注入 babe key-type
-        if chain == "child6":
-            ssh(node,
-                f"{remote_binary} key insert "
-                f"--base-path {base_path} --chain {spec_path} "
-                f"--scheme sr25519 --key-type babe "
-                f"--suri '{aura_phrase}' 2>/dev/null"
-            )
-            print(f"  [{node}] {chain} aura+gran+babe keys injected")
-        else:
-            print(f"  [{node}] {chain} aura+gran keys injected")
+        print(f"  [{node}] {chain} aura+gran keys injected")
 
 
 # ── Step 7：安装 systemd service ─────────────────────────────────────────────
@@ -206,7 +196,7 @@ CHAIN_LABELS = {
     "child3": "Child-3 (Medical, 10MB)",
     "child4": "Child-4 (Financial, 7-val)",
     "child5": "Child-5 (IoT, 1s)",
-    "child6": "Child-6 (Data Market, BABE)",
+    "child6": "Child-6 (Data Trade, AURA-5)",
 }
 
 

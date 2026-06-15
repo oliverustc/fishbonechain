@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
-生成 child3-child6 chain spec（human-readable → 注入真实 validator 密钥 → raw）。
+生成 main/child chain spec（human-readable → 注入真实 validator 密钥与 chain profile → raw）。
 
-用法：python3 scripts/gen_child_specs.py
+用法：
+  python3 scripts/gen_child_specs.py
+  python3 scripts/gen_child_specs.py --only main,child1,child6
 工作目录：fishbonechain 项目根目录
 """
+import argparse
 import json
 import os
-import re
 import subprocess
 import sys
 from pathlib import Path
@@ -79,21 +81,26 @@ def zero_hash() -> str:
 def inject_chain_profile(spec: dict, profile: dict) -> dict:
     """将链 profile 注入 genesis patch，供 runtime 的 pallet-chain-profile 初始化。"""
     patch = spec["genesis"]["runtimeGenesis"]["patch"]
-    patch["chainProfile"] = {"profile": profile}
+    patch["chainProfile"] = {
+        "profile": {
+            "chain_id": profile["chainId"],
+            "scene": profile["scene"],
+            "settlement": profile["settlement"],
+            "params_hash": profile["paramsHash"],
+        }
+    }
     return spec
 
 
-def main():
-    SPECS.mkdir(parents=True, exist_ok=True)
-
-    # ── 主链 + 各子链配置 ─────────────────────────────────────────────────────
-    chains = [
+def chain_configs() -> list[dict]:
+    """返回所有链的 spec 生成配置。"""
+    return [
         {
-            "name":     "main",
+            "name": "main",
             "chain_id": "main-local",
-            "binary":   BIN_DIR / "fishbone-node",
+            "binary": BIN_DIR / "fishbone-node",
             "validators": [f"f{i}" for i in range(1, 13)],
-            "out":      SPECS / "main-custom-raw.json",
+            "out": SPECS / "main-custom-raw.json",
             "profile": {
                 "chainId": 0,
                 "scene": "PlatformOnly",
@@ -102,11 +109,11 @@ def main():
             },
         },
         {
-            "name":     "child1",
+            "name": "child1",
             "chain_id": "child1-local",
-            "binary":   BIN_DIR / "fishbone-node",
+            "binary": BIN_DIR / "fishbone-node-crowdsource",
             "validators": ["f1", "f2", "f3"],
-            "out":      SPECS / "child1-custom-raw.json",
+            "out": SPECS / "child1-custom-raw.json",
             "profile": {
                 "chainId": 0,
                 "scene": "Crowdsource",
@@ -115,11 +122,11 @@ def main():
             },
         },
         {
-            "name":     "child2",
+            "name": "child2",
             "chain_id": "child2-local",
-            "binary":   BIN_DIR / "fishbone-node",
+            "binary": BIN_DIR / "fishbone-node-2s",
             "validators": ["f4", "f5", "f6"],
-            "out":      SPECS / "child2-custom-raw.json",
+            "out": SPECS / "child2-custom-raw.json",
             "profile": {
                 "chainId": 1,
                 "scene": "Crowdsource",
@@ -128,11 +135,11 @@ def main():
             },
         },
         {
-            "name":     "child3",
+            "name": "child3",
             "chain_id": "child3-local",
-            "binary":   BIN_DIR / "fishbone-node",
+            "binary": BIN_DIR / "fishbone-node-10mb",
             "validators": ["f7", "f8", "f9"],
-            "out":      SPECS / "child3-custom-raw.json",
+            "out": SPECS / "child3-custom-raw.json",
             "profile": {
                 "chainId": 2,
                 "scene": "Crowdsource",
@@ -141,11 +148,11 @@ def main():
             },
         },
         {
-            "name":     "child4",
+            "name": "child4",
             "chain_id": "child4-local",
-            "binary":   BIN_DIR / "fishbone-node",
+            "binary": BIN_DIR / "fishbone-node-crowdsource",
             "validators": ["f1", "f2", "f3", "f4", "f5", "f6", "f7"],
-            "out":      SPECS / "child4-custom-raw.json",
+            "out": SPECS / "child4-custom-raw.json",
             "profile": {
                 "chainId": 3,
                 "scene": "Crowdsource",
@@ -154,11 +161,11 @@ def main():
             },
         },
         {
-            "name":     "child5",
+            "name": "child5",
             "chain_id": "child5-local",
-            "binary":   BIN_DIR / "fishbone-node",
+            "binary": BIN_DIR / "fishbone-node-1s",
             "validators": ["f10", "f11", "f12"],
-            "out":      SPECS / "child5-custom-raw.json",
+            "out": SPECS / "child5-custom-raw.json",
             "profile": {
                 "chainId": 4,
                 "scene": "Crowdsource",
@@ -167,11 +174,11 @@ def main():
             },
         },
         {
-            "name":     "child6",
+            "name": "child6",
             "chain_id": "child6-local",
-            "binary":   BIN_DIR / "fishbone-node",
+            "binary": BIN_DIR / "fishbone-node-data-trade",
             "validators": ["f1", "f2", "f3", "f4", "f5"],
-            "out":      SPECS / "child6-custom-raw.json",
+            "out": SPECS / "child6-custom-raw.json",
             "profile": {
                 "chainId": 5,
                 "scene": "DataTrade",
@@ -180,6 +187,32 @@ def main():
             },
         },
     ]
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--only",
+        default="",
+        help="逗号分隔链列表，例如 main,child1,child6；默认生成全部链",
+    )
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    SPECS.mkdir(parents=True, exist_ok=True)
+
+    # ── 主链 + 各子链配置 ─────────────────────────────────────────────────────
+    chains = chain_configs()
+    if args.only:
+        wanted = {name.strip() for name in args.only.split(",") if name.strip()}
+        known = {cfg["name"] for cfg in chains}
+        unknown = sorted(wanted - known)
+        if unknown:
+            print(f"✗ unknown chain(s): {', '.join(unknown)}")
+            sys.exit(1)
+        chains = [cfg for cfg in chains if cfg["name"] in wanted]
 
     for cfg in chains:
         name    = cfg["name"]

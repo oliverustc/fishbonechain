@@ -1,5 +1,6 @@
 """读取 config.toml，提供类型化的配置对象。"""
 from __future__ import annotations
+import copy
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -39,8 +40,8 @@ class NodeConfig:
 
 @dataclass
 class GatewayConfig:
-    ssh: str   # SSH alias for the jump host
-    ip:  str   # IP of the jump host
+    ssh: str   # SSH alias for the optional monitor/RPC gateway
+    ip:  str   # IP of the optional monitor/RPC gateway
 
 
 @dataclass
@@ -76,6 +77,31 @@ class ClusterConfig:
             if pid:
                 result.append(f"/ip4/{n.ip}/tcp/{c.p2p_port}/p2p/{pid}")
         return result
+
+
+def csv_set(value: str) -> set[str] | None:
+    """把逗号分隔的 CLI 参数解析为集合；空字符串返回 None。"""
+    items = {v.strip() for v in value.split(",") if v.strip()}
+    return items or None
+
+
+def filter_config_to_chains(cfg, selected_chains: set[str]):
+    """返回只包含指定链的浅拷贝配置，并同步裁剪节点 roles。"""
+    filtered = copy.copy(cfg)
+    filtered.chains = {
+        name: chain
+        for name, chain in cfg.chains.items()
+        if name in selected_chains
+    }
+    filtered.nodes = []
+    for node in cfg.nodes:
+        filtered_node = copy.copy(node)
+        filtered_node.roles = [
+            role for role in node.roles
+            if role in filtered.chains
+        ]
+        filtered.nodes.append(filtered_node)
+    return filtered
 
 
 def load(config_path: str | Path = "config.toml") -> ClusterConfig:
