@@ -11,7 +11,7 @@ import typer
 from rich.console import Console
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from fishbone.config import load
+from fishbone.config import load, csv_set, filter_config_to_chains
 from fishbone.remote import connect_all, RemoteNode
 from fishbone.service import render_service, service_name
 
@@ -135,8 +135,6 @@ async def start_services(remote: RemoteNode, cfg, node: object, chains: list[str
     console.print(f"  [{node.id}] ✓ services started")
 
 
-# ── 主流程 ────────────────────────────────────────────────────────────────────
-
 async def deploy_node(remote: RemoteNode, cfg, node):
     await setup_dirs(remote, cfg, node.id)
     await push_binaries(remote, cfg, node.id)
@@ -148,18 +146,27 @@ async def deploy_node(remote: RemoteNode, cfg, node):
 
 @app.command()
 def deploy(
-    only: str = typer.Option("", help="只部署指定节点，逗号分隔（如 f1,f2）"),
+    only: str = typer.Option("", "--only", "--nodes", help="只部署指定节点，逗号分隔（如 f1,f2）"),
+    chains: str = typer.Option("", help="只部署指定链，逗号分隔（如 main,child1,child6）"),
     start: bool = typer.Option(True, help="部署后自动启动服务"),
     config: Path = typer.Option(DEPLOY_DIR / "config.toml", help="配置文件路径"),
 ):
     """部署 fishbone-node 到所有（或指定）节点。"""
     cfg = load(config)
 
-    target_ids = {n.strip() for n in only.split(",")} if only else None
+    chain_ids = csv_set(chains)
+    if chain_ids:
+        unknown = sorted(chain_ids - set(cfg.chains))
+        if unknown:
+            raise typer.BadParameter(f"未知链: {', '.join(unknown)}")
+        cfg = filter_config_to_chains(cfg, chain_ids)
+
+    target_ids = csv_set(only)
     nodes = [n for n in cfg.nodes if target_ids is None or n.id in target_ids]
 
     console.print(f"\n[bold cyan]FishboneChain 部署[/bold cyan]")
     console.print(f"目标节点: {', '.join(n.id for n in nodes)}\n")
+    console.print(f"目标链: {', '.join(cfg.chains)}\n")
 
     async def _run():
         async with connect_all(nodes, cfg.sudo_pass) as remotes:

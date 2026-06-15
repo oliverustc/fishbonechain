@@ -20,6 +20,8 @@
 
 - [implementation/implementation-record.md](implementation/implementation-record.md)：当前实现记录
 - [implementation/data-trade-implementation.md](implementation/data-trade-implementation.md)：数据交易场景实现记录
+- [implementation/data-trade-flow.md](implementation/data-trade-flow.md)：数据交易 E2E 运行手册（happy path + negative scenarios）
+- [implementation/data-trade-zk-verifier-plan.md](implementation/data-trade-zk-verifier-plan.md)：ZK verifier 接入计划
 - [implementation/implementation-plan.md](implementation/implementation-plan.md)：早期总体实现规划，已被当前实现记录覆盖的部分仅作历史参考
 - [development/developer-guide.md](development/developer-guide.md)：开发者指南
 - [development/rust-setup.md](development/rust-setup.md)：Rust/Substrate 环境说明

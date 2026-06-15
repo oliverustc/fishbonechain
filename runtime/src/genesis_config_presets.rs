@@ -25,6 +25,39 @@ use sp_consensus_grandpa::AuthorityId as GrandpaId;
 use sp_genesis_builder::{self, PresetId};
 use sp_keyring::Sr25519Keyring;
 
+/// Default chain profile based on compile-time feature.
+fn default_chain_profile() -> ChainProfileInfo {
+	#[cfg(feature = "scene-data-trade")]
+	{
+		return ChainProfileInfo {
+			chain_id: 6,
+			scene: SceneKind::DataTrade,
+			settlement: SettlementMode::MainEscrow,
+			params_hash: Default::default(),
+		};
+	}
+
+	#[cfg(feature = "scene-crowdsource")]
+	{
+		return ChainProfileInfo {
+			chain_id: 0,
+			scene: SceneKind::Crowdsource,
+			settlement: SettlementMode::FmcTaskBill,
+			params_hash: Default::default(),
+		};
+	}
+
+	#[cfg(all(not(feature = "scene-data-trade"), not(feature = "scene-crowdsource")))]
+	{
+		ChainProfileInfo {
+			chain_id: 0,
+			scene: SceneKind::PlatformOnly,
+			settlement: SettlementMode::None,
+			params_hash: Default::default(),
+		}
+	}
+}
+
 // ── AURA genesis (default, non-babe builds) ─────────────────────────────────
 
 #[cfg(not(feature = "babe"))]
@@ -47,14 +80,7 @@ fn testnet_genesis(
 		grandpa: pallet_grandpa::GenesisConfig {
 			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect::<Vec<_>>(),
 		},
-		chain_profile: ChainProfileConfig {
-			profile: ChainProfileInfo {
-				chain_id: 0,
-				scene: SceneKind::PlatformOnly,
-				settlement: SettlementMode::None,
-				params_hash: Default::default(),
-			},
-		},
+		chain_profile: ChainProfileConfig { profile: default_chain_profile() },
 		sudo: SudoConfig { key: Some(root) },
 	})
 }
@@ -71,6 +97,7 @@ pub fn development_config_genesis() -> Value {
 			Sr25519Keyring::Bob.to_account_id(),
 			Sr25519Keyring::AliceStash.to_account_id(),
 			Sr25519Keyring::BobStash.to_account_id(),
+			Sr25519Keyring::Charlie.to_account_id(),
 		],
 		sp_keyring::Sr25519Keyring::Alice.to_account_id(),
 	)
@@ -128,14 +155,7 @@ fn testnet_genesis(
 		grandpa: pallet_grandpa::GenesisConfig {
 			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect::<Vec<_>>(),
 		},
-		chain_profile: ChainProfileConfig {
-			profile: ChainProfileInfo {
-				chain_id: 0,
-				scene: SceneKind::PlatformOnly,
-				settlement: SettlementMode::None,
-				params_hash: Default::default(),
-			},
-		},
+		chain_profile: ChainProfileConfig { profile: default_chain_profile() },
 		sudo: SudoConfig { key: Some(root) },
 	})
 }

@@ -8,13 +8,13 @@ base_dir   = "/home/debian/fishbone"
 log_dir    = "/home/debian/fishbone/logs"
 sudo_pass  = "debian"
 
-# 跳板机（开发机不能直连 10.2.2.x，通过 bcg 做 SSH/HTTP 中转）
+# 可选网关（用于监控服务或在不能直连 10.2.2.x 的环境中执行 --via-gateway 状态查询）
 [gateway]
 ssh        = "bcg"             # SSH Host alias
 ip         = "192.168.8.41"
 
 # ── 链定义 ───────────────────────────────────────────────────────────────────
-# binary: 可选，不填则使用 cluster.binary；容量线性扩展实验中 1..6 子链统一使用默认 binary
+# binary: 可选，不填则使用 cluster.binary；场景子链必须使用匹配 runtime profile 的 binary
 
 [chains.main]
 id       = "fishbone_main"
@@ -28,6 +28,7 @@ prom_port = 9615
 # 验证人：f1 f2 f3
 id       = "fishbone_child_1"
 spec     = "specs/child1-custom-raw.json"
+binary   = "/home/debian/fishbone/bin/fishbone-node-crowdsource"
 p2p_port = 30334
 rpc_port = 9945
 prom_port = 9616
@@ -37,6 +38,7 @@ prom_port = 9616
 # 验证人：f4 f5 f6
 id       = "fishbone_child_2"
 spec     = "specs/child2-custom-raw.json"
+binary   = "/home/debian/fishbone/bin/fishbone-node-2s"
 p2p_port = 30335
 rpc_port = 9946
 prom_port = 9617
@@ -46,6 +48,7 @@ prom_port = 9617
 # 验证人：f7 f8 f9
 id       = "fishbone_child_3"
 spec     = "specs/child3-custom-raw.json"
+binary   = "/home/debian/fishbone/bin/fishbone-node-10mb"
 p2p_port = 30336
 rpc_port = 9947
 prom_port = 9618
@@ -55,6 +58,7 @@ prom_port = 9618
 # 验证人：f1 f2 f3 f4 f5 f6 f7（7 个，BFT f=2）
 id       = "fishbone_child_4"
 spec     = "specs/child4-custom-raw.json"
+binary   = "/home/debian/fishbone/bin/fishbone-node-crowdsource"
 p2p_port = 30337
 rpc_port = 9948
 prom_port = 9619
@@ -64,14 +68,16 @@ prom_port = 9619
 # 验证人：f10 f11 f12
 id       = "fishbone_child_5"
 spec     = "specs/child5-custom-raw.json"
+binary   = "/home/debian/fishbone/bin/fishbone-node-1s"
 p2p_port = 30338
 rpc_port = 9949
 prom_port = 9620
 
 [chains.child6]
-# 去中心化数据市场（AURA-5，6s 出块）
+# 数据交易市场（AURA-5，DataTrade/MainEscrow）
 id       = "fishbone_child_6"
 spec     = "specs/child6-custom-raw.json"
+binary   = "/home/debian/fishbone/bin/fishbone-node-data-trade"
 p2p_port = 30339
 rpc_port = 9950
 prom_port = 9621

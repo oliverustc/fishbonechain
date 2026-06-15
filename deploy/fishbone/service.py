@@ -47,7 +47,7 @@ _CHAIN_LABELS: dict[str, str] = {
     "child3": "Child-3 (Medical Annotation, AURA)",
     "child4": "Child-4 (Financial Verification, 7-val)",
     "child5": "Child-5 (IoT Sensor Network, AURA)",
-    "child6": "Child-6 (Data Market, AURA-5)",
+    "child6": "Child-6 (Data Trade, AURA-5)",
 }
 
 

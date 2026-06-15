@@ -37,6 +37,7 @@ progress.md
 # Temporary planning and execution notes. Completed work must be documented in docs/.
 /docs/plan/
 /docs/superpowers/plans/
+.reasonix/
 
 # Generated experiment data
 /docs/figures/data/

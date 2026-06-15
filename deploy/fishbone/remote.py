@@ -50,7 +50,7 @@ class RemoteNode:
         return await self.run(full_cmd, check=check)
 
     async def upload(self, local_path: str, remote_path: str) -> None:
-        """通过 scp 上传文件（自动走 ProxyJump）。"""
+        """通过系统 scp 上传文件，连接路径由 ~/.ssh/config 决定。"""
         proc = await asyncio.create_subprocess_exec(
             "scp", "-o", "StrictHostKeyChecking=no",
             "-o", "ConnectTimeout=10",

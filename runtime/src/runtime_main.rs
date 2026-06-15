@@ -51,4 +51,7 @@ mod runtime {
 
 	#[runtime::pallet_index(13)]
 	pub type ChainProfile = pallet_chain_profile;
+
+	#[runtime::pallet_index(14)]
+	pub type MainEscrow = pallet_main_escrow;
 }
