@@ -15,11 +15,13 @@ pub use pallet::*;
 pub use proof::{AlwaysPassVerifier, DataTradeProofVerifier, ListingProvider, NoopListingProvider};
 pub use types::*;
 
-pub type BalanceOf<T> =
-	<<T as Config>::Currency as frame_support::traits::Currency<<T as frame_system::Config>::AccountId>>::Balance;
+pub type BalanceOf<T> = <<T as Config>::Currency as frame_support::traits::Currency<
+	<T as frame_system::Config>::AccountId,
+>>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {
+	use codec::Encode;
 	use frame_support::{
 		pallet_prelude::*,
 		traits::{Get, ReservableCurrency},
@@ -48,19 +50,45 @@ pub mod pallet {
 	}
 
 	impl WeightInfo for () {
-		fn create_session() -> Weight { Weight::from_parts(20_000, 0) }
-		fn accept_session() -> Weight { Weight::from_parts(10_000, 0) }
-		fn open_round() -> Weight { Weight::from_parts(15_000, 0) }
-		fn submit_payment_proof() -> Weight { Weight::from_parts(20_000, 0) }
-		fn submit_data_proof() -> Weight { Weight::from_parts(20_000, 0) }
-		fn submit_proof_signature() -> Weight { Weight::from_parts(15_000, 0) }
-		fn submit_data_delivery_hash() -> Weight { Weight::from_parts(15_000, 0) }
-		fn submit_payment_preimage() -> Weight { Weight::from_parts(15_000, 0) }
-		fn claim_settlement() -> Weight { Weight::from_parts(50_000, 0) }
-		fn dispute_invalid_proof() -> Weight { Weight::from_parts(30_000, 0) }
-		fn dispute_invalid_plaintext() -> Weight { Weight::from_parts(30_000, 0) }
-		fn claim_last_payment() -> Weight { Weight::from_parts(30_000, 0) }
-		fn attest_data_proof() -> Weight { Weight::from_parts(15_000, 0) }
+		fn create_session() -> Weight {
+			Weight::from_parts(20_000, 0)
+		}
+		fn accept_session() -> Weight {
+			Weight::from_parts(10_000, 0)
+		}
+		fn open_round() -> Weight {
+			Weight::from_parts(15_000, 0)
+		}
+		fn submit_payment_proof() -> Weight {
+			Weight::from_parts(20_000, 0)
+		}
+		fn submit_data_proof() -> Weight {
+			Weight::from_parts(20_000, 0)
+		}
+		fn submit_proof_signature() -> Weight {
+			Weight::from_parts(15_000, 0)
+		}
+		fn submit_data_delivery_hash() -> Weight {
+			Weight::from_parts(15_000, 0)
+		}
+		fn submit_payment_preimage() -> Weight {
+			Weight::from_parts(15_000, 0)
+		}
+		fn claim_settlement() -> Weight {
+			Weight::from_parts(50_000, 0)
+		}
+		fn dispute_invalid_proof() -> Weight {
+			Weight::from_parts(30_000, 0)
+		}
+		fn dispute_invalid_plaintext() -> Weight {
+			Weight::from_parts(30_000, 0)
+		}
+		fn claim_last_payment() -> Weight {
+			Weight::from_parts(30_000, 0)
+		}
+		fn attest_data_proof() -> Weight {
+			Weight::from_parts(15_000, 0)
+		}
 	}
 
 	#[pallet::pallet]
@@ -107,22 +135,55 @@ pub mod pallet {
 			listing_id: ListingId,
 			escrow_id: EscrowId,
 		},
-		SessionAccepted { session_id: SessionId },
-		RoundOpened { session_id: SessionId, round_index: RoundIndex },
-		PaymentProofSubmitted { session_id: SessionId, round_index: RoundIndex },
-		DataProofSubmitted { session_id: SessionId, round_index: RoundIndex },
-		ProofSignatureSubmitted { session_id: SessionId, round_index: RoundIndex },
-		DataDelivered { session_id: SessionId, round_index: RoundIndex },
-		PaymentPreimageSubmitted { session_id: SessionId, round_index: RoundIndex },
-		RoundCompleted { session_id: SessionId, round_index: RoundIndex },
+		SessionAccepted {
+			session_id: SessionId,
+		},
+		RoundOpened {
+			session_id: SessionId,
+			round_index: RoundIndex,
+		},
+		PaymentProofSubmitted {
+			session_id: SessionId,
+			round_index: RoundIndex,
+		},
+		DataProofSubmitted {
+			session_id: SessionId,
+			round_index: RoundIndex,
+		},
+		ProofSignatureSubmitted {
+			session_id: SessionId,
+			round_index: RoundIndex,
+		},
+		DataDelivered {
+			session_id: SessionId,
+			round_index: RoundIndex,
+		},
+		PaymentPreimageSubmitted {
+			session_id: SessionId,
+			round_index: RoundIndex,
+		},
+		RoundCompleted {
+			session_id: SessionId,
+			round_index: RoundIndex,
+		},
 		SettlementClaimed {
 			session_id: SessionId,
 			actor: T::AccountId,
 			remaining_rounds: u32,
 		},
-		SessionPunished { session_id: SessionId },
-		DataProofAttested { session_id: SessionId, round_index: RoundIndex, accepted: bool },
-		LastPaymentClaimed { session_id: SessionId, actor: T::AccountId, round_index: RoundIndex },
+		SessionPunished {
+			session_id: SessionId,
+		},
+		DataProofAttested {
+			session_id: SessionId,
+			round_index: RoundIndex,
+			accepted: bool,
+		},
+		LastPaymentClaimed {
+			session_id: SessionId,
+			actor: T::AccountId,
+			round_index: RoundIndex,
+		},
 	}
 
 	#[pallet::error]
@@ -144,6 +205,8 @@ pub mod pallet {
 		SettlementRoundsExceedCompleted,
 		NotVerifier,
 		InvalidProofAttestation,
+		InvalidProof,
+		InvalidAttestation,
 	}
 
 	#[pallet::call]
@@ -166,21 +229,14 @@ pub mod pallet {
 			let requester = ensure_signed(origin)?;
 
 			// Validate listing
-			ensure!(
-				T::ListingProvider::listing_exists(listing_id),
-				Error::<T>::ListingNotFound
-			);
-			ensure!(
-				T::ListingProvider::listing_active(listing_id),
-				Error::<T>::ListingNotActive
-			);
+			ensure!(T::ListingProvider::listing_exists(listing_id), Error::<T>::ListingNotFound);
+			ensure!(T::ListingProvider::listing_active(listing_id), Error::<T>::ListingNotActive);
 			ensure!(
 				T::ListingProvider::listing_owner(listing_id) == Some(data_owner.clone()),
 				Error::<T>::ListingOwnerMismatch
 			);
 			let (listing_price, listing_rounds, _listing_deposit, _listing_proof_hash) =
-				T::ListingProvider::listing_terms(listing_id)
-					.ok_or(Error::<T>::ListingNotFound)?;
+				T::ListingProvider::listing_terms(listing_id).ok_or(Error::<T>::ListingNotFound)?;
 			ensure!(listing_price == price_per_round, Error::<T>::ListingTermsMismatch);
 			ensure!(listing_rounds == max_rounds, Error::<T>::ListingTermsMismatch);
 
@@ -225,15 +281,15 @@ pub mod pallet {
 
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::accept_session())]
-		pub fn accept_session(
-			origin: OriginFor<T>,
-			session_id: SessionId,
-		) -> DispatchResult {
+		pub fn accept_session(origin: OriginFor<T>, session_id: SessionId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Sessions::<T>::try_mutate(session_id, |maybe_session| -> DispatchResult {
 				let session = maybe_session.as_mut().ok_or(Error::<T>::SessionNotFound)?;
 				ensure!(session.data_owner == who, Error::<T>::NotDataOwner);
-				ensure!(session.status == SessionStatus::Requested, Error::<T>::InvalidSessionStatus);
+				ensure!(
+					session.status == SessionStatus::Requested,
+					Error::<T>::InvalidSessionStatus
+				);
 				session.status = SessionStatus::Accepted;
 				Ok(())
 			})?;
@@ -275,6 +331,14 @@ pub mod pallet {
 					payment_preimage_hash: None,
 					status: RoundStatus::Opened,
 					last_actor: Some(who),
+					proof_system: None,
+					constraint_kind: None,
+					ro_depth: None,
+					ch_proof_hash: None,
+					ro_proof_hash: None,
+					public_input_hash: None,
+					vk_hash: None,
+					verifier_attestation_hash: None,
 				},
 			);
 
@@ -336,12 +400,40 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			session_id: SessionId,
 			round_index: RoundIndex,
-			proof_hash: T::Hash,
+			proof_system: ProofSystem,
+			constraint_kind: ConstraintKind,
+			ro_depth: u32,
+			ch_proof_hash: T::Hash,
+			ro_proof_hash: T::Hash,
+			public_input_hash: T::Hash,
+			vk_hash: T::Hash,
+			proof_digest: T::Hash,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			let session = Sessions::<T>::get(session_id).ok_or(Error::<T>::SessionNotFound)?;
 			ensure!(session.data_owner == who, Error::<T>::NotDataOwner);
 			ensure!(session.status == SessionStatus::InDelivery, Error::<T>::InvalidSessionStatus);
+			ensure!(ro_depth > 0, Error::<T>::InvalidProof);
+			ensure!(ch_proof_hash != T::Hash::default(), Error::<T>::InvalidProof);
+			ensure!(ro_proof_hash != T::Hash::default(), Error::<T>::InvalidProof);
+			ensure!(public_input_hash != T::Hash::default(), Error::<T>::InvalidProof);
+			ensure!(vk_hash != T::Hash::default(), Error::<T>::InvalidProof);
+			ensure!(proof_digest != T::Hash::default(), Error::<T>::InvalidProof);
+
+			// Recompute proof digest and verify it matches
+			let expected_digest = crate::proof::compute_zk_proof_digest::<T::Hashing>(
+				proof_system,
+				constraint_kind,
+				ro_depth,
+				session.request_hash,
+				session_id,
+				round_index,
+				vk_hash,
+				ch_proof_hash,
+				ro_proof_hash,
+				public_input_hash,
+			);
+			ensure!(expected_digest == proof_digest, Error::<T>::InvalidProof);
 
 			Rounds::<T>::try_mutate(session_id, round_index, |maybe_round| -> DispatchResult {
 				let round = maybe_round.as_mut().ok_or(Error::<T>::RoundNotFound)?;
@@ -350,10 +442,14 @@ pub mod pallet {
 					Error::<T>::RoundStepsOutOfOrder,
 				);
 
-				let verified = T::ProofVerifier::verify_data_proof(proof_hash);
-				ensure!(verified, Error::<T>::RoundStepsOutOfOrder);
-
-				round.proof_hash = Some(proof_hash);
+				round.proof_hash = Some(proof_digest);
+				round.proof_system = Some(proof_system);
+				round.constraint_kind = Some(constraint_kind);
+				round.ro_depth = Some(ro_depth);
+				round.ch_proof_hash = Some(ch_proof_hash);
+				round.ro_proof_hash = Some(ro_proof_hash);
+				round.public_input_hash = Some(public_input_hash);
+				round.vk_hash = Some(vk_hash);
 				round.status = RoundStatus::DataProofSubmitted;
 				round.last_actor = Some(who);
 				Ok(())
@@ -416,10 +512,7 @@ pub mod pallet {
 
 			Rounds::<T>::try_mutate(session_id, round_index, |maybe_round| -> DispatchResult {
 				let round = maybe_round.as_mut().ok_or(Error::<T>::RoundNotFound)?;
-				ensure!(
-					round.status == RoundStatus::ProofSigned,
-					Error::<T>::RoundStepsOutOfOrder,
-				);
+				ensure!(round.status == RoundStatus::ProofSigned, Error::<T>::RoundStepsOutOfOrder,);
 
 				round.delivered_data_hash = Some(data_hash);
 				round.status = RoundStatus::DataDelivered;
@@ -488,10 +581,7 @@ pub mod pallet {
 					session.status == SessionStatus::InDelivery,
 					Error::<T>::InvalidSessionStatus,
 				);
-				ensure!(
-					remaining_rounds < session.max_rounds,
-					Error::<T>::RoundStepsOutOfOrder,
-				);
+				ensure!(remaining_rounds < session.max_rounds, Error::<T>::RoundStepsOutOfOrder,);
 
 				let claimed_paid_rounds = session
 					.max_rounds
@@ -527,10 +617,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			let session = Sessions::<T>::get(session_id).ok_or(Error::<T>::SessionNotFound)?;
 			ensure!(session.requester == who, Error::<T>::NotRequester);
-			ensure!(
-				session.status == SessionStatus::InDelivery,
-				Error::<T>::InvalidSessionStatus,
-			);
+			ensure!(session.status == SessionStatus::InDelivery, Error::<T>::InvalidSessionStatus,);
 
 			// Mark the round as disputed and session as punished
 			Rounds::<T>::mutate(session_id, round_index, |maybe_round| {
@@ -564,10 +651,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			let session = Sessions::<T>::get(session_id).ok_or(Error::<T>::SessionNotFound)?;
 			ensure!(session.requester == who, Error::<T>::NotRequester);
-			ensure!(
-				session.status == SessionStatus::InDelivery,
-				Error::<T>::InvalidSessionStatus,
-			);
+			ensure!(session.status == SessionStatus::InDelivery, Error::<T>::InvalidSessionStatus,);
 
 			// Verify the plaintext hash mismatch
 			let verified = T::ProofVerifier::verify_plaintext_hash(data_hash, expected_hash);
@@ -602,10 +686,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			let session = Sessions::<T>::get(session_id).ok_or(Error::<T>::SessionNotFound)?;
 			ensure!(session.data_owner == who, Error::<T>::NotDataOwner);
-			ensure!(
-				session.status == SessionStatus::InDelivery,
-				Error::<T>::InvalidSessionStatus,
-			);
+			ensure!(session.status == SessionStatus::InDelivery, Error::<T>::InvalidSessionStatus,);
 
 			// Verify round was at least ProofSigned (data delivered)
 			Rounds::<T>::try_mutate(session_id, round_index, |maybe_round| -> DispatchResult {
@@ -623,11 +704,7 @@ pub mod pallet {
 				}
 			});
 
-			Self::deposit_event(Event::LastPaymentClaimed {
-				session_id,
-				actor: who,
-				round_index,
-			});
+			Self::deposit_event(Event::LastPaymentClaimed { session_id, actor: who, round_index });
 			Ok(())
 		}
 
@@ -641,9 +718,22 @@ pub mod pallet {
 			round_index: RoundIndex,
 			proof_hash: T::Hash,
 			accepted: bool,
+			attestation_hash: T::Hash,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			ensure!(who == T::VerifierAuthority::get(), Error::<T>::NotVerifier);
+			ensure!(attestation_hash != T::Hash::default(), Error::<T>::InvalidAttestation);
+
+			// Verify attestation payload matches expected
+			let verifier_encoded = T::VerifierAuthority::get().encode();
+			let expected_attestation = crate::proof::compute_zk_attestation_digest::<T::Hashing>(
+				session_id,
+				round_index,
+				proof_hash,
+				accepted,
+				&verifier_encoded,
+			);
+			ensure!(expected_attestation == attestation_hash, Error::<T>::InvalidAttestation);
 
 			Rounds::<T>::try_mutate(session_id, round_index, |maybe_round| -> DispatchResult {
 				let round = maybe_round.as_mut().ok_or(Error::<T>::RoundNotFound)?;
@@ -657,6 +747,7 @@ pub mod pallet {
 				} else {
 					RoundStatus::DataProofRejected
 				};
+				round.verifier_attestation_hash = Some(attestation_hash);
 				round.last_actor = Some(who);
 				Ok(())
 			})?;

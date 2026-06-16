@@ -20,6 +20,30 @@ import {
   assertEscrowMatchesTradeTerms,
   assertSessionMatchesListingAndEscrow,
 } from "./lib/data_trade_binding.js";
+import { computeZkAttestationDigest } from "./lib/zk_attestation.js";
+import { computeProofDigest } from "./lib/zk_artifact.js";
+
+/**
+ * Compute a deterministic dev proof digest matching the pallet's computation.
+ * Uses Blake2-256 with canonical byte encoding.
+ */
+function devProofDigest({ requestHash, sessionId, roundIndex, vkHash, chProofHash, roProofHash, publicInputHash }) {
+  return computeProofDigest({
+    version: 1,
+    proof_system: "gnark-groth16-bn254",
+    proof_system_code: 1,
+    constraint_kind: "range",
+    constraint_kind_code: 1,
+    ro_depth: 10,
+    request_hash: requestHash,
+    session_id: sessionId,
+    round_index: roundIndex,
+    vk_hash: vkHash,
+    ch_proof_hash: chProofHash,
+    ro_proof_hash: roProofHash,
+    public_input_hash: publicInputHash,
+  });
+}
 
 function parseArg(flag) {
   const idx = process.argv.indexOf(flag);
@@ -121,13 +145,32 @@ async function setupTrade(mainApi, childApi, alice, bob, sample, maxRounds, pric
 /**
  * Run one complete delivery round (DR=alice, DO=bob).
  */
-async function completeRound(childApi, alice, bob, sessionId, roundIndex, charlie) {
+async function completeRound(childApi, alice, bob, sessionId, roundIndex, charlie, requestHash) {
   const ch = hashNTimes(`round-${roundIndex}`, 1);
+  const proofDigest = devProofDigest({
+    requestHash,
+    sessionId,
+    roundIndex,
+    vkHash: ch,
+    chProofHash: ch,
+    roProofHash: ch,
+    publicInputHash: ch,
+  });
   await submitTx(alice, childApi.tx.tradeSession.openRound(sessionId, roundIndex, ch), `openRound(${roundIndex})`);
   await submitTx(alice, childApi.tx.tradeSession.submitPaymentProof(sessionId, roundIndex, ch), `submitPaymentProof(${roundIndex})`);
-  await submitTx(bob, childApi.tx.tradeSession.submitDataProof(sessionId, roundIndex, ch), `submitDataProof(${roundIndex})`);
-  // Dev verifier attestation (Charlie)
-  await submitTx(charlie, childApi.tx.tradeSession.attestDataProof(sessionId, roundIndex, ch, true), `attestDataProof(${roundIndex})`);
+  await submitTx(bob, childApi.tx.tradeSession.submitDataProof(
+      sessionId, roundIndex,
+      'GnarkGroth16Bn254', 'Range', 10,
+      ch, ch, ch, ch, proofDigest
+    ), `submitDataProof(${roundIndex})`);
+  const attDigest = computeZkAttestationDigest({
+    sessionId,
+    roundIndex,
+    proofDigest,
+    accepted: true,
+    verifierAccount: charlie.addressRaw,
+  });
+  await submitTx(charlie, childApi.tx.tradeSession.attestDataProof(sessionId, roundIndex, proofDigest, true, attDigest), `attestDataProof(${roundIndex})`);
   await submitTx(alice, childApi.tx.tradeSession.submitProofSignature(sessionId, roundIndex, ch), `submitProofSignature(${roundIndex})`);
   await submitTx(bob, childApi.tx.tradeSession.submitDataDeliveryHash(sessionId, roundIndex, ch), `submitDataDeliveryHash(${roundIndex})`);
   await submitTx(alice, childApi.tx.tradeSession.submitPaymentPreimage(sessionId, roundIndex, ch), `submitPaymentPreimage(${roundIndex})`);
@@ -150,7 +193,7 @@ async function happyPath(mainApi, childApi, alice, bob, charlie) {
   // ── Round delivery (2 rounds) ──
   for (let round = 0; round < 2; round++) {
     log(`Round ${round} delivery...`);
-    await completeRound(childApi, alice, bob, sessionId, round, charlie);
+    await completeRound(childApi, alice, bob, sessionId, round, charlie, sample.requestHash);
   }
 
   // ── DO claims settlement ──
@@ -187,10 +230,15 @@ async function invalidProofScenario(mainApi, childApi, alice, bob) {
   const ch = hashNTimes("round-0", 1);
   await submitTx(alice, childApi.tx.tradeSession.openRound(sessionId, 0, ch), "openRound(0)");
   await submitTx(alice, childApi.tx.tradeSession.submitPaymentProof(sessionId, 0, ch), "submitPaymentProof(0)");
-  await submitTx(bob, childApi.tx.tradeSession.submitDataProof(sessionId, 0, ch), "submitDataProof(0)");
+  const invalidDigest = devProofDigest({ requestHash: sample.requestHash, sessionId, roundIndex: 0, vkHash: ch, chProofHash: ch, roProofHash: ch, publicInputHash: ch });
+  await submitTx(bob, childApi.tx.tradeSession.submitDataProof(
+      sessionId, 0,
+      'GnarkGroth16Bn254', 'Range', 10,
+      ch, ch, ch, ch, invalidDigest
+    ), "submitDataProof(0)");
 
   log("DR 争议无效 proof...");
-  await submitTx(alice, childApi.tx.tradeSession.disputeInvalidProof(sessionId, 0, ch), "disputeInvalidProof");
+  await submitTx(alice, childApi.tx.tradeSession.disputeInvalidProof(sessionId, 0, invalidDigest), "disputeInvalidProof");
 
   log("DR 在主链 punishDataOwner...");
   await submitTx(alice, mainApi.tx.mainEscrow.punishDataOwner(escrowId), "punishDataOwner");
@@ -218,8 +266,14 @@ async function refusesPaymentScenario(mainApi, childApi, alice, bob, charlie) {
   const ch = hashNTimes("round-0", 1);
   await submitTx(alice, childApi.tx.tradeSession.openRound(sessionId, 0, ch), "openRound(0)");
   await submitTx(alice, childApi.tx.tradeSession.submitPaymentProof(sessionId, 0, ch), "submitPaymentProof(0)");
-  await submitTx(bob, childApi.tx.tradeSession.submitDataProof(sessionId, 0, ch), "submitDataProof(0)");
-  await submitTx(charlie, childApi.tx.tradeSession.attestDataProof(sessionId, 0, ch, true), "attestDataProof(0)");
+  const refuseDigest = devProofDigest({ requestHash: sample.requestHash, sessionId, roundIndex: 0, vkHash: ch, chProofHash: ch, roProofHash: ch, publicInputHash: ch });
+  await submitTx(bob, childApi.tx.tradeSession.submitDataProof(
+      sessionId, 0,
+      'GnarkGroth16Bn254', 'Range', 10,
+      ch, ch, ch, ch, refuseDigest
+    ), "submitDataProof(0)");
+  const refuseAttDigest = computeZkAttestationDigest({ sessionId, roundIndex: 0, proofDigest: refuseDigest, accepted: true, verifierAccount: charlie.addressRaw });
+  await submitTx(charlie, childApi.tx.tradeSession.attestDataProof(sessionId, 0, refuseDigest, true, refuseAttDigest), "attestDataProof(0)");
   await submitTx(alice, childApi.tx.tradeSession.submitProofSignature(sessionId, 0, ch), "submitProofSignature(0)");
   await submitTx(bob, childApi.tx.tradeSession.submitDataDeliveryHash(sessionId, 0, ch), "submitDataDeliveryHash(0)");
 

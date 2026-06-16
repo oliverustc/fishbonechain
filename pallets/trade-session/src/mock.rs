@@ -35,7 +35,11 @@ impl ListingProvider<u64, u64, sp_core::H256> for TestListingProvider {
 		listing_id == 0
 	}
 	fn listing_owner(listing_id: ListingId) -> Option<u64> {
-		if listing_id == 0 { Some(2) } else { None }
+		if listing_id == 0 {
+			Some(2)
+		} else {
+			None
+		}
 	}
 	fn listing_active(listing_id: ListingId) -> bool {
 		listing_id == 0
@@ -93,12 +97,12 @@ pub fn hash_n_times(data: &[u8], n: u32) -> sp_core::H256 {
 pub fn create_session_helper() {
 	assert_ok!(crate::Pallet::<Test>::create_session(
 		frame_system::RawOrigin::Signed(1).into(),
-		0,    // listing_id
-		42,   // escrow_id
-		2,    // data_owner
+		0,  // listing_id
+		42, // escrow_id
+		2,  // data_owner
 		sp_core::H256::repeat_byte(4),
-		100,  // price_per_round
-		5,    // max_rounds
+		100, // price_per_round
+		5,   // max_rounds
 		hash_n_times(b"secret", 5),
 		crate::types::TradeSettlementMode::MainEscrow,
 	));
@@ -128,18 +132,50 @@ pub fn complete_round(session_id: u32, round_index: u32) {
 		round_index,
 		ch,
 	));
+	let public_input_hash = ch;
+	let vk_hash = ch;
+	let proof_digest =
+		crate::proof::compute_zk_proof_digest::<<Test as frame_system::Config>::Hashing>(
+			crate::types::ProofSystem::GnarkGroth16Bn254,
+			crate::types::ConstraintKind::Range,
+			10,
+			sp_core::H256::repeat_byte(4), // request_hash
+			session_id,
+			round_index,
+			vk_hash,
+			ch,
+			ch,
+			public_input_hash,
+		);
+	let attestation_hash =
+		crate::proof::compute_zk_attestation_digest::<<Test as frame_system::Config>::Hashing>(
+			session_id,
+			round_index,
+			proof_digest,
+			true,
+			&3u64.to_le_bytes(), // verifier = account 3, SCALE encoded
+		);
+
 	assert_ok!(crate::Pallet::<Test>::submit_data_proof(
 		frame_system::RawOrigin::Signed(2).into(),
 		session_id,
 		round_index,
+		crate::types::ProofSystem::GnarkGroth16Bn254,
+		crate::types::ConstraintKind::Range,
+		10,
 		ch,
+		ch,
+		public_input_hash,
+		vk_hash,
+		proof_digest,
 	));
 	assert_ok!(crate::Pallet::<Test>::attest_data_proof(
 		frame_system::RawOrigin::Signed(3).into(),
 		session_id,
 		round_index,
-		ch,
+		proof_digest,
 		true,
+		attestation_hash,
 	));
 	assert_ok!(crate::Pallet::<Test>::submit_proof_signature(
 		frame_system::RawOrigin::Signed(1).into(),
@@ -159,4 +195,57 @@ pub fn complete_round(session_id: u32, round_index: u32) {
 		round_index,
 		ch,
 	));
+}
+
+pub fn setup_accepted_session() -> u32 {
+	create_session_helper();
+	accept_session_helper(0);
+	0
+}
+
+pub fn setup_session_with_submitted_data_proof() -> u32 {
+	let session_id = setup_accepted_session();
+	let round = 0;
+	let payment_hash = sp_core::H256::repeat_byte(10);
+	let public_input_hash = sp_core::H256::repeat_byte(12);
+	let vk_hash = sp_core::H256::repeat_byte(13);
+	let proof_digest =
+		crate::proof::compute_zk_proof_digest::<<Test as frame_system::Config>::Hashing>(
+			crate::types::ProofSystem::GnarkGroth16Bn254,
+			crate::types::ConstraintKind::Range,
+			10,
+			sp_core::H256::repeat_byte(4), // request_hash
+			session_id,
+			round,
+			vk_hash,
+			payment_hash,
+			payment_hash,
+			public_input_hash,
+		);
+	assert_ok!(crate::Pallet::<Test>::open_round(
+		frame_system::RawOrigin::Signed(1).into(),
+		session_id,
+		round,
+		payment_hash,
+	));
+	assert_ok!(crate::Pallet::<Test>::submit_payment_proof(
+		frame_system::RawOrigin::Signed(1).into(),
+		session_id,
+		round,
+		payment_hash,
+	));
+	assert_ok!(crate::Pallet::<Test>::submit_data_proof(
+		frame_system::RawOrigin::Signed(2).into(),
+		session_id,
+		round,
+		crate::types::ProofSystem::GnarkGroth16Bn254,
+		crate::types::ConstraintKind::Range,
+		10,
+		payment_hash,
+		payment_hash,
+		public_input_hash,
+		vk_hash,
+		proof_digest,
+	));
+	session_id
 }
