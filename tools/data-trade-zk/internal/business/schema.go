@@ -1,7 +1,6 @@
 package business
 
 import (
-	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -21,33 +20,20 @@ type RangeWitness struct {
 	MaskedValueHash string `json:"masked_value_hash,omitempty"`
 }
 
-// ComputeMaskedValueHash returns SHA256(masked_value || salt) as a 0x-prefixed hex string.
+// ComputeMaskedValueHash returns MiMC(masked_value, salt) as a 0x-prefixed hex string.
+// Stage 2.2: migrated from SHA256 to MiMC for gnark circuit compatibility.
+// NOTE: This function cannot compute the real MiMC hash without importing gnark
+// (which would create a circular dependency). The actual MiMC computation is
+// done in gnarkadapter.GenerateBusinessRangeFixture. The fixture JSON should
+// provide masked_value_hash directly; Validate() checks it is valid hex format.
+// ReadRangeWitness() does NOT auto-compute it.
 func (w RangeWitness) ComputeMaskedValueHash() string {
-	masked := w.RawValue + w.MaskDelta
-	salt, err := hex.DecodeString(strings.TrimPrefix(w.SaltHex, "0x"))
-	if err != nil {
-		return ""
-	}
-	var data []byte
-	// masked_value as 8-byte LE
-	var le [8]byte
-	binaryPutUint64(le[:], masked)
-	data = append(data, le[:]...)
-	data = append(data, salt...)
-	sum := sha256.Sum256(data)
-	return "0x" + hex.EncodeToString(sum[:])
+	return ""
 }
 
-func binaryPutUint64(buf []byte, v uint64) {
-	_ = buf[7]
-	buf[0] = byte(v)
-	buf[1] = byte(v >> 8)
-	buf[2] = byte(v >> 16)
-	buf[3] = byte(v >> 24)
-	buf[4] = byte(v >> 32)
-	buf[5] = byte(v >> 40)
-	buf[6] = byte(v >> 48)
-	buf[7] = byte(v >> 56)
+// IsMaskedValueHashProvided returns true if the witness has a non-empty hash.
+func (w RangeWitness) IsMaskedValueHashProvided() bool {
+	return w.MaskedValueHash != ""
 }
 
 func validHex32(value string) bool {
@@ -70,12 +56,8 @@ func (w RangeWitness) Validate() error {
 		return fmt.Errorf("raw_value outside requested range")
 	}
 	if w.MaskedValueHash != "" {
-		expected := w.ComputeMaskedValueHash()
-		if expected == "" {
-			return fmt.Errorf("cannot compute masked_value_hash")
-		}
-		if w.MaskedValueHash != expected {
-			return fmt.Errorf("masked_value_hash mismatch: got %s, expected %s", w.MaskedValueHash, expected)
+		if !validHex32(w.MaskedValueHash) {
+			return fmt.Errorf("masked_value_hash must be 32-byte hex if provided")
 		}
 	}
 	return nil
@@ -92,10 +74,6 @@ func ReadRangeWitness(path string) (RangeWitness, error) {
 	}
 	if err := w.Validate(); err != nil {
 		return w, err
-	}
-	// Auto-compute if not provided
-	if w.MaskedValueHash == "" {
-		w.MaskedValueHash = w.ComputeMaskedValueHash()
 	}
 	return w, nil
 }

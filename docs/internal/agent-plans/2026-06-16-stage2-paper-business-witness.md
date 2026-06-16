@@ -29,39 +29,107 @@
 - **Stage 2.1: Business Metadata Binding**：本计划主体。证明 artifact 额外携带 `business_input_hash`，该 hash 进入 `proof_digest`，再由 child6 `submitDataProof` 与 Charlie attestation 绑定到链上。此阶段不得在文档或代码日志中声称“gnark 电路证明了业务数据”。
 - **Stage 2.2: Circuit-Level Business Witness**：后续必须新增或改造 gnark circuit/assignment，使 `raw_value/min/max/mask_delta/salt` 真正进入约束系统。只有 Stage 2.2 完成后，才能声称 proof 证明了业务约束。
 
-## Stage 2.2 待明确事项（Open Questions）
+## Stage 2.2 已定案执行口径（Agent Read This First）
 
-以下问题在 Stage 2.2 执行前必须回答，否则无法确定实现路径和验收标准。
+Stage 2.2 不再作为开放设计题交给执行 agent 自由选择。执行范围必须保持窄而可验收：**只实现 range 业务 witness 真正进入 gnark 电路**，不实现 subset/substr，不把 IMT/root obfuscation 与业务电路耦合，不做 VK registry，不做链上 ZK verifier，不改变当前 VerifierAuthority attestation 安全模型。
+
+Stage 2.2 的完成含义是：
+
+- `raw_value/min_value/max_value/mask_delta/salt/masked_value_hash` 不再只是链下 metadata，而是进入 gnark circuit 的 witness/public inputs。
+- gnark proof 能证明：
+  - `raw_value in [min_value, max_value]`
+  - `masked_value = raw_value + mask_delta`
+  - `masked_value_hash = MiMC(masked_value, salt)`
+- `business_input_hash` 继续进入 artifact `proof_digest` 和 child6 `submitDataProof`，链上仍只校验 digest + verifier attestation。
+- 文档必须清楚说明：Stage 2.2 完成后，**range 业务约束由 gnark proof 证明**；但 RO/IMT、subset/substr、链上 verifier、trustless bridge 仍是后续工作。
+
+非目标（不要在 Stage 2.2 做）：
+
+- 不实现 subset/substr 电路接入。
+- 不把 `masked_value_hash` 放进 RO proof leaf。
+- 不实现 runtime 里直接验证 gnark proof。
+- 不实现 production trusted setup / VK registry。
+- 不实现动态数据源、真实随机 salt 管理或多轮不同业务数据策略。
 
 ### 2.2.1 电路改造范围
 
-当前 gnark 电路使用两个独立电路：`RangeHashProof`（prove `preimage` 在 `[min, max]` 范围内且 hash 匹配）和 `RootObfuscationProof`（Merkle proof + 4-root obfuscation）。Stage 2.2 需要决定：
+当前 gnark 电路使用两个独立电路：`RangeHashProof`（prove `preimage` 在 `[min, max]` 范围内且 hash 匹配）和 `RootObfuscationProof`（Merkle proof + 4-root obfuscation）。此前有三个候选方向，现记录为背景，执行时以下方“决策”为准：
 
 - **方案 A**：只修改 `RangeHashProof.Assign()`，将 `utils.RandStr(3)` 替换为 `witness.RawValue`。`MaskDelta` 和 `Salt` 不进电路，仅通过 `business_input_hash` 在 digest 层面绑定。优点：改动最小。缺点：`masked_value` 的正确性依赖链下信任。
 - **方案 B**：新增一个组合电路，同时证明 `raw_value ∈ [min, max]` 和 `masked_value_hash = H(raw_value + delta || salt)`。优点：电路完整证明了业务逻辑。缺点：需要新电路定义、新 trusted setup、新 VK。
 - **方案 C**：修改现有 `RangeHashProof` 增加 public input 字段（`MaskedValueHash`），在 `Define()` 中增加 `masked = raw + delta; api.AssertIsEqual(H(masked || salt), MaskedValueHash)`。优点：复用已有电路结构。缺点：MiMC hash 的 `masked_value_hash` 与 SHA256 版本不一致——当前 `business_input_hash` 用的是 SHA256，但 gnark 电路使用 MiMC（BN254 原生）。
 
-待决定：选 A / B / C？若选 B 或 C，SHA256 ↔ MiMC 的 hash 函数不一致如何解决？
+**决策：选方案 C 的简化版。**
+
+执行方式：
+
+- 新增或扩展一个 `BusinessRangeProof` 电路，优先新建，避免破坏 Stage 1/2.1 的 `RangeHashProof` smoke。
+- 电路内使用 MiMC，不使用 SHA256。原因：MiMC 是当前 gnark/BN254 代码已采用的 ZK-friendly hash；SHA256 在电路内成本高，也会引入新的复杂依赖。
+- Stage 2.1 的 `masked_value_hash = SHA256(masked_value || salt)` 语义在 Stage 2.2 迁移为 `masked_value_hash = MiMC(masked_value, salt)`。文档必须明确这是 Stage 2.2 为了电路友好性做出的 hash 语义升级。
+- `business_input_hash` 仍可使用 Blake2 作为 artifact/digest 层面的 canonical metadata hash，但它绑定的 `masked_value_hash` 字段值应来自 MiMC commitment。
+
+验收要求：
+
+- 不能只把 `utils.RandStr(3)` 替换成 `raw_value` 就结束；`mask_delta/salt/masked_value_hash` 必须参与电路约束。
+- 修改 `masked_value_hash` 后，gnark verify 必须失败。
+- 修改 `raw_value/min/max/mask_delta/salt` 中任一会影响业务 public input/hash，并且对应测试必须覆盖至少一个篡改路径。
 
 ### 2.2.2 Witness 数据来源
 
-Stage 2.1 的 witness 来自静态 JSON fixture。Stage 2.2 需要回答：
+Stage 2.1 的 witness 来自静态 JSON fixture。此前关于动态数据源、每轮数据变化和 salt 随机化有若干讨论点，现统一收敛如下：
 
-- Witness 数据是静态 fixture 还是由 E2E 脚本运行时动态生成？
-- 如果是动态生成，每轮 round 的 `raw_value` 是否需要变化（如不同 sensor reading）？
-- `MaskDelta` 是 DO 随机选择还是固定值？
-- `Salt` 是否需要每轮重新生成以防止 rainbow table 攻击？
+- 动态生成 witness、多轮不同 `raw_value`、DO 随机 `MaskDelta`、每轮随机 `Salt` 都是后续增强，不属于 Stage 2.2。
+
+**决策：继续使用 JSON fixture，E2E 脚本只覆盖 session-specific 字段。**
+
+执行方式：
+
+- `scripts/fixtures/data_trade_business_sample.json` 继续作为默认 witness。
+- `zk_real_data_trade_flow.js` 继续在运行时覆盖 `request_hash/session_id/round_index`。
+- `raw_value/min/max/mask_delta/salt` 先保持 fixture 固定值。
+- 每轮 salt 随机化、动态 sensor reading、多数据源接入均不属于 Stage 2.2。
+
+验收要求：
+
+- CLI 必须允许 `--session-id 0 --round-index 0` 显式覆盖。
+- fixture 中若提供 `masked_value_hash`，必须校验它等于由当前 witness 计算出的 MiMC commitment；若不提供，可以由 CLI/业务 reader 计算并填充到 artifact 语义中。
 
 ### 2.2.3 IMT / Root Obfuscation 与业务电路的耦合
 
-Stage 2.1 中 RO proof 完全独立于业务 witness。Stage 2.2 是否需要：
+Stage 2.1 中 RO proof 完全独立于业务 witness。此前讨论过将业务承诺耦合进 RO proof，但 Stage 2.2 不采用该方向：
 
-- 将 `masked_value_hash` 作为 RO proof 的叶子节点之一？
-- 还是在现有 RO proof 基础上叠加业务证明（两个无关 proof 的组合）？
+- 不将 `masked_value_hash` 作为 RO proof 的叶子节点。
+- 不把 RO proof 与业务 proof 合并成一个组合 proof。
+
+**决策：暂不耦合。**
+
+执行方式：
+
+- Stage 2.2 只让 business range proof 真实证明业务约束。
+- `RootObfuscationProof` 继续保持当前独立 proof。
+- `ProofArtifact` 仍可以携带 CH/RO 两类 proof hash；业务 range proof 可替换现有 CH range proof，RO 不绑定业务 leaf。
+
+验收要求：
+
+- 不修改 RO proof 的 Merkle leaf 语义。
+- 文档必须说明：Stage 2.2 后，range 业务约束已由 gnark proof 证明；完整 IMT membership 与业务承诺的耦合仍未完成。
 
 ### 2.2.4 多约束种类 (subset / substr) 的优先级
 
-当前 `constraint_kind` 固定为 `range`。`subset` 和 `substr` 的 gnark 电路原型存在于 `references/data_trade_code/snarks/gnarkzkp/cmd/constraint-hash-proof/circuit_subset_hash.go` 和 `circuit_substr_hash.go`，但尚未接入。Stage 2.2 是否应包含 subset/substr？还是先完成 range，subset/substr 留在 Stage 3？
+当前 `constraint_kind` 固定为 `range`。`subset` 和 `substr` 的 gnark 电路原型存在于 `references/data_trade_code/snarks/gnarkzkp/cmd/constraint-hash-proof/circuit_subset_hash.go` 和 `circuit_substr_hash.go`，但尚未接入。Stage 2.2 先完成 range，subset/substr 留给后续阶段。
+
+**决策：Stage 2.2 只做 range。**
+
+执行方式：
+
+- 不接入 `subset` / `substr`。
+- `constraint_kind` 仍为 `range`。
+- subset/substr 后续单独规划，可作为 Stage 2.3 或 Stage 3 的一部分。
+
+验收要求：
+
+- 不新增 subset/substr runtime 或 JS profile 复杂度。
+- 不修改当前 artifact kind code map，除非只是保持兼容已有 enum。
 
 ### 2.2.5 Trusted Setup 管理
 
@@ -71,21 +139,67 @@ Stage 2.1 中 RO proof 完全独立于业务 witness。Stage 2.2 是否需要：
 - 确定性 setup（publicly verifiable）
 - VK 版本化：链上 `vk_hash` 绑定到特定版本的 VK，VK 升级时需同步更新链上配置
 
+**决策：Stage 2.2 仍使用 dev per-run setup。**
+
+执行方式：
+
+- 保持 `business-fixture` / fixture 生成时临时 `Compile + Setup + Prove`。
+- 继续在 artifact 中绑定 `vk_hash`，并由链上 digest 间接绑定 VK。
+- 不实现 VK registry、版本升级治理、预编译 setup artifact。
+
+验收要求：
+
+- 文档必须把当前 setup 标注为 dev fixture 模式。
+- 不得声称生产级 trusted setup 已完成。
+
 ### 2.2.6 验收标准差异
 
-Stage 2.1 完成标志是 "VM E2E 通过 + business_input_hash 进入 digest"。Stage 2.2 的完成标志需要回答：
+Stage 2.1 完成标志是 "VM E2E 通过 + business_input_hash 进入 digest"。Stage 2.2 的验收标准如下，不再扩展 VM negative matrix：
 
-- 是否需要新的 VM E2E scenario（如 "wrong business value → gnark verify rejects"）？
-- 是否需要链上能区分 "gnark proof rejected by verifier" 和 "proof digest 不匹配"？
-- Go 测试是否需要覆盖 "修改 witness 后 proof 验证失败"（目前 `VerifyRangeRO` 可以做到，但 `business_range_obfuscation_test.go` 未覆盖此路径）？
+- 不新增 VM negative scenario。
+- 不要求链上区分 "gnark proof rejected by verifier" 和 "proof digest mismatch"。
+- 必须在 Go 层覆盖 witness/proof 篡改失败路径。
+
+**决策：Go negative tests 必须做；VM negative path 暂缓。**
+
+Stage 2.2 必须新增/更新 Go 测试：
+
+- valid business range witness -> proof generation succeeds and `verify` accepts.
+- `raw_value` outside `[min_value, max_value]` -> witness validation or generation rejects.
+- wrong `masked_value_hash` -> rejects before proving, or proof verification fails.
+- tampered public witness / artifact commitment -> `verify` rejects.
+
+VM E2E 验收：
+
+- `scripts/run_data_trade_vm_regression.sh` happy regression 必须通过。
+- Real ZK path 必须使用 Stage 2.2 business circuit artifact。
+- 可以不新增 VM negative scenario，避免慢速 VM 回归膨胀。
+
+链上错误类型：
+
+- Stage 2.2 不要求 runtime 区分 "gnark verify rejected" 和 "proof digest mismatch"。链上仍接收 verifier attestation 后的 digest。
 
 ### 2.2.7 与 `DataTradeProofVerifier` trait 的关系
 
-当前 `AlwaysPassVerifier` 意味着链上不调用任何真实 proof 验证逻辑。Stage 2.2 是否需要：
+当前 `AlwaysPassVerifier` 意味着链上不调用任何真实 proof 验证逻辑。Stage 2.2 不改变该安全模型：
 
-- 将 `DataTradeProofVerifier` 替换为能调用 `fishbone-zk verify` 的链下服务？
-- 还是保持 `AlwaysPassVerifier`，完全依赖 VerifierAuthority attestation？
-- 若替换，新的 verifier 签名机制如何防止 replay（同一 proof 被多次 attest 到不同 session）？
+- 不替换 `DataTradeProofVerifier`。
+- 继续依赖 VerifierAuthority attestation。
+- 不新增签名/replay 机制。
+
+**决策：保持 `AlwaysPassVerifier` + VerifierAuthority attestation。**
+
+执行方式：
+
+- 不在 Substrate runtime 中调用 `fishbone-zk verify`。
+- 链下 CLI 负责 proof verification；Charlie/VerifierAuthority 负责 attest。
+- 链上继续校验 `proof_digest`、`business_input_hash`、`attestation_digest` 和 verifier 权限。
+
+安全边界说明：
+
+- Stage 2.2 提升的是链下 proof 的真实性：proof 现在确实证明 range 业务约束。
+- Stage 2.2 不提升为 trustless on-chain ZK verification；链上仍信任 VerifierAuthority 的 attestation。
+- Replay 防护继续依赖 digest 中绑定的 `request_hash/session_id/round_index/vk_hash/proof hashes/business_input_hash`，不新增签名机制。
 
 ## Business Witness v1 Metadata
 
@@ -626,3 +740,11 @@ git commit -m "docs: record business witness vm verification"
 - JS 语法检查：`data_trade_flow.js`、`zk_attested_data_trade_flow.js`、`zk_real_data_trade_flow.js` 全部 pass。
 - VM E2E：`data_trade_flow.js --scenario happy` ✅、`zk_real_data_trade_flow.js` (business witness) ✅。
 - 限制：gnark 电路 witness 仍使用随机 `utils.RandStr`，电路未真正证明业务约束（Stage 2.2 pending）。
+
+### 2026-06-16 Stage 2.2 Complete
+
+- 新增 `BusinessRangeProof` gnark 电路，证明：`raw_value ∈ [min, max]` + `masked_value = raw_value + delta` + `masked_value_hash = MiMC(masked_value, salt)`。
+- `masked_value_hash` 从 SHA256 迁移至 MiMC（电路兼容性）。
+- `GenerateBusinessRangeFixture` 改用 `BusinessRangeProof` 替代原随机 witness 的 `RangeHashProof`。
+- Go 测试新增：wrong masked_value_hash 在电路层被拒绝 (`TestBusinessFixtureRejectsWrongMaskedValueHash`)、固定宽度 LE 编码 (`TestBusinessHashUsesFixedWidthLittleEndian`)、artifact 可验证 (`TestBusinessArtifactIsValidAndVerifiable`)。
+- VM E2E：`zk_real_data_trade_flow.js` ✅。
