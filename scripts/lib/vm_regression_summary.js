@@ -16,14 +16,18 @@ function parseArgs(argv) {
 
 function readSummary(path) {
   if (!existsSync(path)) {
-    return {
-      started_at: new Date().toISOString(),
-      finished_at: null,
-      status: "running",
-      steps: [],
-    };
+    return newSummary();
   }
   return JSON.parse(readFileSync(path, "utf8"));
+}
+
+function newSummary() {
+  return {
+    started_at: new Date().toISOString(),
+    finished_at: null,
+    status: "running",
+    steps: [],
+  };
 }
 
 function saveSummary(path, summary) {
@@ -62,11 +66,12 @@ function main() {
   if (!command) throw new Error("usage: vm_regression_summary.js <init|record|finish> --json PATH ...");
   if (!args.json) throw new Error("--json is required");
 
-  const summary = readSummary(args.json);
   if (command === "init") {
-    saveSummary(args.json, summary);
+    saveSummary(args.json, newSummary());
     return;
   }
+
+  const summary = readSummary(args.json);
   if (command === "record") {
     if (!args.step || !args.status) throw new Error("record requires --step and --status");
     summary.steps.push({

@@ -12,6 +12,7 @@ SUMMARY_JSON="$SUMMARY_DIR/summary.json"
 SUMMARY_MD="$SUMMARY_DIR/summary.md"
 ZK_VERIFIER_CMD="${ZK_VERIFIER_CMD:-target/tools/fishbone-zk}"
 SKIP_DEPLOY="${SKIP_DEPLOY:-0}"
+FLOW_TIMEOUT_SECONDS="${FLOW_TIMEOUT_SECONDS:-300}"
 
 mkdir -p "$SUMMARY_DIR"
 
@@ -20,6 +21,22 @@ record_step() {
   local status="$2"
   local detail="${3:-}"
   node scripts/lib/vm_regression_summary.js record --json "$SUMMARY_JSON" --step "$name" --status "$status" --detail "$detail"
+}
+
+run_step() {
+  local name="$1"
+  local detail="$2"
+  shift 2
+
+  record_step "$name" started "$detail"
+  if timeout "${FLOW_TIMEOUT_SECONDS}s" "$@"; then
+    record_step "$name" ok "$detail"
+    return 0
+  fi
+
+  local status=$?
+  record_step "$name" failed "exit=$status $detail"
+  return "$status"
 }
 
 finish_summary() {
@@ -40,26 +57,20 @@ fi
 record_step zk_cli ok "$ZK_VERIFIER_CMD"
 
 if [[ "$SKIP_DEPLOY" != "1" ]]; then
-  bash scripts/dev_redeploy_clean_chains.sh --chains main,child6 --config "$CONFIG" --logs
-  record_step deploy ok "clean redeploy main,child6"
+  run_step deploy "clean redeploy main,child6" bash scripts/dev_redeploy_clean_chains.sh --chains main,child6 --config "$CONFIG" --logs
 else
   record_step deploy skipped "SKIP_DEPLOY=1"
 fi
 
-node scripts/data_trade_flow.js --main "$MAIN_WS" --child "$CHILD_WS" --scenario happy
-record_step base_happy ok "data_trade_flow happy"
+run_step base_happy "data_trade_flow happy" node scripts/data_trade_flow.js --main "$MAIN_WS" --child "$CHILD_WS" --scenario happy
 
-node scripts/data_trade_flow.js --main "$MAIN_WS" --child "$CHILD_WS" --scenario invalid-proof
-record_step base_invalid_proof ok "data_trade_flow invalid-proof"
+run_step base_invalid_proof "data_trade_flow invalid-proof" node scripts/data_trade_flow.js --main "$MAIN_WS" --child "$CHILD_WS" --scenario invalid-proof
 
-node scripts/data_trade_flow.js --main "$MAIN_WS" --child "$CHILD_WS" --scenario requester-refuses-payment
-record_step base_refuses_payment ok "data_trade_flow requester-refuses-payment"
+run_step base_refuses_payment "data_trade_flow requester-refuses-payment" node scripts/data_trade_flow.js --main "$MAIN_WS" --child "$CHILD_WS" --scenario requester-refuses-payment
 
-node scripts/zk_attested_data_trade_flow.js --main "$MAIN_WS" --child "$CHILD_WS"
-record_step dev_zk_attested ok "zk_attested_data_trade_flow"
+run_step dev_zk_attested "zk_attested_data_trade_flow" node scripts/zk_attested_data_trade_flow.js --main "$MAIN_WS" --child "$CHILD_WS"
 
-ZK_VERIFIER_CMD="$ZK_VERIFIER_CMD" node scripts/zk_real_data_trade_flow.js --main "$MAIN_WS" --child "$CHILD_WS"
-record_step real_zk_attested ok "zk_real_data_trade_flow"
+run_step real_zk_attested "zk_real_data_trade_flow" env ZK_VERIFIER_CMD="$ZK_VERIFIER_CMD" node scripts/zk_real_data_trade_flow.js --main "$MAIN_WS" --child "$CHILD_WS"
 
 find target/data-trade-zk -maxdepth 3 -type f | sort > "$SUMMARY_DIR/artifacts.txt"
 record_step artifacts ok "$SUMMARY_DIR/artifacts.txt"
