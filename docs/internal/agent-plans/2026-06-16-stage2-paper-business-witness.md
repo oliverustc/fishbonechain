@@ -29,6 +29,64 @@
 - **Stage 2.1: Business Metadata Binding**：本计划主体。证明 artifact 额外携带 `business_input_hash`，该 hash 进入 `proof_digest`，再由 child6 `submitDataProof` 与 Charlie attestation 绑定到链上。此阶段不得在文档或代码日志中声称“gnark 电路证明了业务数据”。
 - **Stage 2.2: Circuit-Level Business Witness**：后续必须新增或改造 gnark circuit/assignment，使 `raw_value/min/max/mask_delta/salt` 真正进入约束系统。只有 Stage 2.2 完成后，才能声称 proof 证明了业务约束。
 
+## Stage 2.2 待明确事项（Open Questions）
+
+以下问题在 Stage 2.2 执行前必须回答，否则无法确定实现路径和验收标准。
+
+### 2.2.1 电路改造范围
+
+当前 gnark 电路使用两个独立电路：`RangeHashProof`（prove `preimage` 在 `[min, max]` 范围内且 hash 匹配）和 `RootObfuscationProof`（Merkle proof + 4-root obfuscation）。Stage 2.2 需要决定：
+
+- **方案 A**：只修改 `RangeHashProof.Assign()`，将 `utils.RandStr(3)` 替换为 `witness.RawValue`。`MaskDelta` 和 `Salt` 不进电路，仅通过 `business_input_hash` 在 digest 层面绑定。优点：改动最小。缺点：`masked_value` 的正确性依赖链下信任。
+- **方案 B**：新增一个组合电路，同时证明 `raw_value ∈ [min, max]` 和 `masked_value_hash = H(raw_value + delta || salt)`。优点：电路完整证明了业务逻辑。缺点：需要新电路定义、新 trusted setup、新 VK。
+- **方案 C**：修改现有 `RangeHashProof` 增加 public input 字段（`MaskedValueHash`），在 `Define()` 中增加 `masked = raw + delta; api.AssertIsEqual(H(masked || salt), MaskedValueHash)`。优点：复用已有电路结构。缺点：MiMC hash 的 `masked_value_hash` 与 SHA256 版本不一致——当前 `business_input_hash` 用的是 SHA256，但 gnark 电路使用 MiMC（BN254 原生）。
+
+待决定：选 A / B / C？若选 B 或 C，SHA256 ↔ MiMC 的 hash 函数不一致如何解决？
+
+### 2.2.2 Witness 数据来源
+
+Stage 2.1 的 witness 来自静态 JSON fixture。Stage 2.2 需要回答：
+
+- Witness 数据是静态 fixture 还是由 E2E 脚本运行时动态生成？
+- 如果是动态生成，每轮 round 的 `raw_value` 是否需要变化（如不同 sensor reading）？
+- `MaskDelta` 是 DO 随机选择还是固定值？
+- `Salt` 是否需要每轮重新生成以防止 rainbow table 攻击？
+
+### 2.2.3 IMT / Root Obfuscation 与业务电路的耦合
+
+Stage 2.1 中 RO proof 完全独立于业务 witness。Stage 2.2 是否需要：
+
+- 将 `masked_value_hash` 作为 RO proof 的叶子节点之一？
+- 还是在现有 RO proof 基础上叠加业务证明（两个无关 proof 的组合）？
+
+### 2.2.4 多约束种类 (subset / substr) 的优先级
+
+当前 `constraint_kind` 固定为 `range`。`subset` 和 `substr` 的 gnark 电路原型存在于 `references/data_trade_code/snarks/gnarkzkp/cmd/constraint-hash-proof/circuit_subset_hash.go` 和 `circuit_substr_hash.go`，但尚未接入。Stage 2.2 是否应包含 subset/substr？还是先完成 range，subset/substr 留在 Stage 3？
+
+### 2.2.5 Trusted Setup 管理
+
+当前 Groth16 setup 在 `fixture` 命令中每次重新生成（`Compile` + `Setup`），proof 和 VK 只存在于临时目录。生产级使用需要：
+
+- 预编译电路和 VK，作为构建产物管理（类似 Solidity verifier 的预编译合约）
+- 确定性 setup（publicly verifiable）
+- VK 版本化：链上 `vk_hash` 绑定到特定版本的 VK，VK 升级时需同步更新链上配置
+
+### 2.2.6 验收标准差异
+
+Stage 2.1 完成标志是 "VM E2E 通过 + business_input_hash 进入 digest"。Stage 2.2 的完成标志需要回答：
+
+- 是否需要新的 VM E2E scenario（如 "wrong business value → gnark verify rejects"）？
+- 是否需要链上能区分 "gnark proof rejected by verifier" 和 "proof digest 不匹配"？
+- Go 测试是否需要覆盖 "修改 witness 后 proof 验证失败"（目前 `VerifyRangeRO` 可以做到，但 `business_range_obfuscation_test.go` 未覆盖此路径）？
+
+### 2.2.7 与 `DataTradeProofVerifier` trait 的关系
+
+当前 `AlwaysPassVerifier` 意味着链上不调用任何真实 proof 验证逻辑。Stage 2.2 是否需要：
+
+- 将 `DataTradeProofVerifier` 替换为能调用 `fishbone-zk verify` 的链下服务？
+- 还是保持 `AlwaysPassVerifier`，完全依赖 VerifierAuthority attestation？
+- 若替换，新的 verifier 签名机制如何防止 replay（同一 proof 被多次 attest 到不同 session）？
+
 ## Business Witness v1 Metadata
 
 最小业务场景只实现 `constraint_kind = "range"`：
@@ -46,7 +104,7 @@ Stage 2.1 不证明完整 IMT membership，也不让上述业务字段进入 gna
 
 ## Task 1: Define Business Witness Schema
 
-- [ ] Step 1: Write failing Go tests in `tools/data-trade-zk/internal/business/schema_test.go`.
+- [x] Step 1: Write failing Go tests in `tools/data-trade-zk/internal/business/schema_test.go`.
 
 Expected test file:
 
@@ -88,7 +146,7 @@ func TestRangeWitnessValidateRejectsOutOfRange(t *testing.T) {
 }
 ```
 
-- [ ] Step 2: Run failing test.
+- [x] Step 2: Run failing test.
 
 Run:
 
@@ -98,7 +156,7 @@ cd tools/data-trade-zk && go test ./internal/business
 
 Expected: fail because package/types do not exist.
 
-- [ ] Step 3: Implement `tools/data-trade-zk/internal/business/schema.go`.
+- [x] Step 3: Implement `tools/data-trade-zk/internal/business/schema.go`.
 
 Expected file:
 
@@ -159,7 +217,7 @@ func ReadRangeWitness(path string) (RangeWitness, error) {
 }
 ```
 
-- [ ] Step 4: Run passing test.
+- [x] Step 4: Run passing test.
 
 Run:
 
@@ -169,7 +227,7 @@ cd tools/data-trade-zk && go test ./internal/business
 
 Expected: pass.
 
-- [ ] Step 5: Commit schema.
+- [x] Step 5: Commit schema.
 
 Run:
 
@@ -180,7 +238,7 @@ git commit -m "feat: add data trade business witness schema"
 
 ## Task 2: Extend Artifact Schema for Business Public Inputs
 
-- [ ] Step 1: Add tests in `tools/data-trade-zk/internal/artifact/schema_test.go`.
+- [x] Step 1: Add tests in `tools/data-trade-zk/internal/artifact/schema_test.go`.
 
 Append:
 
@@ -217,7 +275,7 @@ func TestBusinessProofDigestIncludesBusinessInputHash(t *testing.T) {
 }
 ```
 
-- [ ] Step 2: Run failing test.
+- [x] Step 2: Run failing test.
 
 Run:
 
@@ -227,7 +285,7 @@ cd tools/data-trade-zk && go test ./internal/artifact
 
 Expected: fail because `BusinessInputHash` does not exist.
 
-- [ ] Step 3: Modify `tools/data-trade-zk/internal/artifact/schema.go`.
+- [x] Step 3: Modify `tools/data-trade-zk/internal/artifact/schema.go`.
 
 Add field:
 
@@ -258,7 +316,7 @@ Set:
 BusinessInputHash: artifact.ZeroBusinessInputHash,
 ```
 
-- [ ] Step 4: Run tests.
+- [x] Step 4: Run tests.
 
 Run:
 
@@ -268,7 +326,7 @@ cd tools/data-trade-zk && go test ./internal/artifact
 
 Expected: pass.
 
-- [ ] Step 5: Mirror JS artifact validation in `scripts/lib/zk_artifact.js`.
+- [x] Step 5: Mirror JS artifact validation in `scripts/lib/zk_artifact.js`.
 
 Add required `business_input_hash` check:
 
@@ -278,7 +336,7 @@ if (!HEX_32.test(a.business_input_hash)) {
 }
 ```
 
-- [ ] Step 6: Run JS syntax check.
+- [x] Step 6: Run JS syntax check.
 
 Run:
 
@@ -288,7 +346,7 @@ node --check scripts/lib/zk_artifact.js
 
 Expected: pass.
 
-- [ ] Step 7: Commit artifact schema.
+- [x] Step 7: Commit artifact schema.
 
 Run:
 
@@ -299,7 +357,7 @@ git commit -m "feat: bind business input hash in zk artifact"
 
 ## Task 3: Add Business Sample Fixture
 
-- [ ] Step 1: Create `scripts/fixtures/data_trade_business_sample.json`.
+- [x] Step 1: Create `scripts/fixtures/data_trade_business_sample.json`.
 
 Expected file:
 
@@ -316,7 +374,7 @@ Expected file:
 }
 ```
 
-- [ ] Step 2: Validate fixture through business reader.
+- [x] Step 2: Validate fixture through business reader.
 
 Run:
 
@@ -326,7 +384,7 @@ cd tools/data-trade-zk && go test ./internal/business
 
 Expected: pass.
 
-- [ ] Step 3: Commit fixture.
+- [x] Step 3: Commit fixture.
 
 Run:
 
@@ -337,7 +395,7 @@ git commit -m "test: add data trade business witness fixture"
 
 ## Task 4: Implement CLI `business-fixture`
 
-- [ ] Step 1: Add CLI command test by running expected failing command.
+- [x] Step 1: Add CLI command test by running expected failing command.
 
 Run:
 
@@ -347,7 +405,7 @@ cd tools/data-trade-zk && go run ./cmd/fishbone-zk business-fixture --witness ..
 
 Expected: fail with `unknown command: business-fixture`.
 
-- [ ] Step 2: Modify `tools/data-trade-zk/cmd/fishbone-zk/main.go`.
+- [x] Step 2: Modify `tools/data-trade-zk/cmd/fishbone-zk/main.go`.
 
 Add switch case:
 
@@ -388,7 +446,7 @@ Also import:
 "fishbone-data-trade-zk/internal/business"
 ```
 
-- [ ] Step 3: Implement `GenerateBusinessRangeFixture`.
+- [x] Step 3: Implement `GenerateBusinessRangeFixture`.
 
 Create `tools/data-trade-zk/internal/gnarkadapter/business_range_obfuscation.go` with a wrapper that:
 
@@ -445,7 +503,7 @@ func GenerateBusinessRangeFixture(w business.RangeWitness, outDir string) (Gener
 }
 ```
 
-- [ ] Step 4: Run CLI smoke.
+- [x] Step 4: Run CLI smoke.
 
 Run:
 
@@ -456,7 +514,7 @@ cd ../.. && target/tools/fishbone-zk verify --artifact target/business-zk-smoke/
 
 Expected: `verify` prints `accepted`.
 
-- [ ] Step 5: Commit CLI feature.
+- [x] Step 5: Commit CLI feature.
 
 Run:
 
@@ -467,7 +525,7 @@ git commit -m "feat: generate business witness zk artifacts"
 
 ## Task 5: Use Business Witness in Real E2E Script
 
-- [ ] Step 1: Modify `scripts/zk_real_data_trade_flow.js`.
+- [x] Step 1: Modify `scripts/zk_real_data_trade_flow.js`.
 
 Add `--business-witness` arg:
 
@@ -485,7 +543,7 @@ const fixResult = spawnSync(ZK_CMD, [
 
 When reading artifact, continue using `artifact.proof_digest`, `artifact.public_input_hash`, and `artifact.vk_hash`.
 
-- [ ] Step 2: Run syntax check.
+- [x] Step 2: Run syntax check.
 
 Run:
 
@@ -495,7 +553,7 @@ node --check scripts/zk_real_data_trade_flow.js
 
 Expected: pass.
 
-- [ ] Step 3: Run local business fixture smoke.
+- [x] Step 3: Run local business fixture smoke.
 
 Run:
 
@@ -509,7 +567,7 @@ target/tools/fishbone-zk verify --artifact target/business-zk-smoke/artifact.jso
 
 Expected: `accepted`.
 
-- [ ] Step 4: Commit E2E script change.
+- [x] Step 4: Commit E2E script change.
 
 Run:
 
@@ -520,7 +578,7 @@ git commit -m "feat: use business witness in real zk data trade flow"
 
 ## Task 6: VM E2E Regression
 
-- [ ] Step 1: Run Stage 1 regression script.
+- [x] Step 1: Run Stage 1 regression script.
 
 Run:
 
@@ -530,7 +588,7 @@ MAIN_WS=ws://10.2.2.11:9944 CHILD_WS=ws://10.2.2.11:9950 scripts/run_data_trade_
 
 Expected: pass.
 
-- [ ] Step 2: Record result in this plan.
+- [x] Step 2: Record result in this plan.
 
 Required record:
 
@@ -540,14 +598,14 @@ Required record:
 - Artifact includes `business_input_hash`.
 ```
 
-- [ ] Step 3: Update docs.
+- [x] Step 3: Update docs.
 
 Modify `docs/implementation/data-trade-implementation.md`:
 
 - Change “Paper witness” limitation to say Stage 2 minimal range business witness is implemented.
 - Keep a limitation that full IMT membership and all constraint kinds remain future work.
 
-- [ ] Step 4: Commit docs and roadmap.
+- [x] Step 4: Commit docs and roadmap.
 
 Run:
 
@@ -558,4 +616,13 @@ git commit -m "docs: record business witness vm verification"
 
 ## Execution Record
 
-- Not started.
+### 2026-06-16 Stage 2.1 Complete
+
+- Tasks 1-6 全部执行完成。
+- `business/schema.go` + `business_range_obfuscation.go` + CLI `business-fixture` 实现，含 `u64le` canonical encoding 和 `masked_value_hash = SHA256(masked_value || salt)` 语义。
+- `pallet-trade-session` 新增 `business_input_hash` 参数进入 `submit_data_proof` 和 `compute_zk_proof_digest`，链上 digest 包含业务 hash。
+- Go 测试：`internal/business`（5 tests）、`internal/artifact`（6 tests）、`internal/gnarkadapter`（5 tests，含新 `business_range_obfuscation_test.go`）。
+- Rust 测试：`pallet-trade-session` 19/19 pass。
+- JS 语法检查：`data_trade_flow.js`、`zk_attested_data_trade_flow.js`、`zk_real_data_trade_flow.js` 全部 pass。
+- VM E2E：`data_trade_flow.js --scenario happy` ✅、`zk_real_data_trade_flow.js` (business witness) ✅。
+- 限制：gnark 电路 witness 仍使用随机 `utils.RandStr`，电路未真正证明业务约束（Stage 2.2 pending）。
