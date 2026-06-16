@@ -418,4 +418,13 @@ git commit -m "docs: record multi subchain profile validation"
 
 ## Execution Record
 
-- Not started.
+### 2026-06-16 Stage 3 Complete
+
+- Tasks 1-4 全部执行完成。
+- `scripts/lib/trade_profile.js` 实现，含 nested `proof.*` 字段校验和 `parseProfileArg`。
+- `scripts/profiles/chains.json` 新增 `trade_profiles` key，含 `child6-data-trade` 和 `child7-business-trade`。
+- `data_trade_flow.js`、`zk_attested_data_trade_flow.js`、`zk_real_data_trade_flow.js` 全部支持 `--profile` 参数。
+- `deploy/config.toml` 新增 `child7` chain section，`gen_child_specs.py` 支持 `template_chain_id`（child7 使用 child6-local 作为模板生成 spec，不依赖 node 端硬编码 preset）。
+- VM 部署遇到 `data dir root:root` 权限问题，通过 `sudo chown debian:debian` 修复后部署成功。
+- VM E2E：`node scripts/zk_real_data_trade_flow.js --profile child7-business-trade` ✅。
+- Negative check：`fishbone-node-data-trade build-spec --chain child7-local` 返回错误（预期），证明 spec generation 不依赖 node 端注册。
