@@ -32,6 +32,7 @@ function parseArg(flag) {
 const MAIN_WS = parseArg("--main") || "ws://127.0.0.1:9944";
 const CHILD_WS = parseArg("--child") || "ws://127.0.0.1:9950";
 const ZK_CMD = process.env.ZK_VERIFIER_CMD || "target/tools/fishbone-zk";
+const BUSINESS_WITNESS = parseArg("--business-witness") || "scripts/fixtures/data_trade_business_sample.json";
 const VERBOSE = process.argv.includes("--verbose");
 
 function log(msg) {
@@ -137,11 +138,10 @@ async function main() {
 
       // 1. Generate fixture via fishbone-zk CLI
       const fixResult = spawnSync(ZK_CMD, [
-        "fixture", "--out", outDir,
+        "business-fixture", "--witness", BUSINESS_WITNESS, "--out", outDir,
         "--request-hash", sample.requestHash,
         "--session-id", String(sessionId),
         "--round-index", String(round),
-        "--ro-depth", "10",
       ], { stdio: "inherit" });
       if (fixResult.status !== 0) throw new Error(`fishbone-zk fixture failed: ${fixResult.status}`);
 
@@ -167,7 +167,8 @@ async function main() {
         sessionId, round,
         "GnarkGroth16Bn254", "Range", 10,
         artifact.ch_proof_hash, artifact.ro_proof_hash,
-        artifact.public_input_hash, artifact.vk_hash, artifact.proof_digest,
+        artifact.public_input_hash, artifact.vk_hash,
+        artifact.business_input_hash, artifact.proof_digest,
       ), `submitDataProof(${round})`);
 
       // 6. Verifier attestation (Charlie)
