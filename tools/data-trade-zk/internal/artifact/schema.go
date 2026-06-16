@@ -26,6 +26,8 @@ type Files struct {
 	VKBundle        string `json:"vk_bundle"`
 }
 
+const ZeroBusinessInputHash = "0x0000000000000000000000000000000000000000000000000000000000000000"
+
 type ProofArtifact struct {
 	Version            uint32 `json:"version"`
 	ProofSystem        string `json:"proof_system"`
@@ -40,6 +42,7 @@ type ProofArtifact struct {
 	CHProofHash        string `json:"ch_proof_hash"`
 	ROProofHash        string `json:"ro_proof_hash"`
 	PublicInputHash    string `json:"public_input_hash"`
+	BusinessInputHash  string `json:"business_input_hash"`
 	ProofDigest        string `json:"proof_digest"`
 	Files              Files  `json:"files"`
 }
@@ -103,6 +106,10 @@ func (p ProofArtifact) ComputeProofDigest() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("public_input_hash: %w", err)
 	}
+	business, err := mustHex(p.BusinessInputHash)
+	if err != nil {
+		return "", fmt.Errorf("business_input_hash: %w", err)
+	}
 	return Blake2Hex(
 		[]byte(ProofDigestDomain),
 		[]byte{p.ProofSystemCode},
@@ -115,6 +122,7 @@ func (p ProofArtifact) ComputeProofDigest() (string, error) {
 		ch,
 		ro,
 		pi,
+		business,
 	), nil
 }
 

@@ -1,0 +1,11 @@
+{
+  "request_hash": "0x6b9f5a1765adf428a2b7220c2fa6e11ef4f3d8235dc145d7c42b3e26fbd13a01",
+  "session_id": 0,
+  "round_index": 0,
+  "raw_value": 42,
+  "min_value": 18,
+  "max_value": 65,
+  "mask_delta": 1000,
+  "salt_hex": "0x2222222222222222222222222222222222222222222222222222222222222222",
+  "masked_value_hash": "0x6a379cb51853dab914354f9e91fca161d8744dfd0bbaad415e32ed9d5f4a1ade"
+}
