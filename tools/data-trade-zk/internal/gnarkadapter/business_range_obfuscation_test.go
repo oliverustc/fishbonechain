@@ -66,6 +66,25 @@ func TestBusinessHashUsesFixedWidthLittleEndian(t *testing.T) {
 	}
 }
 
+func TestBusinessFixtureRejectsWrongMaskedValueHash(t *testing.T) {
+	dir := t.TempDir()
+	w := business.RangeWitness{
+		RequestHash:     "0x1111111111111111111111111111111111111111111111111111111111111111",
+		SessionID:       1,
+		RoundIndex:      0,
+		RawValue:        42,
+		MinValue:        18,
+		MaxValue:        65,
+		MaskDelta:       1000,
+		SaltHex:         "0x2222222222222222222222222222222222222222222222222222222222222222",
+		MaskedValueHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	}
+	_, err := GenerateBusinessRangeFixture(w, dir)
+	if err == nil {
+		t.Fatal("expected wrong masked_value_hash to be rejected at circuit level")
+	}
+}
+
 func TestBusinessArtifactIsValidAndVerifiable(t *testing.T) {
 	dir := t.TempDir()
 	w := business.RangeWitness{

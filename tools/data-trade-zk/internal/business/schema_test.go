@@ -18,7 +18,7 @@ func TestRangeWitnessValidateAcceptsValidSample(t *testing.T) {
 	}
 }
 
-func TestRangeWitnessValidateRejectsWrongMaskedValueHash(t *testing.T) {
+func TestRangeWitnessRejectsInvalidHexMaskedValueHash(t *testing.T) {
 	w := RangeWitness{
 		RequestHash:     "0x1111111111111111111111111111111111111111111111111111111111111111",
 		SessionID:       7,
@@ -28,14 +28,14 @@ func TestRangeWitnessValidateRejectsWrongMaskedValueHash(t *testing.T) {
 		MaxValue:        65,
 		MaskDelta:       1000,
 		SaltHex:         "0x2222222222222222222222222222222222222222222222222222222222222222",
-		MaskedValueHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		MaskedValueHash: "0xzzzz", // invalid hex
 	}
 	if err := w.Validate(); err == nil {
-		t.Fatalf("expected wrong masked_value_hash to fail")
+		t.Fatalf("expected invalid hex masked_value_hash to fail")
 	}
 }
 
-func TestRangeWitnessValidateAcceptsCorrectMaskedValueHash(t *testing.T) {
+func TestRangeWitnessAcceptsEmptyMaskedValueHash(t *testing.T) {
 	w := RangeWitness{
 		RequestHash: "0x1111111111111111111111111111111111111111111111111111111111111111",
 		SessionID:   7,
@@ -45,11 +45,10 @@ func TestRangeWitnessValidateAcceptsCorrectMaskedValueHash(t *testing.T) {
 		MaxValue:    65,
 		MaskDelta:   1000,
 		SaltHex:     "0x2222222222222222222222222222222222222222222222222222222222222222",
+		// MaskedValueHash empty — validated at circuit level by GenerateBusinessRangeFixture
 	}
-	correct := w.ComputeMaskedValueHash()
-	w.MaskedValueHash = correct
 	if err := w.Validate(); err != nil {
-		t.Fatalf("correct masked_value_hash rejected: %v", err)
+		t.Fatalf("empty masked_value_hash rejected: %v", err)
 	}
 }
 

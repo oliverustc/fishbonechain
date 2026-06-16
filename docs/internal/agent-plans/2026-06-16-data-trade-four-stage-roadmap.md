@@ -66,8 +66,7 @@
 ## 阶段状态
 
 - [x] Stage 1: VM E2E Regression
-- [x] Stage 2.1: Business Metadata Binding (complete)
-- [ ] Stage 2.2: Circuit-Level Business Witness (pending)
+- [x] Stage 2: Paper Business Witness (complete)
 - [ ] Stage 3: Multi Trade Subchain Profiles
 - [ ] Stage 4: Security Model and Paper Alignment
 
