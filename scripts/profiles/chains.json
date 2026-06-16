@@ -4,5 +4,37 @@
   "child3": { "chainId": 2, "scene": "Crowdsource", "settlement": "FmcTaskBill" },
   "child4": { "chainId": 3, "scene": "Crowdsource", "settlement": "FmcTaskBill" },
   "child5": { "chainId": 4, "scene": "Crowdsource", "settlement": "FmcTaskBill" },
-  "child6": { "chainId": 5, "scene": "DataTrade", "settlement": "MainEscrow" }
+  "child6": { "chainId": 5, "scene": "DataTrade", "settlement": "MainEscrow" },
+  "trade_profiles": {
+    "child6-data-trade": {
+      "chain": "child6",
+      "main_ws": "ws://10.2.2.11:9944",
+      "child_ws": "ws://10.2.2.11:9950",
+      "settlement_mode": "MainEscrow",
+      "verifier_mode": "gnark-groth16-bn254",
+      "verifier_authority": "//Charlie",
+      "zk_verifier_cmd": "target/tools/fishbone-zk",
+      "business_witness": "scripts/fixtures/data_trade_business_sample.json",
+      "proof": {
+        "system": "GnarkGroth16Bn254",
+        "constraint_kind": "Range",
+        "ro_depth": 10
+      }
+    },
+    "child7-business-trade": {
+      "chain": "child7",
+      "main_ws": "ws://10.2.2.11:9944",
+      "child_ws": "ws://10.2.2.11:9951",
+      "settlement_mode": "MainEscrow",
+      "verifier_mode": "gnark-groth16-bn254",
+      "verifier_authority": "//Charlie",
+      "zk_verifier_cmd": "target/tools/fishbone-zk",
+      "business_witness": "scripts/fixtures/data_trade_business_sample.json",
+      "proof": {
+        "system": "GnarkGroth16Bn254",
+        "constraint_kind": "Range",
+        "ro_depth": 10
+      }
+    }
+  }
 }

@@ -23,16 +23,19 @@ import {
 } from "./lib/data_trade_binding.js";
 import { computeZkAttestationDigest } from "./lib/zk_attestation.js";
 import { assertValidZkArtifact, readZkArtifact } from "./lib/zk_artifact.js";
+import { loadTradeProfile, parseProfileArg } from "./lib/trade_profile.js";
 
 function parseArg(flag) {
   const idx = process.argv.indexOf(flag);
   return idx !== -1 ? process.argv[idx + 1] : null;
 }
 
-const MAIN_WS = parseArg("--main") || "ws://127.0.0.1:9944";
-const CHILD_WS = parseArg("--child") || "ws://127.0.0.1:9950";
-const ZK_CMD = process.env.ZK_VERIFIER_CMD || "target/tools/fishbone-zk";
-const BUSINESS_WITNESS = parseArg("--business-witness") || "scripts/fixtures/data_trade_business_sample.json";
+const PROFILE = parseProfileArg();
+const PROFILE_CONFIG = PROFILE ? loadTradeProfile(PROFILE) : null;
+const MAIN_WS = parseArg("--main") || PROFILE_CONFIG?.main_ws || "ws://127.0.0.1:9944";
+const CHILD_WS = parseArg("--child") || PROFILE_CONFIG?.child_ws || "ws://127.0.0.1:9950";
+const ZK_CMD = process.env.ZK_VERIFIER_CMD || PROFILE_CONFIG?.zk_verifier_cmd || "target/tools/fishbone-zk";
+const BUSINESS_WITNESS = parseArg("--business-witness") || PROFILE_CONFIG?.business_witness || "scripts/fixtures/data_trade_business_sample.json";
 const VERBOSE = process.argv.includes("--verbose");
 
 function log(msg) {

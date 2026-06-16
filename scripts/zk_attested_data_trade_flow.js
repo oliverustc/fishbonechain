@@ -17,6 +17,7 @@ import {
 } from "./lib/data_trade_binding.js";
 import { computeZkAttestationDigest } from "./lib/zk_attestation.js";
 import { computeProofDigest } from "./lib/zk_artifact.js";
+import { loadTradeProfile, parseProfileArg } from "./lib/trade_profile.js";
 
 function parseArg(flag) {
   const idx = process.argv.indexOf(flag);
@@ -42,8 +43,10 @@ function devProofDigest({ requestHash, sessionId, roundIndex, vkHash, chProofHas
   });
 }
 
-const MAIN_WS = parseArg("--main") || "ws://127.0.0.1:9944";
-const CHILD_WS = parseArg("--child") || "ws://127.0.0.1:9950";
+const PROFILE = parseProfileArg();
+const PROFILE_CONFIG = PROFILE ? loadTradeProfile(PROFILE) : null;
+const MAIN_WS = parseArg("--main") || PROFILE_CONFIG?.main_ws || "ws://127.0.0.1:9944";
+const CHILD_WS = parseArg("--child") || PROFILE_CONFIG?.child_ws || "ws://127.0.0.1:9950";
 const VERBOSE = process.argv.includes("--verbose");
 
 function log(msg) {

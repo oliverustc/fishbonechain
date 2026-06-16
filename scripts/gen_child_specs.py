@@ -186,6 +186,20 @@ def chain_configs() -> list[dict]:
                 "paramsHash": zero_hash(),
             },
         },
+        {
+            "name": "child7",
+            "chain_id": "child7-local",
+            "template_chain_id": "child6-local",
+            "binary": BIN_DIR / "fishbone-node-data-trade",
+            "validators": ["f1", "f2", "f3", "f4", "f5"],
+            "out": SPECS / "child7-custom-raw.json",
+            "profile": {
+                "chainId": 6,
+                "scene": "DataTrade",
+                "settlement": "MainEscrow",
+                "paramsHash": zero_hash(),
+            },
+        },
     ]
 
 
@@ -234,9 +248,10 @@ def main():
             gran_keys.append(env["GRAN_SS58"])
             print(f"  {node}: aura={env['AURA_SS58'][:12]}…  gran={env['GRAN_SS58'][:12]}…")
 
-        # 生成 human-readable spec
-        print(f"  build-spec --chain {cfg['chain_id']} ...")
-        spec = build_spec(binary, cfg["chain_id"])
+        # 生成 human-readable spec (template_chain_id allows child7 to reuse child6's preset)
+        template_chain_id = cfg.get("template_chain_id", cfg["chain_id"])
+        print(f"  build-spec --chain {template_chain_id} ...")
+        spec = build_spec(binary, template_chain_id)
 
         # 注入真实 validator 密钥
         key_type = cfg.get("key_type", "aura")
