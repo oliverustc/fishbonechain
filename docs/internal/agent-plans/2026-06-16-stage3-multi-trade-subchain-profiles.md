@@ -10,6 +10,28 @@
 
 ---
 
+## Reviewer Note Resolved: child7 build-spec preset
+
+External review raised one deployment risk: `gen_child_specs.py` might call `build-spec --chain child7-local`, but the node binary only recognizes chain IDs explicitly registered in `node/src/command.rs`. Current `child6-local` works because it is registered there; `child7-local` is not registered and will be treated as a JSON file path, causing:
+
+```text
+Error opening spec file `child7-local`: No such file or directory
+```
+
+Stage 3 must **not** fix this by adding `"child7-local"` to `node/src/command.rs` for every new data-trade subchain. That would reintroduce per-chain runtime hardcoding. Instead, `scripts/gen_child_specs.py` must separate:
+
+- **logical chain name**: `child7`, used for output file, deploy config, RPC profile, chain profile `chain_id`.
+- **build-spec template chain id**: an already registered preset such as `child6-local`, used only to obtain the DataTrade runtime human-readable spec skeleton.
+
+For child7, use:
+
+```python
+"chain_id": "child7-local",
+"template_chain_id": "child6-local",
+```
+
+Then inject `spec["name"]`, `spec["id"]`, validators, and `chainProfile.profile.chain_id = 6` before converting to raw. This keeps child7 configurable while avoiding another hardcoded node preset.
+
 ## Files
 
 - Modify: `scripts/profiles/chains.json`
@@ -260,11 +282,65 @@ Add:
 
 - [ ] Step 3: Update `scripts/gen_child_specs.py`.
 
-Ensure it can generate `child7-custom-raw.json` by mapping `child7` to data-trade runtime profile. If current script branches only for `child6`, add `child7` to the same data-trade set:
+Ensure it can generate `child7-custom-raw.json` without requiring the binary to recognize `--chain child7-local`.
+
+First, update `build_spec()` call sites so a chain config may specify `template_chain_id`.
+
+Find:
 
 ```python
-DATA_TRADE_CHAINS = {"child6", "child7"}
+        print(f"  build-spec --chain {cfg['chain_id']} ...")
+        spec = build_spec(binary, cfg["chain_id"])
 ```
+
+Replace with:
+
+```python
+        template_chain_id = cfg.get("template_chain_id", cfg["chain_id"])
+        print(f"  build-spec --chain {template_chain_id} ...")
+        spec = build_spec(binary, template_chain_id)
+```
+
+Second, add a helper to override the generated chain spec identity after the template spec is loaded:
+
+```python
+def inject_spec_identity(spec: dict, cfg: dict) -> dict:
+    """Override human-readable chain identity after loading a reusable template."""
+    if "spec_name" in cfg:
+        spec["name"] = cfg["spec_name"]
+    if "spec_id" in cfg:
+        spec["id"] = cfg["spec_id"]
+    return spec
+```
+
+Call it before validator/profile injection:
+
+```python
+        spec = inject_spec_identity(spec, cfg)
+```
+
+Third, add child7 to `chain_configs()` by reusing the DataTrade binary and `child6-local` template:
+
+```python
+        {
+            "name": "child7",
+            "chain_id": "child7-local",
+            "template_chain_id": "child6-local",
+            "binary": BIN_DIR / "fishbone-node-data-trade",
+            "validators": ["f1", "f2", "f3", "f4", "f5"],
+            "out": SPECS / "child7-custom-raw.json",
+            "spec_name": "Fishbone Child-7 (Business Data Trade, AURA-5)",
+            "spec_id": "fishbone_child_7",
+            "profile": {
+                "chainId": 6,
+                "scene": "DataTrade",
+                "settlement": "MainEscrow",
+                "paramsHash": zero_hash(),
+            },
+        },
+```
+
+Do not add `"child7-local"` to `node/src/command.rs` in this task. If the executor believes node-level registration is necessary, stop and record the blocker in this plan instead of hardcoding another preset.
 
 - [ ] Step 4: Generate child7 spec.
 
@@ -275,6 +351,14 @@ python3 scripts/gen_child_specs.py --only child7
 ```
 
 Expected: `deploy/specs/child7-custom-raw.json` created.
+
+Also run this negative check to prove the script is not depending on a registered `child7-local` preset:
+
+```bash
+./deploy/bin/fishbone-node-data-trade build-spec --chain child7-local --disable-default-bootnode >/tmp/child7-spec.json 2>/tmp/child7-spec.err; test $? -ne 0
+```
+
+Expected: command exits nonzero. This is acceptable because `gen_child_specs.py` should use `template_chain_id = "child6-local"` internally.
 
 - [ ] Step 5: Commit child7 draft.
 

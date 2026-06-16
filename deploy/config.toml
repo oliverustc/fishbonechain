@@ -82,6 +82,15 @@ p2p_port = 30339
 rpc_port = 9950
 prom_port = 9621
 
+[chains.child7]
+# 脱敏可验证数据交易实验链（DataTrade/MainEscrow）
+id       = "fishbone_child_7"
+spec     = "specs/child7-custom-raw.json"
+binary   = "/home/debian/fishbone/bin/fishbone-node-data-trade"
+p2p_port = 30340
+rpc_port = 9951
+prom_port = 9622
+
 # ── 节点定义 ──────────────────────────────────────────────────────────────────
 # roles: 该节点参与哪些链（validator）
 # peer_ids: 在各链上的 libp2p Peer ID（由 generate-keys.py 填充）
@@ -91,7 +100,7 @@ prom_port = 9621
 id      = "f1"
 ip      = "10.2.2.11"
 ssh     = "f1"
-roles   = ["main", "child1", "child4", "child6"]
+roles   = ["main", "child1", "child4", "child6", "child7"]
 
 [nodes.peer_ids]
 main   = "12D3KooWEG8gvUe7RRvrgknZwbzg1snqKQzxhewX5FDaEYGfcDLa"
@@ -101,12 +110,13 @@ child3 = ""
 child4 = "12D3KooWEzqdETWNBZ34tcemhRA8msBH7ik4vZqQkekZts72Eg9W"
 child5 = ""
 child6 = "12D3KooWDpGaJH1xggrY1e9xhyym1JYzADxK6WipdDrArmt7d1Ba"
+child7 = ""
 
 [[nodes]]
 id      = "f2"
 ip      = "10.2.2.12"
 ssh     = "f2"
-roles   = ["main", "child1", "child4", "child6"]
+roles   = ["main", "child1", "child4", "child6", "child7"]
 
 [nodes.peer_ids]
 main   = "12D3KooWFsrUUPRd7oVv4aUQ4oF3oi1zfGYGvhW3TyZvvuWhQqNL"
@@ -116,12 +126,13 @@ child3 = ""
 child4 = "12D3KooWFBCVDS8aBj6ZvbDuykDQPXsNLiJ96qgTmcvnJMM45CKc"
 child5 = ""
 child6 = "12D3KooWRQ8LjYQCuPGeoXBCBWZLi25MLwBNmoYULFYayXmnxhwH"
+child7 = ""
 
 [[nodes]]
 id      = "f3"
 ip      = "10.2.2.13"
 ssh     = "f3"
-roles   = ["main", "child1", "child4", "child6"]
+roles   = ["main", "child1", "child4", "child6", "child7"]
 
 [nodes.peer_ids]
 main   = "12D3KooWAEnd9YjewBvTDXAyc2WDuh89wXoDBLYMuV5RUxoBRDP1"
@@ -131,12 +142,13 @@ child3 = ""
 child4 = "12D3KooWLUHZNStauREBnasL9Xb8nVuysDrDUBmWBKjZwUMha6CW"
 child5 = ""
 child6 = "12D3KooWLgWrAGTV7a5jm2rGaBf7oKpd6wLBbfmGNkvzySKiz3Gn"
+child7 = ""
 
 [[nodes]]
 id      = "f4"
 ip      = "10.2.2.14"
 ssh     = "f4"
-roles   = ["main", "child2", "child4", "child6"]
+roles   = ["main", "child2", "child4", "child6", "child7"]
 
 [nodes.peer_ids]
 main   = "12D3KooWAzKDpDs5jCSX3eC5urRotn4QBsqzhz8pSEqbjsPWYf9k"
@@ -146,12 +158,13 @@ child3 = ""
 child4 = "12D3KooWGEeA7kGn1Mh6NdNHk2r3j33cFwBEznSBB5tN7hM5Kjua"
 child5 = ""
 child6 = "12D3KooWB5nwiJ7UKcKwByemEgmuz51o9EfspwtXx88zbwpXmybo"
+child7 = ""
 
 [[nodes]]
 id      = "f5"
 ip      = "10.2.2.15"
 ssh     = "f5"
-roles   = ["main", "child2", "child4", "child6"]
+roles   = ["main", "child2", "child4", "child6", "child7"]
 
 [nodes.peer_ids]
 main   = "12D3KooWE7erpnv3EzmqhEjkHNB4i2vsDgquJKwG637qPJM9gnur"
@@ -161,6 +174,7 @@ child3 = ""
 child4 = "12D3KooWN7LKBs97FFknxcTH1zRHzbx4ctuVrHxNwSWfg1hxb8u7"
 child5 = ""
 child6 = "12D3KooWPtNEsx2fLity4wgbrM7gPoaghBMMxyjrUDf3q4NhA8tM"
+child7 = ""
 
 [[nodes]]
 id      = "f6"
