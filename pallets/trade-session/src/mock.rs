@@ -134,6 +134,7 @@ pub fn complete_round(session_id: u32, round_index: u32) {
 	));
 	let public_input_hash = ch;
 	let vk_hash = ch;
+	let business_input_hash = sp_core::H256::repeat_byte(99);
 	let proof_digest =
 		crate::proof::compute_zk_proof_digest::<<Test as frame_system::Config>::Hashing>(
 			crate::types::ProofSystem::GnarkGroth16Bn254,
@@ -146,6 +147,7 @@ pub fn complete_round(session_id: u32, round_index: u32) {
 			ch,
 			ch,
 			public_input_hash,
+			business_input_hash,
 		);
 	let attestation_hash =
 		crate::proof::compute_zk_attestation_digest::<<Test as frame_system::Config>::Hashing>(
@@ -167,6 +169,7 @@ pub fn complete_round(session_id: u32, round_index: u32) {
 		ch,
 		public_input_hash,
 		vk_hash,
+		business_input_hash,
 		proof_digest,
 	));
 	assert_ok!(crate::Pallet::<Test>::attest_data_proof(
@@ -209,6 +212,7 @@ pub fn setup_session_with_submitted_data_proof() -> u32 {
 	let payment_hash = sp_core::H256::repeat_byte(10);
 	let public_input_hash = sp_core::H256::repeat_byte(12);
 	let vk_hash = sp_core::H256::repeat_byte(13);
+	let business_input_hash = sp_core::H256::repeat_byte(99);
 	let proof_digest =
 		crate::proof::compute_zk_proof_digest::<<Test as frame_system::Config>::Hashing>(
 			crate::types::ProofSystem::GnarkGroth16Bn254,
@@ -221,6 +225,7 @@ pub fn setup_session_with_submitted_data_proof() -> u32 {
 			payment_hash,
 			payment_hash,
 			public_input_hash,
+			business_input_hash,
 		);
 	assert_ok!(crate::Pallet::<Test>::open_round(
 		frame_system::RawOrigin::Signed(1).into(),
@@ -245,6 +250,7 @@ pub fn setup_session_with_submitted_data_proof() -> u32 {
 		payment_hash,
 		public_input_hash,
 		vk_hash,
+		business_input_hash,
 		proof_digest,
 	));
 	session_id

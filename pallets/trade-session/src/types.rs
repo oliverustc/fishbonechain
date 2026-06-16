@@ -181,4 +181,5 @@ pub struct RoundState<AccountId, Hash> {
 	pub public_input_hash: Option<Hash>,
 	pub vk_hash: Option<Hash>,
 	pub verifier_attestation_hash: Option<Hash>,
+	pub business_input_hash: Option<Hash>,
 }

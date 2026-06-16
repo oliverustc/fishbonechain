@@ -15,6 +15,7 @@ fn compute_dev_digest(
 	public_input_hash: sp_core::H256,
 	vk_hash: sp_core::H256,
 ) -> sp_core::H256 {
+	let business_input_hash = sp_core::H256::repeat_byte(99);
 	crate::proof::compute_zk_proof_digest::<<Test as frame_system::Config>::Hashing>(
 		ProofSystem::GnarkGroth16Bn254,
 		ConstraintKind::Range,
@@ -26,6 +27,7 @@ fn compute_dev_digest(
 		ch_proof_hash,
 		ro_proof_hash,
 		public_input_hash,
+		business_input_hash,
 	)
 }
 
@@ -187,6 +189,7 @@ fn dr_can_dispute_invalid_proof_and_mark_session_punished() {
 			ch,
 			ch,
 			ch,
+			sp_core::H256::repeat_byte(99),
 			digest,
 		));
 		assert_ok!(crate::Pallet::<Test>::dispute_invalid_proof(
@@ -230,6 +233,7 @@ fn do_can_claim_last_payment_after_signature_and_delivery() {
 			ch,
 			ch,
 			ch,
+			sp_core::H256::repeat_byte(99),
 			digest,
 		));
 		assert_ok!(crate::Pallet::<Test>::attest_data_proof(
@@ -292,6 +296,7 @@ fn dr_can_dispute_plaintext_hash_mismatch() {
 			ch,
 			ch,
 			ch,
+			sp_core::H256::repeat_byte(99),
 			digest,
 		));
 		assert_ok!(crate::Pallet::<Test>::attest_data_proof(
@@ -374,6 +379,7 @@ fn only_authorized_verifier_can_attest_data_proof() {
 			ch,
 			ch,
 			ch,
+			sp_core::H256::repeat_byte(99),
 			digest,
 		));
 		assert_noop!(
@@ -432,6 +438,7 @@ fn rejected_attestation_cannot_be_signed_by_requester() {
 			ch,
 			ch,
 			ch,
+			sp_core::H256::repeat_byte(99),
 			digest,
 		));
 		assert_ok!(crate::Pallet::<Test>::attest_data_proof(
@@ -485,6 +492,7 @@ fn requester_can_dispute_after_verifier_accepts_proof() {
 			ch,
 			ch,
 			ch,
+			sp_core::H256::repeat_byte(99),
 			digest,
 		));
 		assert_ok!(crate::Pallet::<Test>::attest_data_proof(
@@ -549,6 +557,7 @@ fn submit_data_proof_records_bound_metadata() {
 			ro_proof_hash,
 			public_input_hash,
 			vk_hash,
+			sp_core::H256::repeat_byte(99),
 			proof_digest,
 		));
 
@@ -596,6 +605,7 @@ fn submit_data_proof_rejects_digest_not_bound_to_session() {
 				payment_hash,
 				payment_hash,
 				payment_hash,
+				sp_core::H256::repeat_byte(99),
 				wrong_digest,
 			),
 			Error::<Test>::InvalidProof,
