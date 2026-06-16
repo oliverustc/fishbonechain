@@ -38,6 +38,10 @@ function log(msg) {
   console.log(`[zk-real-e2e ${new Date().toISOString()}] ${msg}`);
 }
 
+function verifierAccepted(output) {
+  return output.split(/\r?\n/).some((line) => line.trim() === "accepted");
+}
+
 async function submitTx(signer, tx, label) {
   return new Promise((resolve, reject) => {
     tx.signAndSend(signer, ({ status, dispatchError, events }) => {
@@ -149,7 +153,7 @@ async function main() {
       const verifyResult = spawnSync(ZK_CMD, ["verify", "--artifact", artifactPath], {
         encoding: "utf8",
       });
-      if (verifyResult.status !== 0 || verifyResult.stdout.trim() !== "accepted") {
+      if (verifyResult.status !== 0 || !verifierAccepted(verifyResult.stdout)) {
         throw new Error(`fishbone-zk verify rejected: ${verifyResult.stderr || verifyResult.stdout}`);
       }
 
