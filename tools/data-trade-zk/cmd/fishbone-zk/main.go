@@ -124,5 +124,5 @@ func businessFixtureCmd(args []string) {
 		os.Exit(1)
 	}
 	fmt.Printf("proof_digest=%s\n", out.Artifact.ProofDigest)
-	fmt.Printf("masked_value_hash=%s\n", out.Artifact.BusinessInputHash)
+	fmt.Printf("business_input_hash=%s\n", out.Artifact.BusinessInputHash)
 }

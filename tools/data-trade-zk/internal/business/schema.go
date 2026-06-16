@@ -20,13 +20,10 @@ type RangeWitness struct {
 	MaskedValueHash string `json:"masked_value_hash,omitempty"`
 }
 
-// ComputeMaskedValueHash returns MiMC(masked_value, salt) as a 0x-prefixed hex string.
-// Stage 2.2: migrated from SHA256 to MiMC for gnark circuit compatibility.
-// NOTE: This function cannot compute the real MiMC hash without importing gnark
-// (which would create a circular dependency). The actual MiMC computation is
-// done in gnarkadapter.GenerateBusinessRangeFixture. The fixture JSON should
-// provide masked_value_hash directly; Validate() checks it is valid hex format.
-// ReadRangeWitness() does NOT auto-compute it.
+// Deprecated: ComputeMaskedValueHash always returns "".
+// The real MiMC masked_value_hash is computed by gnarkadapter.GenerateBusinessRangeFixture
+// during proof generation (the business package cannot import gnark).
+// Use IsMaskedValueHashProvided() to check if the fixture supplied a value.
 func (w RangeWitness) ComputeMaskedValueHash() string {
 	return ""
 }
