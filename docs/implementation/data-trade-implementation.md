@@ -113,17 +113,16 @@ VM E2E 结果（main @ `ws://10.2.2.11:9944`，child6 @ `ws://10.2.2.11:9950`，
 | `dev-zk-attested` | ✅ ZK digest + Charlie attestation → 2 轮交付 → claimSettlement → settleByPreimage |
 | `gnark-groth16-bn254` | ✅ 每轮链下生成并验证 gnark proof → 链上 proof digest/attestation → claimSettlement → settleByPreimage |
 
-一键回归结果（2026-06-16）：
+手动 VM E2E 回归结果（2026-06-16 最终）：
 
-- Command: `MAIN_WS=ws://10.2.2.11:9944 CHILD_WS=ws://10.2.2.11:9950 scripts/run_data_trade_vm_regression.sh`
-- Summary: `target/data-trade-vm-regression/summary.json` status = `passed`
-- Markdown summary: `target/data-trade-vm-regression/summary.md`
-- Real ZK path: `verifier=gnark-groth16-bn254`，最终 Bob/Alice reserved 均为 `0`
-- 稳定性修复：runner 在 clean redeploy 后通过 `scripts/lib/wait_for_ws_chain.js` 等待 main/child6 区块推进，避免 RPC 刚启动时 `ApiPromise.create` 偶发卡住。
+- `scripts/data_trade_flow.js --scenario happy` → ✅
+- `scripts/zk_real_data_trade_flow.js` (business witness, gnark proof) → ✅
+- `verifier=gnark-groth16-bn254`，Bob/Alice reserved 均为 0
 
 ### 边界与限制
 
-- **ZK 为 mock**：`DataTradeProofVerifier = AlwaysPassVerifier`，Groth16 验证在链下 CLI 完成，链上只验证 attestation 签名和 digest 绑定。`fishbone-zk verify` 可对真实 gnark proof 执行完整验证。
+- **ZK 验证路径**：`DataTradeProofVerifier = AlwaysPassVerifier`。Groth16 验证在链下 CLI (`fishbone-zk verify`) 完成，链上只验证 attestation 签名和 digest 绑定。
+- **业务 witness (Stage 2.1)**：已实现业务 metadata 与 masked value commitment 绑定到 proof digest 与链上 attestation。`business_input_hash` 包含 `raw_value`、`min/max`、`mask_delta`、`salt` 和 `masked_value_hash = SHA256(masked_value || salt)` 的 canonical LE 编码。但 **gnark 电路 witness 仍未替换**——电路仍使用随机样例 (`utils.RandStr`)，不代表电路证明了业务约束。此工作属于 Stage 2.2。
 - **Bridge 非 trustless**：session-escrow 绑定由 E2E/bridge 脚本在链下校验，未接入 CCMC/Merkle proof 做链上跨链验证。
 - **Settlement 模式**：仅实现 `MainEscrow`。`FmcAssisted` 和 `Hybrid` 预留为后续。
 - **单 verifier**：`VerifierAuthority` 是单一 dev 账户（Charlie），不是多签委员会。

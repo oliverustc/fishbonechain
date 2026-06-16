@@ -42,6 +42,7 @@ function devProofDigest({ requestHash, sessionId, roundIndex, vkHash, chProofHas
     ch_proof_hash: chProofHash,
     ro_proof_hash: roProofHash,
     public_input_hash: publicInputHash,
+    business_input_hash: "0x0000000000000000000000000000000000000000000000000000000000000000",
   });
 }
 
@@ -161,7 +162,7 @@ async function completeRound(childApi, alice, bob, sessionId, roundIndex, charli
   await submitTx(bob, childApi.tx.tradeSession.submitDataProof(
       sessionId, roundIndex,
       'GnarkGroth16Bn254', 'Range', 10,
-      ch, ch, ch, ch, proofDigest
+      ch, ch, ch, ch, '0x0000000000000000000000000000000000000000000000000000000000000000', proofDigest
     ), `submitDataProof(${roundIndex})`);
   const attDigest = computeZkAttestationDigest({
     sessionId,
@@ -234,7 +235,7 @@ async function invalidProofScenario(mainApi, childApi, alice, bob) {
   await submitTx(bob, childApi.tx.tradeSession.submitDataProof(
       sessionId, 0,
       'GnarkGroth16Bn254', 'Range', 10,
-      ch, ch, ch, ch, invalidDigest
+      ch, ch, ch, ch, '0x0000000000000000000000000000000000000000000000000000000000000000', invalidDigest
     ), "submitDataProof(0)");
 
   log("DR 争议无效 proof...");
@@ -270,7 +271,7 @@ async function refusesPaymentScenario(mainApi, childApi, alice, bob, charlie) {
   await submitTx(bob, childApi.tx.tradeSession.submitDataProof(
       sessionId, 0,
       'GnarkGroth16Bn254', 'Range', 10,
-      ch, ch, ch, ch, refuseDigest
+      ch, ch, ch, ch, '0x0000000000000000000000000000000000000000000000000000000000000000', refuseDigest
     ), "submitDataProof(0)");
   const refuseAttDigest = computeZkAttestationDigest({ sessionId, roundIndex: 0, proofDigest: refuseDigest, accepted: true, verifierAccount: charlie.addressRaw });
   await submitTx(charlie, childApi.tx.tradeSession.attestDataProof(sessionId, 0, refuseDigest, true, refuseAttDigest), "attestDataProof(0)");

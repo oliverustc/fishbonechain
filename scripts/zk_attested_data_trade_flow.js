@@ -38,6 +38,7 @@ function devProofDigest({ requestHash, sessionId, roundIndex, vkHash, chProofHas
     ch_proof_hash: chProofHash,
     ro_proof_hash: roProofHash,
     public_input_hash: publicInputHash,
+    business_input_hash: "0x0000000000000000000000000000000000000000000000000000000000000000",
   });
 }
 
@@ -146,7 +147,7 @@ async function main() {
       await submitTx(alice, childApi.tx.tradeSession.openRound(sessionId, round, ch), `openRound(${round})`);
       await submitTx(alice, childApi.tx.tradeSession.submitPaymentProof(sessionId, round, ch), `submitPaymentProof(${round})`);
       await submitTx(bob, childApi.tx.tradeSession.submitDataProof(
-        sessionId, round, "GnarkGroth16Bn254", "Range", 10, ch, ch, ch, ch, proofDigest,
+        sessionId, round, "GnarkGroth16Bn254", "Range", 10, ch, ch, ch, ch, '0x0000000000000000000000000000000000000000000000000000000000000000', proofDigest,
       ), `submitDataProof(${round})`);
       // ZK attestation by verifier (Charlie)
       const attDigest = computeZkAttestationDigest({
