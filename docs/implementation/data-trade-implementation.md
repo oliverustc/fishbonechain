@@ -122,11 +122,10 @@ VM E2E 结果（main @ `ws://10.2.2.11:9944`，child6 @ `ws://10.2.2.11:9950`，
 ### 边界与限制
 
 - **ZK 验证路径**：`DataTradeProofVerifier = AlwaysPassVerifier`。Groth16 验证在链下 CLI (`fishbone-zk verify`) 完成，链上只验证 attestation 签名和 digest 绑定。
-- **业务 witness (Stage 2.1)**：已实现业务 metadata 与 masked value commitment 绑定到 proof digest 与链上 attestation。`business_input_hash` 包含 `raw_value`、`min/max`、`mask_delta`、`salt` 和 `masked_value_hash = SHA256(masked_value || salt)` 的 canonical LE 编码。- **业务 witness (Stage 2.2)**：`BusinessRangeProof` 电路已实现，gnark 证明 `raw_value ∈ [min, max]` + `masked_value = raw_value + delta` + `masked_value_hash = MiMC(masked_value, salt)`。`business_input_hash` 继续绑定到 `proof_digest` 和链上 attestation。电路级业务约束已由 gnark proof 证明。但 RO/IMT、subset/substr、链上 verifier、trustless bridge 仍是后续工作。
+- **业务 witness (Stage 2.2 complete)**：`BusinessRangeProof` 电路已实现，gnark 证明 `raw_value ∈ [min, max]` + `masked_value = raw_value + delta` + `masked_value_hash = MiMC(masked_value, salt)`。`business_input_hash` 包含 `raw_value`、`min/max`、`mask_delta`、`salt`、`masked_value_hash` 的 canonical LE 编码，绑定到 `proof_digest` 和链上 attestation。RO/IMT、subset/substr、链上 verifier、trustless bridge 仍是后续工作。
 - **Bridge 非 trustless**：session-escrow 绑定由 E2E/bridge 脚本在链下校验，未接入 CCMC/Merkle proof 做链上跨链验证。
 - **Settlement 模式**：仅实现 `MainEscrow`。`FmcAssisted` 和 `Hybrid` 预留为后续。
 - **单 verifier**：`VerifierAuthority` 是单一 dev 账户（Charlie），不是多签委员会。
-- **Paper witness**：gnark 电路当前使用随机生成的 witness（`utils.RandStr`），不是业务数据驱动。
 
 ## 测试状态
 
@@ -178,7 +177,6 @@ MAIN_WS=ws://10.2.2.11:9944 CHILD_WS=ws://10.2.2.11:9950 scripts/run_data_trade_
 
 ## 后续方向
 
-- 接入真实业务数据驱动的 gnark witness（替换 `RandStr`）
 - Trustless 跨链证明：CCMC/Merkle proof 接入主链 escrow
 - 多 verifier 委员会 + 阈值 attestation
 - FmcAssisted / Hybrid 结算模式
