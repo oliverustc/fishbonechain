@@ -62,6 +62,8 @@ else
   record_step deploy skipped "SKIP_DEPLOY=1"
 fi
 
+run_step rpc_ready "wait for main,child6 headers to advance" node scripts/lib/wait_for_ws_chain.js --main "$MAIN_WS" --child "$CHILD_WS" --min-blocks 2 --timeout-ms 180000
+
 run_step base_happy "data_trade_flow happy" node scripts/data_trade_flow.js --main "$MAIN_WS" --child "$CHILD_WS" --scenario happy
 
 run_step base_invalid_proof "data_trade_flow invalid-proof" node scripts/data_trade_flow.js --main "$MAIN_WS" --child "$CHILD_WS" --scenario invalid-proof
