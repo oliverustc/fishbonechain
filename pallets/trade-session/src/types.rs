@@ -2,6 +2,60 @@ use codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use frame_support::pallet_prelude::RuntimeDebug;
 use scale_info::TypeInfo;
 
+/// Proof system identifier.
+#[derive(
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Clone,
+	Copy,
+	PartialEq,
+	Eq,
+	RuntimeDebug,
+	TypeInfo,
+	MaxEncodedLen,
+)]
+pub enum ProofSystem {
+	GnarkGroth16Bn254,
+}
+
+impl ProofSystem {
+	pub fn code(self) -> u8 {
+		match self {
+			ProofSystem::GnarkGroth16Bn254 => 1,
+		}
+	}
+}
+
+/// Constraint kind for data trade proofs.
+#[derive(
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Clone,
+	Copy,
+	PartialEq,
+	Eq,
+	RuntimeDebug,
+	TypeInfo,
+	MaxEncodedLen,
+)]
+pub enum ConstraintKind {
+	Range,
+	Subset,
+	Substr,
+}
+
+impl ConstraintKind {
+	pub fn code(self) -> u8 {
+		match self {
+			ConstraintKind::Range => 1,
+			ConstraintKind::Subset => 2,
+			ConstraintKind::Substr => 3,
+		}
+	}
+}
+
 pub type SessionId = u32;
 pub type ListingId = u32;
 pub type EscrowId = u32;
@@ -118,4 +172,13 @@ pub struct RoundState<AccountId, Hash> {
 	pub payment_preimage_hash: Option<Hash>,
 	pub status: RoundStatus,
 	pub last_actor: Option<AccountId>,
+	// ZK proof binding (Stage 2)
+	pub proof_system: Option<ProofSystem>,
+	pub constraint_kind: Option<ConstraintKind>,
+	pub ro_depth: Option<u32>,
+	pub ch_proof_hash: Option<Hash>,
+	pub ro_proof_hash: Option<Hash>,
+	pub public_input_hash: Option<Hash>,
+	pub vk_hash: Option<Hash>,
+	pub verifier_attestation_hash: Option<Hash>,
 }

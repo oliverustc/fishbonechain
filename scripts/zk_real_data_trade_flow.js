@@ -1,13 +1,19 @@
 /**
- * FishboneChain 数据交易 ZK-Attested E2E 流程脚本。
+ * FishboneChain 真实 Gnark ZK E2E 流程脚本。
  *
- * 与 data_trade_flow.js 相同但输出 verifier=dev-zk-attested，用于区分 base 和 ZK 模式。
+ * 调用 fishbone-zk CLI 生成/验证真实 Groth16 proof，在 child6 上完成完整数据交易闭环。
  *
  * 用法：
- *   node scripts/zk_attested_data_trade_flow.js --main ws://... --child ws://...
+ *   ZK_VERIFIER_CMD=target/tools/fishbone-zk \
+ *   node scripts/zk_real_data_trade_flow.js --main ws://... --child ws://...
+ *
+ * Note: This script is NOT yet VM-verified. It is a staged integration point for the
+ * gnark CH/RO proof pipeline. See docs/implementation/data-trade-zk-verifier-plan.md.
  */
 
 import { ApiPromise, WsProvider, Keyring } from "@polkadot/api";
+import { spawnSync } from "node:child_process";
+import { mkdirSync } from "node:fs";
 import { hashNTimes, paymentPreimageForRemaining } from "./lib/hash_chain.js";
 import { sampleListing } from "./lib/data_trade_sample.js";
 import { findEvent, eventDataNumber } from "./lib/data_trade_events.js";
@@ -16,37 +22,20 @@ import {
   assertSessionMatchesListingAndEscrow,
 } from "./lib/data_trade_binding.js";
 import { computeZkAttestationDigest } from "./lib/zk_attestation.js";
-import { computeProofDigest } from "./lib/zk_artifact.js";
+import { assertValidZkArtifact, readZkArtifact } from "./lib/zk_artifact.js";
 
 function parseArg(flag) {
   const idx = process.argv.indexOf(flag);
   return idx !== -1 ? process.argv[idx + 1] : null;
 }
 
-function devProofDigest({ requestHash, sessionId, roundIndex, vkHash, chProofHash, roProofHash, publicInputHash }) {
-  return computeProofDigest({
-    version: 1,
-    proof_system: "gnark-groth16-bn254",
-    proof_system_code: 1,
-    constraint_kind: "range",
-    constraint_kind_code: 1,
-    ro_depth: 10,
-    request_hash: requestHash,
-    session_id: sessionId,
-    round_index: roundIndex,
-    vk_hash: vkHash,
-    ch_proof_hash: chProofHash,
-    ro_proof_hash: roProofHash,
-    public_input_hash: publicInputHash,
-  });
-}
-
 const MAIN_WS = parseArg("--main") || "ws://127.0.0.1:9944";
 const CHILD_WS = parseArg("--child") || "ws://127.0.0.1:9950";
+const ZK_CMD = process.env.ZK_VERIFIER_CMD || "target/tools/fishbone-zk";
 const VERBOSE = process.argv.includes("--verbose");
 
 function log(msg) {
-  console.log(`[zk-attested-e2e ${new Date().toISOString()}] ${msg}`);
+  console.log(`[zk-real-e2e ${new Date().toISOString()}] ${msg}`);
 }
 
 async function submitTx(signer, tx, label) {
@@ -71,6 +60,7 @@ async function submitTx(signer, tx, label) {
 
 async function main() {
   log(`连接主链: ${MAIN_WS}  子链: ${CHILD_WS}`);
+  log(`ZK CLI: ${ZK_CMD}`);
 
   const [mainApi, childApi] = await Promise.all([
     ApiPromise.create({ provider: new WsProvider(MAIN_WS) }),
@@ -85,14 +75,14 @@ async function main() {
   log(`Alice (DR): ${alice.address}`);
   log(`Bob   (DO): ${bob.address}`);
   log(`Charlie (Verifier): ${charlie.address}`);
-  log("verifier=dev-zk-attested");
+  log("verifier=gnark-groth16-bn254");
   log(`主链: ${await mainApi.rpc.system.chain()}  子链: ${await childApi.rpc.system.chain()}`);
 
   const sample = sampleListing();
   const maxRounds = 3;
   const pricePerRound = 100;
   const depositHint = 500;
-  const seed = "zk-attested-data-trade-secret";
+  const seed = "zk-real-data-trade-secret";
   const hashChainAnchor = hashNTimes(seed, maxRounds);
   log(`hash_chain_anchor (H^${maxRounds}(seed)): ${hashChainAnchor}`);
 
@@ -134,25 +124,55 @@ async function main() {
 
     await submitTx(bob, childApi.tx.tradeSession.acceptSession(sessionId), "acceptSession");
 
-    // ── Round delivery with ZK attestation ──
+    // ── Round delivery with real gnark ZK proof ──
     for (let round = 0; round < 2; round++) {
-      log(`Round ${round} delivery (with zk attestation)...`);
-      const ch = hashNTimes(`round-${round}`, 1);
-      const proofDigest = devProofDigest({
-        requestHash: sample.requestHash,
-        sessionId, roundIndex: round,
-        vkHash: ch, chProofHash: ch, roProofHash: ch, publicInputHash: ch,
+      log(`Round ${round} delivery (real gnark ZK)...`);
+
+      const outDir = `target/data-trade-zk/session-${sessionId}-round-${round}`;
+      mkdirSync(outDir, { recursive: true });
+
+      // 1. Generate fixture via fishbone-zk CLI
+      const fixResult = spawnSync(ZK_CMD, [
+        "fixture", "--out", outDir,
+        "--request-hash", sample.requestHash,
+        "--session-id", String(sessionId),
+        "--round-index", String(round),
+        "--ro-depth", "10",
+      ], { stdio: "inherit" });
+      if (fixResult.status !== 0) throw new Error(`fishbone-zk fixture failed: ${fixResult.status}`);
+
+      // 2. Read and validate artifact
+      const artifactPath = `${outDir}/artifact.json`;
+      const artifact = assertValidZkArtifact(readZkArtifact(artifactPath));
+
+      // 3. Verify artifact via CLI
+      const verifyResult = spawnSync(ZK_CMD, ["verify", "--artifact", artifactPath], {
+        encoding: "utf8",
       });
+      if (verifyResult.status !== 0 || verifyResult.stdout.trim() !== "accepted") {
+        throw new Error(`fishbone-zk verify rejected: ${verifyResult.stderr || verifyResult.stdout}`);
+      }
+
+      // 4. Submit round
+      const ch = hashNTimes(`round-${round}`, 1);
       await submitTx(alice, childApi.tx.tradeSession.openRound(sessionId, round, ch), `openRound(${round})`);
       await submitTx(alice, childApi.tx.tradeSession.submitPaymentProof(sessionId, round, ch), `submitPaymentProof(${round})`);
+
+      // 5. Submit ZK proof metadata on-chain
       await submitTx(bob, childApi.tx.tradeSession.submitDataProof(
-        sessionId, round, "GnarkGroth16Bn254", "Range", 10, ch, ch, ch, ch, proofDigest,
+        sessionId, round,
+        "GnarkGroth16Bn254", "Range", 10,
+        artifact.ch_proof_hash, artifact.ro_proof_hash,
+        artifact.public_input_hash, artifact.vk_hash, artifact.proof_digest,
       ), `submitDataProof(${round})`);
-      // ZK attestation by verifier (Charlie)
+
+      // 6. Verifier attestation (Charlie)
       const attDigest = computeZkAttestationDigest({
-        sessionId, roundIndex: round, proofDigest, accepted: true, verifierAccount: charlie.addressRaw,
+        sessionId, roundIndex: round, proofDigest: artifact.proof_digest,
+        accepted: true, verifierAccount: charlie.addressRaw,
       });
-      await submitTx(charlie, childApi.tx.tradeSession.attestDataProof(sessionId, round, proofDigest, true, attDigest), `attestDataProof(${round})`);
+      await submitTx(charlie, childApi.tx.tradeSession.attestDataProof(sessionId, round, artifact.proof_digest, true, attDigest), `attestDataProof(${round})`);
+
       await submitTx(alice, childApi.tx.tradeSession.submitProofSignature(sessionId, round, ch), `submitProofSignature(${round})`);
       await submitTx(bob, childApi.tx.tradeSession.submitDataDeliveryHash(sessionId, round, ch), `submitDataDeliveryHash(${round})`);
       await submitTx(alice, childApi.tx.tradeSession.submitPaymentPreimage(sessionId, round, ch), `submitPaymentPreimage(${round})`);
@@ -171,13 +191,15 @@ async function main() {
     const aliceBal = await mainApi.query.system.account(alice.address);
     log(`Bob free = ${bobBal.data.free}, reserved = ${bobBal.data.reserved}`);
     log(`Alice free = ${aliceBal.data.free}, reserved = ${aliceBal.data.reserved}`);
-    log("✅ ZK-attested path 完成！");
+    log("✅ Real ZK-attested path 完成！");
+    log("verifier=gnark-groth16-bn254 (off-chain proof, on-chain attestation)");
   } finally {
     await Promise.all([mainApi.disconnect(), childApi.disconnect()]);
   }
 }
 
 main().catch((e) => {
-  console.error("[zk-attested-e2e 致命错误]", e.message);
+  console.error("[zk-real-e2e 致命错误]", e.message);
+  console.error(e.stack);
   process.exit(1);
 });

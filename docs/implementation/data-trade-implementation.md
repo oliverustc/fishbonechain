@@ -2,52 +2,168 @@
 
 数据交易场景作为 CDT 的第一阶段工程实现，部署在专用数据交易子链 (child6)，并通过 `SceneKind::DataTrade` 与 `SettlementMode::MainEscrow` 声明身份。
 
-## 当前实现 (2026-06-15 更新)
+## 当前实现 (2026-06-16 更新)
 
-### 已实现
+### 架构总览
 
-- **`pallet-data-registry`** (DC)：完整 listing 管理，含 `price_per_round`、`max_rounds`、`deposit_hint`、`request_schema_hash`、`proof_params_hash`、`ListingStatus` (Active/Suspended/Retired)。
-- **`pallet-trade-session`** (VC)：完整论文 VC 状态机 (12 extrinsics)：
-  - `create_session`、`accept_session`
-  - 轮次协议：`open_round` → `submit_payment_proof` → `submit_data_proof` → `submit_proof_signature` → `submit_data_delivery_hash` → `submit_payment_preimage`
-  - 结算：`claim_settlement`
-  - 争议：`dispute_invalid_proof`、`dispute_invalid_plaintext`
-  - 救济：`claim_last_payment`
-- **`pallet-main-escrow`** (Fund)：主链锁资/押金 pallet：
-  - `open_escrow`、`lock_funds`、`lock_deposit`
-  - `settle_by_preimage` (hash-chain 验证 + 按轮付款 + 退款)
-  - `punish_data_owner` (slash deposit)
-  - `claim_last_payment`
-- **跨 pallet 集成**：
-  - `data-registry` 实现 `ListingProvider` trait，供 `trade-session` 校验 listing
-  - `trade-session` 使用可插拔 `DataTradeProofVerifier` trait (Phase 1: mock)
-- **E2E 脚本** (`scripts/data_trade_flow.js`)：happy path + invalid-proof + requester-refuses-payment
-- **Bridge** (`scripts/bridges/data_trade.js`)：观察器 + 可选 `--execute --dev-keys` 协调器
-- **Runtime 配置**：`role-main` 包含 `MainEscrow`，`scene-data-trade` 包含 `DataRegistry` + `TradeSession` (不含 Crowdsource)
+```
+┌──────────────────────────────────────────────────────┐
+│ main chain (role-main)                                │
+│   pallet-main-escrow  — DR lockFunds / DO lockDeposit │
+│                       — settleByPreimage              │
+│                       — punishDataOwner               │
+│                       — claimLastPayment              │
+├──────────────────────────────────────────────────────┤
+│ child6 (scene-data-trade)                             │
+│   pallet-data-registry  — DO publish listing          │
+│   pallet-trade-session  — VC state machine            │
+│     • VerifierAuthority attestation (Charlie=dev)     │
+│     • ZK proof digest binding                         │
+│     • DR retains dispute right after attestation      │
+├──────────────────────────────────────────────────────┤
+│ off-chain                                              │
+│   fishbone-zk (Go CLI)  — gnark CH/RO proof gen/verify│
+│   scripts/data_trade_flow.js  — 3 scenario E2E        │
+│   scripts/bridges/data_trade.js  — observer/coordinator│
+└──────────────────────────────────────────────────────┘
+```
 
-### 仍未实现
+### pallet-data-registry (DC)
 
-- 真实上链 zk-SNARK verifier（当前使用 `AlwaysPassVerifier` mock）
-- CCMC/Merkle proof 接入主链 escrow（trustless 跨链桥）
-- FmcAssisted / Hybrid 结算模式
-- 生产环境的 bridge 安全签名
+完整 listing 管理：
 
-### 边界
+- 字段：`owner`、`imt_root`、`description`、`price_per_round`、`max_rounds`、`deposit_hint`、`request_schema_hash`、`proof_params_hash`
+- 状态：`Active` / `Suspended` / `Retired`
+- 校验：price/rounds/deposit 非零
+- 提供 `ListingProvider` trait 供 `trade-session` 查询 listing
 
-- 数据交易场景独立于数据众包 pallet
-- 第一版采用 `MainEscrow`，不调用 FMC
-- ZK verifier 当前为 mock，只在协议状态机层面工作
+### pallet-trade-session (VC)
+
+完整论文 VC 状态机 (13 extrinsics)：
+
+| Extrinsic | 调用者 | 说明 |
+|-----------|--------|------|
+| `create_session` | DR | 绑定 listing + escrow，验证 listing 存在且 Active |
+| `accept_session` | DO | 接受交易 |
+| `open_round` | DR | 开启轮次，提交 payment commitment |
+| `submit_payment_proof` | DR | DR 提交付款证明 |
+| `submit_data_proof` | DO | 提交 ZK proof metadata（10 参数含 proof digest + vk hash + public input hash；pallet 重算 digest 校验绑定） |
+| `attest_data_proof` | Verifier | 授权验证者提交 attestation（6 参数含 attestation hash；pallet 校验权限 + attestation payload） |
+| `submit_proof_signature` | DR | DR 签名（需 `DataProofVerified`） |
+| `submit_data_delivery_hash` | DO | 交付数据 |
+| `submit_payment_preimage` | DR | DR 付款 |
+| `claim_settlement` | DO | 声明结算（校验 `completed_rounds` 防超领） |
+| `dispute_invalid_proof` | DR | 争议无效 proof（verifier accept 后仍可调用） |
+| `dispute_invalid_plaintext` | DR | 争议 hash 不匹配 |
+| `claim_last_payment` | DO | DR 拒付时的救济 |
+
+ZK 绑定字段（`RoundState` 新增 8 个字段）：`proof_system`、`constraint_kind`、`ro_depth`、`ch_proof_hash`、`ro_proof_hash`、`public_input_hash`、`vk_hash`、`verifier_attestation_hash`
+
+Proof digest 校验：pallet 用 `compute_zk_proof_digest` 重算 digest，确保 proof 绑定到 session/round/request/vk/hashes，不匹配返回 `InvalidProof`。此函数的 byte encoding 与 Go (`tools/data-trade-zk`) 和 Node.js (`scripts/lib/zk_artifact.js`) 层完全一致。
+
+Attestation payload 校验：pallet 用 `compute_zk_attestation_digest` 重算，确保 attestation 绑定到 session/round/digest/accepted/verifier_account，不匹配返回 `InvalidAttestation`。
+
+### pallet-main-escrow (Fund)
+
+主链锁资/押金 pallet（部署于 main chain，`role-main` runtime）：
+
+- `open_escrow`：DR 创建 escrow（记录 trade terms + hash_chain_anchor）
+- `lock_funds`：DR reserve `max_rounds × price_per_round`
+- `lock_deposit`：DO reserve deposit
+- `settle_by_preimage`：DO 用 hash chain preimage 结算（验证 preimage → 按轮付款给 DO → 退款给 DR → 释放 DO 押金）
+- `punish_data_owner`：DR slash DO deposit
+- `claim_last_payment`：DO 在 DR 拒付时 claim 一轮付款
+
+### gnark ZK 工具链
+
+| 组件 | 技术 | 功能 |
+|------|------|------|
+| `tools/data-trade-zk/` | Go 1.23 + gnark v0.11 | 稳定 CLI + artifact schema |
+| `fishbone-zk fixture` | Groth16 BN254 | 生成 range CH proof + depth=10 RO proof |
+| `fishbone-zk verify` | Groth16 BN254 | 验证 proof + artifact digest |
+| `scripts/lib/zk_artifact.js` | Node.js | 读取 artifact、计算/校验 proof_digest |
+| `scripts/lib/zk_attestation.js` | Node.js | 计算 attestation payload digest |
+| `scripts/lib/zk_verifier_client.js` | Node.js | 调用外部 verifier CLI（artifact 模式 + legacy 模式） |
+
+Go ↔ JS ↔ Rust 三层的 `proof_digest` 和 `attestation_digest` 使用统一的 canonical byte encoding，逐字节一致。
+
+### Verifier Authority
+
+- `VerifierAuthority = Charlie`（dev 模式，`//Charlie` development key）
+- `//Charlie` 已加入 `development_config_genesis()` endowment
+- `//Charlie` addressRaw 用于 attestation payload 中的 verifier account 编码
+
+### E2E 脚本
+
+| 脚本 | 模式 | 状态 |
+|------|------|------|
+| `scripts/data_trade_flow.js` | `verifier=dev-attested`（Charlie 签名 attestation） | ✅ VM 验证通过（3/3 scenarios） |
+| `scripts/zk_attested_data_trade_flow.js` | `verifier=dev-zk-attested` | ✅ 语法通过，待 VM 运行 |
+| `scripts/zk_real_data_trade_flow.js` | `verifier=gnark-groth16-bn254` | ✅ 语法与 CLI fixture/verify smoke 通过，待 VM E2E（需 `fishbone-zk` CLI 在 PATH 中） |
+| `scripts/bridges/data_trade.js` | 观察器 + `--execute --dev-keys` 协调器 | ✅ 含 session-escrow binding 校验 |
+
+VM E2E 结果（child6 @ `ws://10.2.2.11:9950`，2026-06-15）：
+
+| Scenario | 结果 |
+|----------|------|
+| `happy` | ✅ 2 轮交付 → DO claim → settleByPreimage → DO 获付款、DR 退款、押金释放 |
+| `invalid-proof` | ✅ DO submitDataProof → DR dispute → session Punished → punishDataOwner |
+| `requester-refuses-payment` | ✅ DR 不付最后一轮 → DO claimLastPayment → 释放 1 轮给 DO |
+
+### 边界与限制
+
+- **ZK 为 mock**：`DataTradeProofVerifier = AlwaysPassVerifier`，Groth16 验证在链下 CLI 完成，链上只验证 attestation 签名和 digest 绑定。`fishbone-zk verify` 可对真实 gnark proof 执行完整验证。
+- **Bridge 非 trustless**：session-escrow 绑定由 E2E/bridge 脚本在链下校验，未接入 CCMC/Merkle proof 做链上跨链验证。
+- **Settlement 模式**：仅实现 `MainEscrow`。`FmcAssisted` 和 `Hybrid` 预留为后续。
+- **单 verifier**：`VerifierAuthority` 是单一 dev 账户（Charlie），不是多签委员会。
+- **Paper witness**：gnark 电路当前使用随机生成的 witness（`utils.RandStr`），不是业务数据驱动。
 
 ## 测试状态
 
 ```bash
+# Rust unit tests (40 total)
 SKIP_WASM_BUILD=1 cargo test -p pallet-data-registry    # 12 passed
-SKIP_WASM_BUILD=1 cargo test -p pallet-trade-session    # 12 passed
+SKIP_WASM_BUILD=1 cargo test -p pallet-trade-session    # 19 passed
 SKIP_WASM_BUILD=1 cargo test -p pallet-main-escrow      # 9 passed
+
+# Go tests
+go -C tools/data-trade-zk test ./...                     # artifact + gnarkadapter passed
+
+# JS syntax checks (all pass)
+node --check scripts/data_trade_flow.js
+node --check scripts/zk_attested_data_trade_flow.js
+node --check scripts/zk_real_data_trade_flow.js
+node --check scripts/bridges/data_trade.js
+node --check scripts/lib/zk_artifact.js
+node --check scripts/lib/zk_attestation.js
+node --check scripts/lib/zk_verifier_client.js
+node --check scripts/lib/data_trade_events.js
+node --check scripts/lib/data_trade_binding.js
+node --check scripts/lib/hash_chain.js
+node --check scripts/lib/data_trade_sample.js
+```
+
+## VM 部署
+
+```bash
+# 构建
+make build-main                    # role-main + MainEscrow → deploy/bin/fishbone-node
+make build-data-trade-child        # scene-data-trade → deploy/bin/fishbone-node-data-trade
+
+# 重新生成 spec（runtime 变更后必须）
+python3 scripts/gen_child_specs.py --only child6
+
+# 部署
+bash scripts/dev_redeploy_clean_chains.sh --chains main,child6 --config deploy/config.toml --logs
+
+# 验证 metadata
+node -e '...'  # main 含 MainEscrow, child6 含 DataRegistry+TradeSession, 不含 Crowdsource
 ```
 
 ## 后续方向
 
-- 接入真实 ZK verifier (see `data-trade-zk-verifier-plan.md`)
-- 将 trustless CCMC/Merkle proof 接入主链 escrow 验证
-- 不同数据交易类型的子链 profile 和参数哈希
+- 接入真实业务数据驱动的 gnark witness（替换 `RandStr`）
+- 运行 `zk_real_data_trade_flow.js` 端到端（需 `fishbone-zk` CLI 在 PATH 中）
+- Trustless 跨链证明：CCMC/Merkle proof 接入主链 escrow
+- 多 verifier 委员会 + 阈值 attestation
+- FmcAssisted / Hybrid 结算模式
