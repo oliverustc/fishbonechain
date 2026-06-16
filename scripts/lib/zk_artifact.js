@@ -35,6 +35,7 @@ export function computeProofDigest(a) {
     hexToU8a(a.ch_proof_hash),
     hexToU8a(a.ro_proof_hash),
     hexToU8a(a.public_input_hash),
+    hexToU8a(a.business_input_hash),
   ));
 }
 
@@ -49,6 +50,9 @@ export function assertValidZkArtifact(a) {
   const kindCodes = { range: 1, subset: 2, substr: 3 };
   if (kindCodes[a.constraint_kind] !== a.constraint_kind_code) {
     throw new Error(`constraint_kind ${a.constraint_kind} does not match code ${a.constraint_kind_code}`);
+  }
+  if (!/^0x[0-9a-fA-F]{64}$/.test(a.business_input_hash)) {
+    throw new Error(`invalid business_input_hash: ${a.business_input_hash}`);
   }
   return a;
 }

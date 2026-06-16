@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"fishbone-data-trade-zk/internal/artifact"
+	"fishbone-data-trade-zk/internal/business"
 	"fishbone-data-trade-zk/internal/gnarkadapter"
 )
 
@@ -20,6 +21,8 @@ func main() {
 		verifyCmd(os.Args[2:])
 	case "fixture":
 		fixtureCmd(os.Args[2:])
+	case "business-fixture":
+		businessFixtureCmd(os.Args[2:])
 	case "setup", "prove":
 		fmt.Fprintf(os.Stderr, "%s: not yet implemented (use fixture for Stage 1)\n", os.Args[1])
 		os.Exit(2)
@@ -81,6 +84,43 @@ func fixtureCmd(args []string) {
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "fixture generation failed: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("proof_digest=%s\n", out.Artifact.ProofDigest)
+}
+
+func businessFixtureCmd(args []string) {
+	fs := flag.NewFlagSet("business-fixture", flag.ExitOnError)
+	witnessPath := fs.String("witness", "", "business range witness JSON")
+	outDir := fs.String("out", "", "output directory")
+	requestHash := fs.String("request-hash", "", "override request hash (default from witness)")
+	sessionID := fs.Uint("session-id", 0, "override session ID")
+	roundIndex := fs.Uint("round-index", 0, "override round index")
+	_ = fs.Parse(args)
+	if *witnessPath == "" || *outDir == "" {
+		fmt.Fprintln(os.Stderr, "--witness and --out are required")
+		os.Exit(2)
+	}
+	w, err := business.ReadRangeWitness(*witnessPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "read witness: %v\n", err)
+		os.Exit(1)
+	}
+	// CLI overrides for session-specific fields (only when explicitly provided)
+	setFlags := map[string]bool{}
+	fs.Visit(func(f *flag.Flag) { setFlags[f.Name] = true })
+	if setFlags["request-hash"] {
+		w.RequestHash = *requestHash
+	}
+	if setFlags["session-id"] {
+		w.SessionID = uint32(*sessionID)
+	}
+	if setFlags["round-index"] {
+		w.RoundIndex = uint32(*roundIndex)
+	}
+	out, err := gnarkadapter.GenerateBusinessRangeFixture(w, *outDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "business fixture failed: %v\n", err)
 		os.Exit(1)
 	}
 	fmt.Printf("proof_digest=%s\n", out.Artifact.ProofDigest)

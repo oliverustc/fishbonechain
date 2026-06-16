@@ -245,6 +245,7 @@ func GenerateRangeROFixture(in GenerateInput) (GenerateOutput, error) {
 		CHProofHash:        chProofHash,
 		ROProofHash:        roProofHash,
 		PublicInputHash:    publicInputHash,
+		BusinessInputHash:  artifact.ZeroBusinessInputHash,
 		Files: artifact.Files{
 			CHProof:         rel(chProof),
 			CHPublicWitness: rel(chPublic),
