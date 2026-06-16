@@ -339,6 +339,7 @@ pub mod pallet {
 					public_input_hash: None,
 					vk_hash: None,
 					verifier_attestation_hash: None,
+					business_input_hash: None,
 				},
 			);
 
@@ -407,6 +408,7 @@ pub mod pallet {
 			ro_proof_hash: T::Hash,
 			public_input_hash: T::Hash,
 			vk_hash: T::Hash,
+			business_input_hash: T::Hash,
 			proof_digest: T::Hash,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -432,6 +434,7 @@ pub mod pallet {
 				ch_proof_hash,
 				ro_proof_hash,
 				public_input_hash,
+				business_input_hash,
 			);
 			ensure!(expected_digest == proof_digest, Error::<T>::InvalidProof);
 
@@ -450,6 +453,7 @@ pub mod pallet {
 				round.ro_proof_hash = Some(ro_proof_hash);
 				round.public_input_hash = Some(public_input_hash);
 				round.vk_hash = Some(vk_hash);
+				round.business_input_hash = Some(business_input_hash);
 				round.status = RoundStatus::DataProofSubmitted;
 				round.last_actor = Some(who);
 				Ok(())

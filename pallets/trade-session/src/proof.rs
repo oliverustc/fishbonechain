@@ -88,6 +88,7 @@ pub fn compute_zk_proof_digest<H: Hash>(
 	ch_proof_hash: H::Output,
 	ro_proof_hash: H::Output,
 	public_input_hash: H::Output,
+	business_input_hash: H::Output,
 ) -> H::Output {
 	let mut data = Vec::new();
 	data.extend(b"FISHBONE:DATA_TRADE:ZK_PROOF:v1");
@@ -101,6 +102,7 @@ pub fn compute_zk_proof_digest<H: Hash>(
 	data.extend(ch_proof_hash.as_ref());
 	data.extend(ro_proof_hash.as_ref());
 	data.extend(public_input_hash.as_ref());
+	data.extend(business_input_hash.as_ref());
 	<H as Hash>::hash(&data)
 }
 
