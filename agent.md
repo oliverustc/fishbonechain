@@ -100,3 +100,4 @@ bash scripts/check-blocks.sh
 - 对 `scripts/bridges/` 的多矿工、多链和多场景配置继续做可靠性检查
 - 梳理部署产物和源码产物边界，必要时调整 `.gitignore`
 - 将 CDT/BPiano 从当前骨架推进到完整 verifier、争议和链下证明服务
+- 测试 gh CLI 与 Reasonix 集成：验证 git commit、push、PR 创建、close 全流程
