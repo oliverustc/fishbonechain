@@ -58,6 +58,13 @@ def to_raw(binary: Path, spec: dict, out_path: Path) -> None:
         os.unlink(tmp)
 
 
+def inject_spec_identity(spec: dict, name: str, spec_id: str) -> dict:
+    """覆盖 spec 的 name 和 id 字段，使模板生成的 spec 使用目标链身份。"""
+    spec["name"] = name
+    spec["id"] = spec_id
+    return spec
+
+
 def inject_validators(spec: dict, aura_ss58: list[str], gran_ss58: list[str], key_type: str = "aura") -> dict:
     """将真实 validator 公钥注入 genesis patch，替换 Alice/Bob dev keys。
     key_type='babe': 注入 babe.authorities，清空 aura.authorities
@@ -190,6 +197,8 @@ def chain_configs() -> list[dict]:
             "name": "child7",
             "chain_id": "child7-local",
             "template_chain_id": "child6-local",
+            "spec_name": "Fishbone Child-7 (Business Data Trade, AURA-5)",
+            "spec_id": "fishbone_child_7",
             "binary": BIN_DIR / "fishbone-node-data-trade",
             "validators": ["f1", "f2", "f3", "f4", "f5"],
             "out": SPECS / "child7-custom-raw.json",
@@ -252,6 +261,10 @@ def main():
         template_chain_id = cfg.get("template_chain_id", cfg["chain_id"])
         print(f"  build-spec --chain {template_chain_id} ...")
         spec = build_spec(binary, template_chain_id)
+
+        # 注入目标链身份（覆盖模板 preset 的 name/id），仅当配置了 spec_name 时
+        if "spec_name" in cfg and "spec_id" in cfg:
+            spec = inject_spec_identity(spec, cfg["spec_name"], cfg["spec_id"])
 
         # 注入真实 validator 密钥
         key_type = cfg.get("key_type", "aura")

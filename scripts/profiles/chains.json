@@ -5,6 +5,7 @@
   "child4": { "chainId": 3, "scene": "Crowdsource", "settlement": "FmcTaskBill" },
   "child5": { "chainId": 4, "scene": "Crowdsource", "settlement": "FmcTaskBill" },
   "child6": { "chainId": 5, "scene": "DataTrade", "settlement": "MainEscrow" },
+  "child7": { "chainId": 6, "scene": "DataTrade", "settlement": "MainEscrow" },
   "trade_profiles": {
     "child6-data-trade": {
       "chain": "child6",

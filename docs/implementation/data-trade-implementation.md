@@ -119,6 +119,16 @@ VM E2E 结果（main @ `ws://10.2.2.11:9944`，child6 @ `ws://10.2.2.11:9950`，
 - `scripts/zk_real_data_trade_flow.js` (business witness, gnark proof) → ✅
 - `verifier=gnark-groth16-bn254`，Bob/Alice reserved 均为 0
 
+### Stage 3: 多子链 Profile（2026-06-17）
+
+- `scripts/lib/trade_profile.js` 提供 profile loader，支持 `--profile <id>` 参数。
+- `scripts/profiles/chains.json` 的 `trade_profiles` key 定义每条链的 RPC、settlement、verifier、proof 参数。
+- 当前已有两个 profile：`child6-data-trade`（`ws://10.2.2.11:9950`）和 `child7-business-trade`（`ws://10.2.2.11:9951`）。
+- `gen_child_specs.py` 支持 `template_chain_id` — child7 复用了 child6 的 DataTrade runtime preset，然后通过 `inject_spec_identity` 覆盖 `name` 和 `id`。
+- child7 命名已确认为 `Fishbone Child-7 (Business Data Trade, AURA-5)`。
+- `deploy/fishbone/config.py` 的 `NodePeerIds` 已从固定 dataclass 改为 `dict[str, str]`，不再需要为每条新链添加代码。
+- `deploy/fishbone/service.py` 添加了 child7 label。
+
 ### 边界与限制
 
 - **ZK 验证路径**：`DataTradeProofVerifier = AlwaysPassVerifier`。Groth16 验证在链下 CLI (`fishbone-zk verify`) 完成，链上只验证 attestation 签名和 digest 绑定。

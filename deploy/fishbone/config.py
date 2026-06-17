@@ -19,23 +19,12 @@ class ChainConfig:
 
 
 @dataclass
-class NodePeerIds:
-    main:   str = ""
-    child1: str = ""
-    child2: str = ""
-    child3: str = ""
-    child4: str = ""
-    child5: str = ""
-    child6: str = ""
-
-
-@dataclass
 class NodeConfig:
     id:       str          # "f1" ~ "f12"
     ip:       str          # "10.2.2.11"
     ssh:      str          # SSH host alias
     roles:    list[str]    # ["main", "child1", ...]
-    peer_ids: NodePeerIds = field(default_factory=NodePeerIds)
+    peer_ids: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -73,7 +62,7 @@ class ClusterConfig:
         c = self.chains[chain]
         result = []
         for n in self.nodes_for_chain(chain):
-            pid = getattr(n.peer_ids, chain, "")
+            pid = n.peer_ids.get(chain, "")
             if pid:
                 result.append(f"/ip4/{n.ip}/tcp/{c.p2p_port}/p2p/{pid}")
         return result
@@ -114,11 +103,10 @@ def load(config_path: str | Path = "config.toml") -> ClusterConfig:
         for name, cfg in raw["chains"].items()
     }
 
-    known_fields = set(NodePeerIds.__dataclass_fields__)
     nodes = []
     for n in raw["nodes"]:
         peer_ids_raw = n.pop("peer_ids", {})
-        peer_ids = NodePeerIds(**{k: v for k, v in peer_ids_raw.items() if k in known_fields})
+        peer_ids = dict(peer_ids_raw)
         nodes.append(NodeConfig(**n, peer_ids=peer_ids))
 
     cluster = raw["cluster"]
