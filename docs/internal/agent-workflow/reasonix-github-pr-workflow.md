@@ -30,6 +30,127 @@
 
 审阅意见不得只写在聊天里。只要存在 PR，review findings 必须写到 PR review/comment 中。
 
+## 稳定工作流规划
+
+本项目采用“Codex 规划与审阅，Reasonix 执行实现，项目负责人裁决”的默认流程。除非项目负责人临时指定其他安排，所有阶段性工作按以下生命周期推进。
+
+### 1. 规划阶段
+
+Codex 负责把目标写成可执行 plan：
+
+```text
+docs/internal/agent-plans/YYYY-MM-DD-<topic>.md
+```
+
+plan 必须说明：
+
+- 要修改或创建的文件；
+- 关键架构约束；
+- 禁止事项，例如不要重新硬编码已经配置化的子链参数；
+- 验收命令；
+- VM 部署或数据清理影响；
+- 执行中遇到问题时应写入的位置。
+
+Reasonix 不应只根据聊天摘要执行实现；如果聊天内容和 plan 冲突，以 plan 为准。若 plan 缺失、矛盾或无法执行，Reasonix 应停止并在 PR/draft PR 或 plan 顶部记录 blocker。
+
+### 2. 执行阶段
+
+Reasonix 默认执行：
+
+1. 从最新 `origin/main` 创建 `agent/reasonix/<topic>` 分支。
+2. 按 plan 小步修改和提交。
+3. 将执行记录写回 plan 的 `Execution Record`，包括通过/失败的命令。
+4. 创建 PR，并在 PR body 中链接 plan。
+
+Reasonix 可以在 draft PR 中提出问题。不要把 blocker 只写在聊天里。
+
+### 3. 审阅阶段
+
+Codex 默认审阅 Reasonix 的 PR。Codex 的职责不是复述实现者报告，而是重新验证：
+
+- diff 是否符合 plan；
+- 是否引入硬编码、耦合、权限或部署风险；
+- 关键命令是否实际可运行；
+- 文档是否准确反映实现状态；
+- VM/部署脚本是否会造成隐藏破坏性影响。
+
+Codex 的审阅结论必须落在 GitHub PR review/comment 中。聊天中可以摘要，但不能替代 PR review。
+
+### 4. 修复阶段
+
+Reasonix 根据 PR review 提交 follow-up commits。每个修复应说明：
+
+- 对应哪个 finding；
+- 修改了哪些文件；
+- 重新运行了哪些验证。
+
+如果 Reasonix 认为某条 review 不适用，应在 PR comment 中给出技术理由，而不是静默忽略。
+
+### 5. 验收与合并阶段
+
+Codex approve 只表示技术 review 通过，不表示 agent 可以自行 merge。merge 权限由项目负责人决定。
+
+默认顺序：
+
+1. Codex approve PR。
+2. 项目负责人确认是否 merge。
+3. 经授权后执行：
+
+```bash
+gh pr merge <number> --squash --delete-branch
+```
+
+4. 合并后同步本地 `main`：
+
+```bash
+git switch main
+git pull --ff-only origin main
+```
+
+## Codex 持久化职责
+
+Codex 在以下情况下必须把结论写入仓库文件，而不是只写在聊天中：
+
+- 形成新的阶段 plan；
+- 改变 Reasonix/Codex 协作流程；
+- 发现会影响后续 agent 的架构约束；
+- 审阅结论需要 Reasonix 后续执行；
+- 用户明确说“别因为切换会话或者压缩上下文丢失”。
+
+合适的落点：
+
+- 阶段实现计划：`docs/internal/agent-plans/*.md`
+- 跨 agent 工作流：`docs/internal/agent-workflow/*.md`
+- 无法使用 PR 时的 review：`docs/internal/agent-reviews/*.md`
+- 面向用户或论文实现状态的稳定说明：`docs/implementation/*.md`
+
+Codex 不应依赖隐藏记忆来保存项目流程。任何会影响后续工作的约定，都应能通过 `rg` 在仓库中找到。
+
+## 跨会话恢复步骤
+
+任何 agent 在新会话、上下文压缩后恢复工作时，先执行：
+
+```bash
+git status --short --branch
+git log --oneline --decorate -5
+rg -n "Stage|Execution Record|Open Questions|Blockers" docs/internal/agent-plans docs/internal/agent-workflow
+gh pr list --limit 20 --json number,title,state,headRefName,baseRefName,reviewDecision,url
+```
+
+如果当前有目标 PR，继续执行：
+
+```bash
+gh pr view <number> --json title,body,comments,reviews,commits,files,reviewDecision,statusCheckRollup
+gh pr diff <number>
+```
+
+恢复后先判断自己处于哪个阶段：
+
+- plan 尚未完成：Codex 继续写 plan。
+- PR 已开但未审：Codex review。
+- PR 有 requested changes：Reasonix 修复。
+- PR 已 approve：等待项目负责人决定是否 merge。
+
 ## 分支规范
 
 Reasonix 开始任何非 trivial 工作前必须从最新 `main` 创建 feature branch：
