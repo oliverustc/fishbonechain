@@ -123,10 +123,6 @@ async function sendOne(api, signer, nonce, cfg, stats) {
       stats.finish("ok");
       return "ok";
     } catch (e) {
-      if (String(e?.message ?? e).includes("Priority is too low")) {
-        stats.finish("ok");
-        return "ok";
-      }
       stats.finish("fail");
       return "fail";
     }
@@ -181,6 +177,12 @@ async function main() {
   const nonceNums = nextNonce.map(n => n.toNumber());
   console.log(`[worker_burst] nonce range loaded for ${nonceNums.length} workers`);
 
+  const takeNonce = workerIndex => {
+    const nonce = nonceNums[workerIndex];
+    nonceNums[workerIndex]++;
+    return nonce;
+  };
+
   let running = true;
   const stopTimer = setTimeout(() => { running = false; }, cfg.duration * 1000);
   const reportTimer = setInterval(() => stats.report(), cfg.reportInterval * 1000);
@@ -196,11 +198,9 @@ async function main() {
     for (let lane = 0; lane < cfg.parallelPerWorker; lane++) {
       loops.push((async () => {
         while (running) {
-          const nonce = nonceNums[i];
+          const nonce = takeNonce(i);
           const kind = await sendOne(api, signers[i], nonce, cfg, stats);
-          if (cfg.submitMode !== "pool" || kind !== "fail") {
-            nonceNums[i]++;
-          } else {
+          if (cfg.submitMode === "pool" && kind === "fail") {
             await new Promise(r => setTimeout(r, 50));
           }
         }
