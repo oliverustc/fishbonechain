@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from pathlib import Path
 from typing import AsyncIterator, Optional
 
 
@@ -11,6 +12,15 @@ class RunResult:
     returncode: int
     stdout: str
     stderr: str
+
+
+def ssh_base_args() -> list[str]:
+    """Use the user's SSH config explicitly, avoiding broken system-wide snippets."""
+    return [
+        "-F", str(Path.home() / ".ssh" / "config"),
+        "-o", "StrictHostKeyChecking=no",
+        "-o", "ConnectTimeout=10",
+    ]
 
 
 class RemoteNode:
@@ -23,9 +33,7 @@ class RemoteNode:
     async def run(self, cmd: str, check: bool = True, input: Optional[str] = None) -> RunResult:
         """通过系统 ssh 命令在远程执行命令（完整读取 ~/.ssh/config）。"""
         proc = await asyncio.create_subprocess_exec(
-            "ssh", "-o", "StrictHostKeyChecking=no",
-            "-o", "ConnectTimeout=10",
-            self.ssh_host, cmd,
+            "ssh", *ssh_base_args(), self.ssh_host, cmd,
             stdin=asyncio.subprocess.PIPE  if input else asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -52,9 +60,7 @@ class RemoteNode:
     async def upload(self, local_path: str, remote_path: str) -> None:
         """通过系统 scp 上传文件，连接路径由 ~/.ssh/config 决定。"""
         proc = await asyncio.create_subprocess_exec(
-            "scp", "-o", "StrictHostKeyChecking=no",
-            "-o", "ConnectTimeout=10",
-            local_path, f"{self.ssh_host}:{remote_path}",
+            "scp", *ssh_base_args(), local_path, f"{self.ssh_host}:{remote_path}",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -68,9 +74,7 @@ class RemoteNode:
     async def stream_lines(self, cmd: str) -> AsyncIterator[str]:
         """通过系统 ssh 流式读取远程命令输出。"""
         proc = await asyncio.create_subprocess_exec(
-            "ssh", "-o", "StrictHostKeyChecking=no",
-            "-o", "ConnectTimeout=10",
-            self.ssh_host, cmd,
+            "ssh", *ssh_base_args(), self.ssh_host, cmd,
             stdin=asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,

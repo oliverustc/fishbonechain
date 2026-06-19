@@ -19,6 +19,9 @@ BASE_DIR="${BASE_DIR:-${REPO_DIR}/docs/experiments/progressive_tps}"
 RUN_DIR="${RUN_DIR:-${BASE_DIR}/progressive_tps_runs/${RUN_ID}}"
 LOG_DIR="${LOG_DIR:-${RUN_DIR}/logs}"
 PROFILE_FILE="${PROFILE_FILE:-${REPO_DIR}/scripts/profiles/progressive_tps.json}"
+DEPLOY_CONFIG="${DEPLOY_CONFIG:-${REPO_DIR}/deploy/config.toml}"
+CONTROL_PYTHON="${CONTROL_PYTHON:-${REPO_DIR}/deploy/.venv/bin/python}"
+CONTROL_SCRIPT="${CONTROL_SCRIPT:-${REPO_DIR}/deploy/cmd/control.py}"
 
 MAIN_WS="${MAIN_WS:-ws://10.2.2.11:9944}"
 WORKERS="${WORKERS:-}"
@@ -39,6 +42,8 @@ WAIT_COLLECTING="${WAIT_COLLECTING:-$RESET_EACH_STAGE}"
 WAIT_MAX_SUBS="${WAIT_MAX_SUBS:-50}"
 WAIT_MIN_REMAINING_BLOCKS="${WAIT_MIN_REMAINING_BLOCKS:-300}"
 WAIT_TIMEOUT="${WAIT_TIMEOUT:-900}"
+STOP_ALL_CHILDREN_BEFORE_RUN="${STOP_ALL_CHILDREN_BEFORE_RUN:-1}"
+START_ACTIVE_CHILDREN_EACH_STAGE="${START_ACTIVE_CHILDREN_EACH_STAGE:-1}"
 
 N_START="${N_START:-1}"
 N_END="${N_END:-6}"
@@ -47,7 +52,7 @@ while (($#)); do
   case "$1" in
     --stage)
       if [[ $# -lt 2 ]]; then
-        echo "usage: $0 [--stage n1..n6] [--n-start 1] [--n-end 6] [--profile-file path]" >&2
+        echo "usage: $0 [--stage n1..n6] [--n-start 1] [--n-end 6] [--profile-file path] [--deploy-config path]" >&2
         exit 2
       fi
       stage="$2"
@@ -82,6 +87,22 @@ while (($#)); do
       fi
       PROFILE_FILE="$2"
       shift 2
+      ;;
+    --deploy-config)
+      if [[ $# -lt 2 ]]; then
+        echo "--deploy-config requires a path" >&2
+        exit 2
+      fi
+      DEPLOY_CONFIG="$2"
+      shift 2
+      ;;
+    --no-stop-all-children)
+      STOP_ALL_CHILDREN_BEFORE_RUN=0
+      shift
+      ;;
+    --no-start-active-children)
+      START_ACTIVE_CHILDREN_EACH_STAGE=0
+      shift
       ;;
     *)
       echo "unknown argument: $1" >&2
@@ -171,6 +192,7 @@ NODE
 
 mkdir -p "$RUN_DIR" "$LOG_DIR"
 load_profile_defaults "$PROFILE_FILE"
+DEPLOY_CONFIG="$(cd "$(dirname "$DEPLOY_CONFIG")" && pwd)/$(basename "$DEPLOY_CONFIG")"
 
 log() {
   printf '[progressive-tps %s] %s\n' "$(date --iso-8601=seconds)" "$*"
@@ -196,6 +218,24 @@ stage_key_for_n() {
   esac
 }
 
+control_children() {
+  local action="$1"
+  local chains_csv="${2:-}"
+  local log_path="$3"
+
+  if [[ "$action" == "stop-all-children" ]]; then
+    "$CONTROL_PYTHON" "$CONTROL_SCRIPT" stop-all-children \
+      --config "$DEPLOY_CONFIG" \
+      > "$log_path" 2>&1
+    return
+  fi
+
+  "$CONTROL_PYTHON" "$CONTROL_SCRIPT" "$action" \
+    --config "$DEPLOY_CONFIG" \
+    --chains "$chains_csv" \
+    > "$log_path" 2>&1
+}
+
 cleanup() {
   for pid in "${PIDS[@]:-}"; do
     kill "$pid" 2>/dev/null || true
@@ -208,6 +248,7 @@ write_meta() {
     echo "run_id=${RUN_ID}"
     echo "started_at=$(date --iso-8601=seconds)"
     echo "profile_file=${PROFILE_FILE}"
+    echo "deploy_config=${DEPLOY_CONFIG}"
     echo "main_ws=${MAIN_WS}"
     echo "workers_override=${WORKERS:-}"
     echo "parallel_per_worker_override=${PARALLEL_PER_WORKER:-}"
@@ -226,6 +267,8 @@ write_meta() {
     echo "wait_max_subs=${WAIT_MAX_SUBS}"
     echo "wait_min_remaining_blocks=${WAIT_MIN_REMAINING_BLOCKS}"
     echo "wait_timeout=${WAIT_TIMEOUT}"
+    echo "stop_all_children_before_run=${STOP_ALL_CHILDREN_BEFORE_RUN}"
+    echo "start_active_children_each_stage=${START_ACTIVE_CHILDREN_EACH_STAGE}"
     echo "n_start=${N_START}"
     echo "n_end=${N_END}"
     echo "order=${ORDER[*]}"
@@ -256,14 +299,20 @@ run_one_n() {
 
   log "N=${n} stage=${stage_key} active=${active[*]} workers=${stage_workers} parallel=${stage_parallel} duration=${stage_duration}s"
 
+  local active_csv
+  active_csv="$(join_by_comma "${active[@]}")"
+
+  if [[ "$START_ACTIVE_CHILDREN_EACH_STAGE" == "1" && "$RESET_EACH_STAGE" != "1" ]]; then
+    log "N=${n} start active child services: ${active_csv}"
+    control_children start "$active_csv" "${LOG_DIR}/n${n}_start_active_children.log"
+  fi
+
   if [[ "$RESET_EACH_STAGE" == "1" ]]; then
     log "N=${n} reset active chains"
     "${SCRIPT_DIR}/reset_child_chains.sh" --profile-file "$PROFILE_FILE" "${active[@]}" > "${LOG_DIR}/n${n}_reset.log" 2>&1
   fi
 
   if [[ "$SETUP_EACH_STAGE" == "1" ]]; then
-    local active_csv
-    active_csv="$(join_by_comma "${active[@]}")"
     log "N=${n} setup active chains: ${active_csv}"
     node "${SCRIPT_DIR}/setup_selected_child_chains.js" \
       --chains "$active_csv" \
@@ -369,6 +418,11 @@ write_meta
 log "RUN_DIR=${RUN_DIR}"
 log "LOG_DIR=${LOG_DIR}"
 log "workload overrides workers=${WORKERS:-auto} parallel=${PARALLEL_PER_WORKER:-auto} duration=${DURATION:-auto} submit_mode=${SUBMIT_MODE}"
+
+if [[ "$STOP_ALL_CHILDREN_BEFORE_RUN" == "1" ]]; then
+  log "preflight stop all child services in deploy config"
+  control_children stop-all-children "" "${LOG_DIR}/preflight_stop_all_children.log"
+fi
 
 for n in $(seq "$N_START" "$N_END"); do
   run_one_n "$n"

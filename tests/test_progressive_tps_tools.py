@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SUMMARY_SCRIPT = ROOT / "scripts" / "summarize_progressive_tps.py"
 PLOT_SCRIPT = ROOT / "scripts" / "plot_progressive_tps.py"
+RUN_SCRIPT = ROOT / "scripts" / "run_exp_progressive_tps.sh"
 
 
 def load_module(path: Path, name: str):
@@ -21,6 +22,15 @@ def load_module(path: Path, name: str):
 
 
 class ProgressiveTpsToolsTest(unittest.TestCase):
+    def test_runner_has_child_service_preflight_controls(self):
+        script = RUN_SCRIPT.read_text(encoding="utf-8")
+
+        self.assertIn("STOP_ALL_CHILDREN_BEFORE_RUN", script)
+        self.assertIn("START_ACTIVE_CHILDREN_EACH_STAGE", script)
+        self.assertIn("stop-all-children", script)
+        self.assertIn("control_children start", script)
+        self.assertIn("--chains \"$chains_csv\"", script)
+
     def test_summarizer_combines_child_tps_and_mainchain_pressure(self):
         module = load_module(SUMMARY_SCRIPT, "summarize_progressive_tps")
         with tempfile.TemporaryDirectory() as tmp:
