@@ -88,9 +88,9 @@ The implementation strategy is:
 
 ## Files to Create or Modify
 
-- `scripts/run_exp_progressive_tps.sh`: orchestration for N=1..6 progressive runs, process startup, pressure workers, metrics capture, and output layout.
-- `scripts/summarize_progressive_tps.py`: parse per-chain worker logs and mainchain monitor logs into one summary CSV.
-- `scripts/plot_progressive_tps.py`: render the one combined Origin-style figure.
+- `scripts/run_exp_progressive_tps.sh`: orchestration for N=1..6 progressive runs, process startup, pressure workers, metrics capture, and output layout. Implemented in commit `744109e`.
+- `scripts/summarize_progressive_tps.py`: parse per-chain worker logs and mainchain monitor logs into one summary CSV. Implemented in commit `744109e`; bridge-pressure double-counting fixed in commit `d323f7e`.
+- `scripts/plot_progressive_tps.py`: render the one combined Origin-style figure. Implemented in commit `744109e`.
 - `scripts/worker_burst.js` or existing pressure worker: add explicit pressure profiles for baseline tuned mode and optimized modes.
 - `scripts/metrics_main.js` or existing monitor: record bridge extrinsic counts, bridge events, finalized block height, and observation windows.
 - Child runtime and crowdsource pallet files: add feature-gated optimization modes for N=4..6 without changing N=1..3 semantics.
@@ -210,19 +210,30 @@ Each `n*/` directory should contain:
 - command manifest
 - run metadata JSON with commit hash, hardware, start time, end time, and active profile
 
+## Execution Notes
+
+- Current branch: `exp/progressive-tps-main-load`.
+- First tooling milestone is committed: `744109e feat: add progressive tps experiment tooling`.
+- Bridge pressure calculation is corrected in: `d323f7e fix: avoid double counting mainchain bridge pressure`.
+- Local validation run:
+  - `python3 -m unittest tests.test_progressive_tps_tools tests.test_origin_style_preview`
+  - `bash -n scripts/run_exp_progressive_tps.sh`
+  - `python3 -m py_compile scripts/summarize_progressive_tps.py scripts/plot_progressive_tps.py`
+- Important deployment finding: `deploy/config.toml`, `scripts/profiles/chains.json`, and `scripts/gen_child_specs.py` currently model `child6` as `DataTrade`, while this progressive experiment needs six crowdsource child-chain endpoints. The repo already contains `deploy/bin/fishbone-node-crowdsource-v1`, `deploy/bin/fishbone-node-crowdsource-v2`, and `deploy/bin/fishbone-node-crowdsource-v3`, so the next implementation step is to add an explicit progressive experiment profile that maps N=4..6 to crowdsource optimized runtimes without mutating unrelated data-trade workflows.
+
 ## Implementation Checklist
 
-- [ ] Confirm the current branch is clean before implementation begins; create a feature branch for this experiment.
-- [ ] Inspect existing chain launch scripts, pressure workers, and monitor scripts; identify the smallest extension points.
+- [x] Confirm the current branch is clean before implementation begins; create a feature branch for this experiment.
+- [x] Inspect existing chain launch scripts, pressure workers, and monitor scripts; identify the smallest extension points.
 - [ ] Add deployment config for six child chains with unique ports, base paths, chain specs, and RPC endpoints.
 - [ ] Add baseline pressure profiles for N=1..3, including signer pool size, concurrency, payload count, and target run duration.
 - [ ] Add runtime feature flags or profile selection for child4, child5, and child6 optimized crowdsource paths.
 - [ ] Implement N=4 partial optimization and unit tests for unchanged acceptance semantics.
 - [ ] Implement N=5 indexed/aggregated storage optimization and unit tests for counters, duplicate handling, and task state.
 - [ ] Implement N=6 batch/full optimization and tests proving that accepted submission counts match the number of valid business submissions in each batch.
-- [ ] Implement `scripts/run_exp_progressive_tps.sh` with deterministic output directories and per-stage logs.
-- [ ] Implement `scripts/summarize_progressive_tps.py` with validation for monotonic N, nonzero windows, and pressure percentage calculation.
-- [ ] Implement `scripts/plot_progressive_tps.py` to produce the single dual-axis Origin-style figure.
+- [x] Implement `scripts/run_exp_progressive_tps.sh` with deterministic output directories and per-stage logs.
+- [x] Implement `scripts/summarize_progressive_tps.py` with validation for monotonic N, nonzero windows, and pressure percentage calculation.
+- [x] Implement `scripts/plot_progressive_tps.py` to produce the single dual-axis Origin-style figure.
 - [ ] Run N=1 and verify the tuned baseline exceeds 150 accepted submissions/s or document the measured bottleneck before proceeding.
 - [ ] Run N=2 and N=3; verify near-linear tuned-baseline growth and stable RPC error rates.
 - [ ] Run N=4, N=5, and N=6; verify each optimized profile increases aggregate accepted submissions/s over the previous stage.
