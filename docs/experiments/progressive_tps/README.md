@@ -6,7 +6,7 @@ This precheck was run before further N=5/N=6 runtime work to validate the experi
 
 - run_id: `progressive_n1_3_reset_each_20260619_1105`
 - branch: `exp/progressive-tps-main-load`
-- workload: `WORKERS=200`, `PARALLEL_PER_WORKER=4`, `DURATION=180`, `CAPACITY_CAP=10000`
+- workload: `WORKERS=200`, `PARALLEL_PER_WORKER=4`, `DURATION=180`, `CAPACITY_CAP=10000`, `DATA_SIZE=64`
 - procedure: reset active child chains before each N, then setup tasks/workers and run one stage
 - raw_dir: `docs/experiments/progressive_tps/progressive_tps_runs/progressive_n1_3_reset_each_20260619_1105`
 - summary_csv: `docs/experiments/progressive_tps/progressive_tps_summary.csv`
@@ -35,3 +35,5 @@ Do not proceed directly to deeper N=5/N=6 runtime optimization before addressing
 ```bash
 RESET_EACH_STAGE=1 SETUP_MAX_WORKERS=200 WORKERS=200 PARALLEL_PER_WORKER=4 DURATION=180 N_START=1 N_END=3 bash scripts/run_exp_progressive_tps.sh
 ```
+
+Follow-up child1 tuning found that `DATA_SIZE=8` reaches 152.12 TPS at the same 10000-submission cap. See `child1_tuning.md`.
