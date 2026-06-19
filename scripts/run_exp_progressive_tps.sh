@@ -21,11 +21,11 @@ LOG_DIR="${LOG_DIR:-${RUN_DIR}/logs}"
 PROFILE_FILE="${PROFILE_FILE:-${REPO_DIR}/scripts/profiles/progressive_tps.json}"
 
 MAIN_WS="${MAIN_WS:-ws://10.2.2.11:9944}"
-WORKERS="${WORKERS:-160}"
-PARALLEL_PER_WORKER="${PARALLEL_PER_WORKER:-4}"
+WORKERS="${WORKERS:-}"
+PARALLEL_PER_WORKER="${PARALLEL_PER_WORKER:-}"
 REWARD="${REWARD:-0}"
 DATA_SIZE="${DATA_SIZE:-64}"
-DURATION="${DURATION:-180}"
+DURATION="${DURATION:-}"
 SUBMIT_MODE="${SUBMIT_MODE:-pool}"
 REPORT_INTERVAL="${REPORT_INTERVAL:-5}"
 MAIN_INTERVAL="${MAIN_INTERVAL:-3}"
@@ -104,6 +104,33 @@ declare -A TASK_ID=(
 ORDER=(child1 child2 child3 child4 child5 child6)
 PIDS=()
 
+declare -A DEFAULT_WORKERS=(
+  [1]=160
+  [2]=180
+  [3]=220
+  [4]=260
+  [5]=320
+  [6]=400
+)
+
+declare -A DEFAULT_PARALLEL_PER_WORKER=(
+  [1]=4
+  [2]=4
+  [3]=5
+  [4]=5
+  [5]=6
+  [6]=8
+)
+
+declare -A DEFAULT_DURATION=(
+  [1]=180
+  [2]=180
+  [3]=210
+  [4]=210
+  [5]=240
+  [6]=240
+)
+
 mkdir -p "$RUN_DIR" "$LOG_DIR"
 
 log() {
@@ -138,11 +165,11 @@ write_meta() {
     echo "started_at=$(date --iso-8601=seconds)"
     echo "profile_file=${PROFILE_FILE}"
     echo "main_ws=${MAIN_WS}"
-    echo "workers=${WORKERS}"
-    echo "parallel_per_worker=${PARALLEL_PER_WORKER}"
+    echo "workers_override=${WORKERS:-}"
+    echo "parallel_per_worker_override=${PARALLEL_PER_WORKER:-}"
     echo "reward_planck=${REWARD}"
     echo "data_size=${DATA_SIZE}"
-    echo "duration=${DURATION}"
+    echo "duration_override=${DURATION:-}"
     echo "submit_mode=${SUBMIT_MODE}"
     echo "main_interval=${MAIN_INTERVAL}"
     echo "capacity_cap=${CAPACITY_CAP}"
@@ -164,6 +191,9 @@ run_one_n() {
   local prefix="${RUN_DIR}/progressive_tps_n${n}"
   local stage_key
   stage_key="$(stage_key_for_n "$n")"
+  local stage_workers="${WORKERS:-${DEFAULT_WORKERS[$n]}}"
+  local stage_parallel="${PARALLEL_PER_WORKER:-${DEFAULT_PARALLEL_PER_WORKER[$n]}}"
+  local stage_duration="${DURATION:-${DEFAULT_DURATION[$n]}}"
   local active=()
   mapfile -t active < <(active_for_n "$n")
 
@@ -173,7 +203,7 @@ run_one_n() {
   done
   urls="${urls%,}"
 
-  log "N=${n} stage=${stage_key} active=${active[*]}"
+  log "N=${n} stage=${stage_key} active=${active[*]} workers=${stage_workers} parallel=${stage_parallel} duration=${stage_duration}s"
   rm -f "${prefix}_child_precise.csv" "${prefix}_child_precise_summary.json" "${prefix}_main_blocks.csv"
   rm -f "${prefix}_monitor.ready" "${prefix}_monitor.start"
   PIDS=()
@@ -214,11 +244,11 @@ run_one_n() {
     nohup node "${SCRIPT_DIR}/worker_burst.js" \
       --ws "${WS[$child]}" \
       --task-id "${TASK_ID[$child]}" \
-      --workers "$WORKERS" \
-      --parallel-per-worker "$PARALLEL_PER_WORKER" \
+      --workers "$stage_workers" \
+      --parallel-per-worker "$stage_parallel" \
       --reward "$REWARD" \
       --data-size "$DATA_SIZE" \
-      --duration "$DURATION" \
+      --duration "$stage_duration" \
       --submit-mode "$SUBMIT_MODE" \
       --report-interval "$REPORT_INTERVAL" \
       > "${LOG_DIR}/n${n}_burst_${child}.log" 2>&1 &
@@ -247,6 +277,9 @@ run_one_n() {
     echo "n=${n}"
     echo "stage_key=${stage_key}"
     echo "active=${active[*]}"
+    echo "workers=${stage_workers}"
+    echo "parallel_per_worker=${stage_parallel}"
+    echo "duration=${stage_duration}"
     echo "failed=${failed}"
     echo "finished_at=$(date --iso-8601=seconds)"
   } > "${prefix}_stage.txt"
@@ -256,7 +289,7 @@ run_one_n() {
 write_meta
 log "RUN_DIR=${RUN_DIR}"
 log "LOG_DIR=${LOG_DIR}"
-log "workload workers=${WORKERS} parallel=${PARALLEL_PER_WORKER} duration=${DURATION}s submit_mode=${SUBMIT_MODE}"
+log "workload overrides workers=${WORKERS:-auto} parallel=${PARALLEL_PER_WORKER:-auto} duration=${DURATION:-auto} submit_mode=${SUBMIT_MODE}"
 
 for n in $(seq "$N_START" "$N_END"); do
   run_one_n "$n"
