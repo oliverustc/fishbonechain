@@ -19,7 +19,7 @@ prom_port = 9615
 [chains.child1]
 id       = "fishbone_child_1"
 spec     = "specs/child1-custom-raw.json"
-binary   = "/home/debian/fishbone/bin/fishbone-node-crowdsource"
+binary   = "/home/debian/fishbone/bin/fishbone-node-crowdsource-2s"
 p2p_port = 30334
 rpc_port = 9945
 prom_port = 9616

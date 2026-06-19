@@ -31,7 +31,7 @@
     "scene": "Crowdsource",
     "settlement": "FmcTaskBill",
     "progressiveStage": "baseline-tuned",
-    "runtimeBinary": "fishbone-node-crowdsource",
+    "runtimeBinary": "fishbone-node-crowdsource-2s",
     "validators": ["f1", "f2", "f3"],
     "defaultWs": "ws://10.2.2.11:9945",
     "taskId": 0,

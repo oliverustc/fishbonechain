@@ -166,8 +166,8 @@ metadata-hash = ["substrate-wasm-builder/metadata-hash"]
 on-chain-release-build = ["metadata-hash", "sp-api/disable-logging"]
 
 # Block time variants (compile-time selection via --features)
-block-2s = []    # AURA 2s 出块，子链 2（交通感知）
-block-1s = []    # AURA 1s 出块，子链 5（传感器网络）
+block-2s = []    # AURA 2s block time
+block-1s = []    # AURA 1s block time; takes precedence if combined accidentally
 block-10mb = []  # 10 MB 区块，子链 3（医疗影像标注）
 # `babe` feature: enables pallet_babe (pallet_authorship always present as non-optional)
 babe = ["pallet-babe"]

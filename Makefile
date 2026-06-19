@@ -38,6 +38,7 @@ build-2s:
 	mkdir -p deploy/bin
 	WASM_BUILD_RUSTFLAGS="$(WASM_FLAGS)" cargo build --release -p fishbone-node --features fishbone-runtime/scene-crowdsource,fishbone-runtime/block-2s
 	cp target/release/fishbone-node deploy/bin/fishbone-node-2s
+	cp target/release/fishbone-node deploy/bin/fishbone-node-crowdsource-2s
 
 build-1s:
 	mkdir -p deploy/bin
