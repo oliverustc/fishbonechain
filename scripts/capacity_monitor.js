@@ -35,16 +35,19 @@ function csv(...vals) {
 }
 
 async function sample(api) {
-  const [header, epochInfo, subs] = await Promise.all([
+  const hasAcceptedCounter = Boolean(api.query.crowdsource.acceptedSubmissionCount);
+  const [header, epochInfo, countOrSubs] = await Promise.all([
     api.rpc.chain.getHeader(),
     api.query.crowdsource.currentEpoch(),
-    api.query.crowdsource.epochSubmissions(),
+    hasAcceptedCounter
+      ? api.query.crowdsource.acceptedSubmissionCount()
+      : api.query.crowdsource.epochSubmissions(),
   ]);
   return {
     block: header.number.toNumber(),
     epoch: epochInfo.epochId?.toNumber() ?? epochInfo.epoch_id?.toNumber() ?? "?",
     phase: epochInfo.phase?.type ?? epochInfo.phase?.toString() ?? "?",
-    subs: subs.length,
+    subs: hasAcceptedCounter ? countOrSubs.toNumber() : countOrSubs.length,
   };
 }
 

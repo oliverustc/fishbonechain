@@ -10,6 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 SUMMARY_SCRIPT = ROOT / "scripts" / "summarize_progressive_tps.py"
 PLOT_SCRIPT = ROOT / "scripts" / "plot_progressive_tps.py"
 RUN_SCRIPT = ROOT / "scripts" / "run_exp_progressive_tps.sh"
+WORKER_BURST = ROOT / "scripts" / "worker_burst.js"
+CAPACITY_MONITOR = ROOT / "scripts" / "capacity_monitor.js"
 
 
 def load_module(path: Path, name: str):
@@ -30,6 +32,21 @@ class ProgressiveTpsToolsTest(unittest.TestCase):
         self.assertIn("stop-all-children", script)
         self.assertIn("control_children start", script)
         self.assertIn("--chains \"$chains_csv\"", script)
+
+    def test_runner_and_worker_support_batch_business_submissions(self):
+        runner = RUN_SCRIPT.read_text(encoding="utf-8")
+        worker = WORKER_BURST.read_text(encoding="utf-8")
+
+        self.assertIn("DEFAULT_BATCH_SIZE", runner)
+        self.assertIn("--batch-size", runner)
+        self.assertIn("batchSize", worker)
+        self.assertIn("submitDataBatch", worker)
+
+    def test_capacity_monitor_prefers_business_submission_counter(self):
+        monitor = CAPACITY_MONITOR.read_text(encoding="utf-8")
+
+        self.assertIn("acceptedSubmissionCount", monitor)
+        self.assertIn("epochSubmissions", monitor)
 
     def test_summarizer_combines_child_tps_and_mainchain_pressure(self):
         module = load_module(SUMMARY_SCRIPT, "summarize_progressive_tps")

@@ -243,6 +243,14 @@ impl pallet_crowdsource::Config for Runtime {
 	type FullSubmissionEvents = ConstBool<true>;
 	#[cfg(feature = "crowdsource-compact-events")]
 	type FullSubmissionEvents = ConstBool<false>;
+	#[cfg(not(feature = "crowdsource-indexed-submissions"))]
+	type IndexedSubmissionStorage = ConstBool<false>;
+	#[cfg(feature = "crowdsource-indexed-submissions")]
+	type IndexedSubmissionStorage = ConstBool<true>;
+	#[cfg(not(feature = "crowdsource-batch-submissions"))]
+	type MaxBatchSize = frame_support::traits::ConstU32<1>;
+	#[cfg(feature = "crowdsource-batch-submissions")]
+	type MaxBatchSize = frame_support::traits::ConstU32<8>;
 	type WeightInfo = ();
 }
 

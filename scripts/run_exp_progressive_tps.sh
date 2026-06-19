@@ -28,6 +28,7 @@ WORKERS="${WORKERS:-}"
 PARALLEL_PER_WORKER="${PARALLEL_PER_WORKER:-}"
 REWARD="${REWARD:-0}"
 DATA_SIZE="${DATA_SIZE:-8}"
+BATCH_SIZE="${BATCH_SIZE:-}"
 DURATION="${DURATION:-}"
 SUBMIT_MODE="${SUBMIT_MODE:-pool}"
 REPORT_INTERVAL="${REPORT_INTERVAL:-5}"
@@ -159,6 +160,15 @@ declare -A DEFAULT_DURATION=(
   [6]=240
 )
 
+declare -A DEFAULT_BATCH_SIZE=(
+  [1]=1
+  [2]=1
+  [3]=1
+  [4]=1
+  [5]=1
+  [6]=4
+)
+
 load_profile_defaults() {
   local profile="$1"
   if [[ ! -f "$profile" ]]; then
@@ -254,6 +264,7 @@ write_meta() {
     echo "parallel_per_worker_override=${PARALLEL_PER_WORKER:-}"
     echo "reward_planck=${REWARD}"
     echo "data_size=${DATA_SIZE}"
+    echo "batch_size_override=${BATCH_SIZE:-}"
     echo "duration_override=${DURATION:-}"
     echo "submit_mode=${SUBMIT_MODE}"
     echo "main_interval=${MAIN_INTERVAL}"
@@ -288,6 +299,7 @@ run_one_n() {
   local stage_workers="${WORKERS:-${DEFAULT_WORKERS[$n]}}"
   local stage_parallel="${PARALLEL_PER_WORKER:-${DEFAULT_PARALLEL_PER_WORKER[$n]}}"
   local stage_duration="${DURATION:-${DEFAULT_DURATION[$n]}}"
+  local stage_batch_size="${BATCH_SIZE:-${DEFAULT_BATCH_SIZE[$n]}}"
   local active=()
   mapfile -t active < <(active_for_n "$n")
 
@@ -297,7 +309,7 @@ run_one_n() {
   done
   urls="${urls%,}"
 
-  log "N=${n} stage=${stage_key} active=${active[*]} workers=${stage_workers} parallel=${stage_parallel} duration=${stage_duration}s"
+  log "N=${n} stage=${stage_key} active=${active[*]} workers=${stage_workers} parallel=${stage_parallel} batch_size=${stage_batch_size} duration=${stage_duration}s"
 
   local active_csv
   active_csv="$(join_by_comma "${active[@]}")"
@@ -376,6 +388,7 @@ run_one_n() {
       --parallel-per-worker "$stage_parallel" \
       --reward "$REWARD" \
       --data-size "$DATA_SIZE" \
+      --batch-size "$stage_batch_size" \
       --duration "$stage_duration" \
       --submit-mode "$SUBMIT_MODE" \
       --report-interval "$REPORT_INTERVAL" \
@@ -408,6 +421,7 @@ run_one_n() {
     echo "workers=${stage_workers}"
     echo "parallel_per_worker=${stage_parallel}"
     echo "duration=${stage_duration}"
+    echo "batch_size=${stage_batch_size}"
     echo "failed=${failed}"
     echo "finished_at=$(date --iso-8601=seconds)"
   } > "${prefix}_stage.txt"

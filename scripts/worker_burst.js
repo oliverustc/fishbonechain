@@ -14,6 +14,7 @@
  *     --parallel-per-worker 1 \
  *     --reward 0 \
  *     --data-size 64 \
+ *     --batch-size 1 \
  *     --duration 120 \
  *     --submit-mode pool
  */
@@ -35,6 +36,7 @@ function parseArgs() {
     parallelPerWorker: Number(get("--parallel-per-worker", "1")),
     reward: BigInt(get("--reward", "0")),
     dataSize: Number(get("--data-size", "64")),
+    batchSize: Number(get("--batch-size", "1")),
     duration: Number(get("--duration", "120")),
     reportInterval: Number(get("--report-interval", "5")),
     txTimeout: Number(get("--tx-timeout", "45")),
@@ -112,8 +114,13 @@ function classifyDispatchError(api, dispatchError) {
 }
 
 async function sendOne(api, signer, nonce, cfg, stats) {
-  const data = Array.from(randomBytes(cfg.dataSize));
-  const tx = api.tx.crowdsource.submitData(cfg.taskId, data, cfg.reward);
+  const tx = cfg.batchSize > 1
+    ? api.tx.crowdsource.submitDataBatch(
+        cfg.taskId,
+        Array.from({ length: cfg.batchSize }, () => Array.from(randomBytes(cfg.dataSize))),
+        cfg.reward,
+      )
+    : api.tx.crowdsource.submitData(cfg.taskId, Array.from(randomBytes(cfg.dataSize)), cfg.reward);
 
   stats.markSent();
 
@@ -169,7 +176,7 @@ async function main() {
   const cfg = parseArgs();
   console.log(`[worker_burst] ws=${cfg.ws}`);
   console.log(`[worker_burst] task_id=${cfg.taskId} workers=${cfg.workers} worker_offset=${cfg.workerOffset} parallel_per_worker=${cfg.parallelPerWorker}`);
-  console.log(`[worker_burst] reward=${cfg.reward} data_size=${cfg.dataSize} duration=${cfg.duration}s`);
+  console.log(`[worker_burst] reward=${cfg.reward} data_size=${cfg.dataSize} batch_size=${cfg.batchSize} duration=${cfg.duration}s`);
   console.log(`[worker_burst] submit_mode=${cfg.submitMode}`);
 
   const api = await ApiPromise.create({ provider: new WsProvider(cfg.ws) });
