@@ -47,6 +47,8 @@ class ProgressiveTpsToolsTest(unittest.TestCase):
         worker = WORKER_BURST.read_text(encoding="utf-8")
 
         self.assertIn("DEFAULT_BATCH_SIZE", runner)
+        self.assertIn("batch_size_for_child", runner)
+        self.assertIn("local child_batch_size", runner)
         self.assertIn("--batch-size", runner)
         self.assertIn("batchSize", worker)
         self.assertIn("submitDataBatch", worker)

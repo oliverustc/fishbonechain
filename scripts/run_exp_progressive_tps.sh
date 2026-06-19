@@ -229,6 +229,19 @@ stage_key_for_n() {
   esac
 }
 
+batch_size_for_child() {
+  local child="$1"
+  local stage_default="$2"
+
+  if [[ -n "${BATCH_SIZE:-}" ]]; then
+    printf '%s' "$BATCH_SIZE"
+  elif [[ "$child" == "child6" ]]; then
+    printf '%s' "$stage_default"
+  else
+    printf '1'
+  fi
+}
+
 control_children() {
   local action="$1"
   local chains_csv="${2:-}"
@@ -321,7 +334,7 @@ run_one_n() {
   done
   urls="${urls%,}"
 
-  log "N=${n} stage=${stage_key} active=${active[*]} workers=${stage_workers} parallel=${stage_parallel} batch_size=${stage_batch_size} duration=${stage_duration}s"
+  log "N=${n} stage=${stage_key} active=${active[*]} workers=${stage_workers} parallel=${stage_parallel} batch_default=${stage_batch_size} duration=${stage_duration}s"
 
   local active_csv
   active_csv="$(join_by_comma "${active[@]}")"
@@ -395,6 +408,8 @@ run_one_n() {
 
   local worker_pids=()
   for child in "${active[@]}"; do
+    local child_batch_size
+    child_batch_size="$(batch_size_for_child "$child" "$stage_batch_size")"
     nohup node "${SCRIPT_DIR}/worker_burst.js" \
       --ws "${WS[$child]}" \
       --task-id "${TASK_ID[$child]}" \
@@ -402,7 +417,7 @@ run_one_n() {
       --parallel-per-worker "$stage_parallel" \
       --reward "$REWARD" \
       --data-size "$DATA_SIZE" \
-      --batch-size "$stage_batch_size" \
+      --batch-size "$child_batch_size" \
       --duration "$stage_duration" \
       --submit-mode "$SUBMIT_MODE" \
       --report-interval "$REPORT_INTERVAL" \
@@ -435,7 +450,10 @@ run_one_n() {
     echo "workers=${stage_workers}"
     echo "parallel_per_worker=${stage_parallel}"
     echo "duration=${stage_duration}"
-    echo "batch_size=${stage_batch_size}"
+    echo "batch_default=${stage_batch_size}"
+    for child in "${active[@]}"; do
+      echo "batch_size_${child}=$(batch_size_for_child "$child" "$stage_batch_size")"
+    done
     echo "failed=${failed}"
     echo "finished_at=$(date --iso-8601=seconds)"
   } > "${prefix}_stage.txt"
