@@ -137,6 +137,7 @@ def summarize_main_blocks(raw_dir: Path, n: int) -> dict[str, float]:
         return {
             "main_window_seconds": 0.0,
             "main_bridge_events": 0.0,
+            "main_bridge_runtime_events": 0.0,
             "main_bridge_tps": 0.0,
             "main_total_extrinsics": 0.0,
             "main_total_tps": 0.0,
@@ -145,6 +146,7 @@ def summarize_main_blocks(raw_dir: Path, n: int) -> dict[str, float]:
 
     timestamps = []
     bridge_total = 0
+    bridge_runtime_events = 0
     extrinsics_total = 0
     with path.open(newline="") as f:
         for row in csv.DictReader(f):
@@ -155,7 +157,7 @@ def summarize_main_blocks(raw_dir: Path, n: int) -> dict[str, float]:
             bridge_total += as_int(row.get("bridge_extrinsics"))
             extrinsics_total += as_int(row.get("extrinsics_total"))
             if "ccmc_events" in row or "fmc_events" in row:
-                bridge_total += as_int(row.get("ccmc_events")) + as_int(row.get("fmc_events"))
+                bridge_runtime_events += as_int(row.get("ccmc_events")) + as_int(row.get("fmc_events"))
 
     if len(timestamps) >= 2:
         window_s = max((max(timestamps) - min(timestamps)).total_seconds(), 0.001)
@@ -168,6 +170,7 @@ def summarize_main_blocks(raw_dir: Path, n: int) -> dict[str, float]:
     return {
         "main_window_seconds": window_s,
         "main_bridge_events": float(bridge_total),
+        "main_bridge_runtime_events": float(bridge_runtime_events),
         "main_bridge_tps": main_bridge_tps,
         "main_total_extrinsics": float(extrinsics_total),
         "main_total_tps": main_total_tps,
@@ -215,6 +218,7 @@ def summarize_stage(raw_dir: Path, log_dir: Path, n: int, order: list[str]) -> d
         "worker_elapsed_seconds": f"{worker.elapsed_s:.3f}",
         "main_window_seconds": f"{main['main_window_seconds']:.3f}",
         "main_bridge_events": f"{main['main_bridge_events']:.0f}",
+        "main_bridge_runtime_events": f"{main['main_bridge_runtime_events']:.0f}",
         "main_bridge_tps": f"{main_bridge_tps:.4f}",
         "main_total_extrinsics": f"{main['main_total_extrinsics']:.0f}",
         "main_total_tps": f"{main['main_total_tps']:.4f}",
@@ -243,6 +247,7 @@ def write_summary(rows: list[dict[str, str]], out: Path) -> None:
         "worker_elapsed_seconds",
         "main_window_seconds",
         "main_bridge_events",
+        "main_bridge_runtime_events",
         "main_bridge_tps",
         "main_total_extrinsics",
         "main_total_tps",

@@ -49,8 +49,8 @@ class ProgressiveTpsToolsTest(unittest.TestCase):
                 "\n".join(
                     [
                         "timestamp,block_number,block_hash,extrinsics_total,bridge_extrinsics,ccmc_digest_calls,fmc_bill_calls,ccmc_events,fmc_events",
-                        "2026-06-18T00:00:00+00:00,1,0x1,10,1,1,0,0,0",
-                        "2026-06-18T00:00:10+00:00,2,0x2,10,1,1,0,0,0",
+                        "2026-06-18T00:00:00+00:00,1,0x1,10,1,1,0,3,0",
+                        "2026-06-18T00:00:10+00:00,2,0x2,10,1,1,0,3,0",
                     ]
                 )
                 + "\n",
