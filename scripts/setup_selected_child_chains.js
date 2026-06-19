@@ -12,9 +12,7 @@
 import { readFileSync } from "fs";
 import { ApiPromise, WsProvider, Keyring } from "@polkadot/api";
 
-const CHAIN_PROFILES = JSON.parse(
-  readFileSync(new URL("./profiles/chains.json", import.meta.url), "utf8")
-);
+const DEFAULT_PROFILE_FILE = new URL("./profiles/chains.json", import.meta.url);
 
 const UNIT = 1_000_000_000_000n;
 
@@ -83,10 +81,17 @@ function parseArgs() {
   }
   return {
     chains,
+    profileFile: get("--profile-file", ""),
     chunk: Number(get("--chunk", "200")),
     maxWorkers: Number(get("--max-workers", "0")),
     workerUnit: BigInt(get("--worker-unit", "10")) * UNIT,
   };
+}
+
+function loadProfiles(profileFile) {
+  const path = profileFile ? new URL(profileFile, `file://${process.cwd()}/`) : DEFAULT_PROFILE_FILE;
+  const profiles = JSON.parse(readFileSync(path, "utf8"));
+  return profiles.chains ?? profiles;
 }
 
 function log(message) {
@@ -125,7 +130,7 @@ async function fundWorkers(api, alice, keyring, count, amount, chunkSize, chain)
   }
 }
 
-async function setupChain(chain, cfg, keyring, alice, options) {
+async function setupChain(chain, cfg, profile, keyring, alice, options) {
   log(`${chain}: connect ${cfg.ws}`);
   const api = await ApiPromise.create({ provider: new WsProvider(cfg.ws) });
   const [chainName, header] = await Promise.all([
@@ -134,7 +139,6 @@ async function setupChain(chain, cfg, keyring, alice, options) {
   ]);
   log(`${chain}: chain=${chainName.toString()} block=${header.number.toString()}`);
 
-  const profile = CHAIN_PROFILES[chain];
   if (!profile) {
     await api.disconnect();
     throw new Error(`missing chain profile: ${chain}`);
@@ -172,10 +176,11 @@ async function setupChain(chain, cfg, keyring, alice, options) {
 
 async function main() {
   const options = parseArgs();
+  const chainProfiles = loadProfiles(options.profileFile);
   const keyring = new Keyring({ type: "sr25519" });
   const alice = keyring.addFromUri("//Alice");
   for (const chain of options.chains) {
-    await setupChain(chain, CHAINS[chain], keyring, alice, options);
+    await setupChain(chain, CHAINS[chain], chainProfiles[chain], keyring, alice, options);
   }
   log("done");
 }

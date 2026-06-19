@@ -18,6 +18,7 @@ RUN_ID="${RUN_ID:-progressive_tps_$(date +%Y%m%d_%H%M%S)}"
 BASE_DIR="${BASE_DIR:-${REPO_DIR}/docs/experiments/progressive_tps}"
 RUN_DIR="${RUN_DIR:-${BASE_DIR}/progressive_tps_runs/${RUN_ID}}"
 LOG_DIR="${LOG_DIR:-${RUN_DIR}/logs}"
+PROFILE_FILE="${PROFILE_FILE:-${REPO_DIR}/scripts/profiles/progressive_tps.json}"
 
 MAIN_WS="${MAIN_WS:-ws://10.2.2.11:9944}"
 WORKERS="${WORKERS:-160}"
@@ -88,6 +89,7 @@ write_meta() {
   {
     echo "run_id=${RUN_ID}"
     echo "started_at=$(date --iso-8601=seconds)"
+    echo "profile_file=${PROFILE_FILE}"
     echo "main_ws=${MAIN_WS}"
     echo "workers=${WORKERS}"
     echo "parallel_per_worker=${PARALLEL_PER_WORKER}"
@@ -107,6 +109,7 @@ write_meta() {
       echo "${child}_task_id=${TASK_ID[$child]}"
     done
   } > "${RUN_DIR}/meta.txt"
+  cp "$PROFILE_FILE" "${RUN_DIR}/profile_manifest.json"
 }
 
 run_one_n() {
