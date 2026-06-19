@@ -123,7 +123,11 @@ async function sendOne(api, signer, nonce, cfg, stats) {
       stats.finish("ok");
       return "ok";
     } catch (e) {
+      const message = String(e?.message ?? e);
       stats.finish("fail");
+      if (message.includes("Immediately Dropped") || message.includes("couldn't enter the pool because of the limit")) {
+        return "retry";
+      }
       return "fail";
     }
   }
@@ -175,12 +179,26 @@ async function main() {
 
   const nextNonce = await Promise.all(signers.map(s => api.rpc.system.accountNextIndex(s.address)));
   const nonceNums = nextNonce.map(n => n.toNumber());
+  const retryNonceQueues = Array.from({ length: cfg.workers }, () => []);
+  const retryNonceSets = Array.from({ length: cfg.workers }, () => new Set());
   console.log(`[worker_burst] nonce range loaded for ${nonceNums.length} workers`);
 
   const takeNonce = workerIndex => {
+    if (retryNonceQueues[workerIndex].length > 0) {
+      const nonce = retryNonceQueues[workerIndex].shift();
+      retryNonceSets[workerIndex].delete(nonce);
+      return nonce;
+    }
     const nonce = nonceNums[workerIndex];
     nonceNums[workerIndex]++;
     return nonce;
+  };
+
+  const retryNonce = (workerIndex, nonce) => {
+    if (retryNonceSets[workerIndex].has(nonce)) return;
+    retryNonceSets[workerIndex].add(nonce);
+    retryNonceQueues[workerIndex].push(nonce);
+    retryNonceQueues[workerIndex].sort((a, b) => a - b);
   };
 
   let running = true;
@@ -200,7 +218,10 @@ async function main() {
         while (running) {
           const nonce = takeNonce(i);
           const kind = await sendOne(api, signers[i], nonce, cfg, stats);
-          if (cfg.submitMode === "pool" && kind === "fail") {
+          if (cfg.submitMode === "pool" && kind === "retry") {
+            retryNonce(i, nonce);
+            await new Promise(r => setTimeout(r, 50));
+          } else if (cfg.submitMode === "pool" && kind === "fail") {
             await new Promise(r => setTimeout(r, 50));
           }
         }
