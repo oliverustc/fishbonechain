@@ -224,12 +224,45 @@ def summarize_main_blocks(raw_dir: Path, n: int) -> dict[str, float]:
     }
 
 
+def load_stage_batch_sizes(raw_dir: Path, n: int, active: list[str]) -> dict[str, float]:
+    path = raw_dir / f"progressive_tps_n{n}_stage.txt"
+    batch_sizes = {chain: 1.0 for chain in active}
+    if not path.exists():
+        return batch_sizes
+
+    with path.open(errors="replace") as f:
+        for line in f:
+            key, _, value = line.strip().partition("=")
+            if not key.startswith("batch_size_") or not value:
+                continue
+            chain = key.removeprefix("batch_size_")
+            if chain in batch_sizes:
+                batch_sizes[chain] = max(as_float(value, 1.0), 1.0)
+    return batch_sizes
+
+
+def estimate_business_submissions_per_extrinsic(
+    chain_stats: dict[str, dict[str, float]],
+    active: list[str],
+    batch_sizes: dict[str, float],
+) -> float:
+    accepted = 0.0
+    estimated_extrinsics = 0.0
+    for chain in active:
+        accepted_delta = chain_stats.get(chain, {}).get("accepted_delta", 0.0)
+        batch_size = max(batch_sizes.get(chain, 1.0), 1.0)
+        accepted += accepted_delta
+        estimated_extrinsics += accepted_delta / batch_size
+    return accepted / estimated_extrinsics if estimated_extrinsics > 0 else 1.0
+
+
 def summarize_stage(raw_dir: Path, log_dir: Path, n: int, order: list[str]) -> dict[str, str]:
     active = active_chains_for(n, order)
     chain_stats, source = load_capacity_summary(raw_dir, n)
     merge_precise_csv_partials(raw_dir, n, chain_stats)
     worker = summarize_worker_logs(log_dir, n)
     main = summarize_main_blocks(raw_dir, n)
+    batch_sizes = load_stage_batch_sizes(raw_dir, n, active)
 
     accepted = sum(chain_stats.get(chain, {}).get("accepted_delta", 0.0) for chain in active)
     max_window_s = max((chain_stats.get(chain, {}).get("elapsed_s", 0.0) for chain in active), default=0.0)
@@ -246,6 +279,7 @@ def summarize_stage(raw_dir: Path, log_dir: Path, n: int, order: list[str]) -> d
     main_bridge_tps = main["main_bridge_tps"]
     pressure_pct = (main_bridge_tps / sum_chain_tps * 100) if sum_chain_tps > 0 else 0.0
     stage_key, stage_label, profile_label = STAGE_ROWS[n]
+    submissions_per_extrinsic = estimate_business_submissions_per_extrinsic(chain_stats, active, batch_sizes)
 
     return {
         "n": str(n),
@@ -271,7 +305,7 @@ def summarize_stage(raw_dir: Path, log_dir: Path, n: int, order: list[str]) -> d
         "main_total_tps": f"{main['main_total_tps']:.4f}",
         "main_bridge_pressure_pct": f"{pressure_pct:.4f}",
         "main_bridge_share_pct": f"{main['main_bridge_share_pct']:.4f}",
-        "submissions_per_extrinsic": "1",
+        "submissions_per_extrinsic": f"{submissions_per_extrinsic:.4f}",
     }
 
 

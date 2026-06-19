@@ -109,6 +109,49 @@ class ProgressiveTpsToolsTest(unittest.TestCase):
         self.assertIn("0.2000", content)
         self.assertIn("0.1000", content)
 
+    def test_summarizer_uses_stage_batch_sizes_for_business_per_extrinsic(self):
+        module = load_module(SUMMARY_SCRIPT, "summarize_progressive_tps_batch")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            raw_dir = root / "raw"
+            log_dir = root / "logs"
+            raw_dir.mkdir()
+            log_dir.mkdir()
+
+            (raw_dir / "progressive_tps_n6_child_precise_summary.json").write_text(
+                json.dumps(
+                    {
+                        "hit_summary": {
+                            "ws://10.2.2.11:9945": {"accepted_delta": 100, "elapsed_s": 10, "cap_subs": 100},
+                            "ws://10.2.2.14:9946": {"accepted_delta": 100, "elapsed_s": 10, "cap_subs": 100},
+                            "ws://10.2.2.17:9947": {"accepted_delta": 100, "elapsed_s": 10, "cap_subs": 100},
+                            "ws://10.2.2.20:9948": {"accepted_delta": 100, "elapsed_s": 10, "cap_subs": 100},
+                            "ws://10.2.3.11:9949": {"accepted_delta": 100, "elapsed_s": 10, "cap_subs": 100},
+                            "ws://10.2.3.14:9950": {"accepted_delta": 400, "elapsed_s": 10, "cap_subs": 400},
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (raw_dir / "progressive_tps_n6_stage.txt").write_text(
+                "\n".join(
+                    [
+                        "batch_size_child1=1",
+                        "batch_size_child2=1",
+                        "batch_size_child3=1",
+                        "batch_size_child4=1",
+                        "batch_size_child5=1",
+                        "batch_size_child6=4",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            row = module.summarize_stage(raw_dir, log_dir, 6, module.DEFAULT_ORDER)
+
+        self.assertEqual(row["submissions_per_extrinsic"], "1.5000")
+
     def test_plotter_builds_single_combined_figure(self):
         module = load_module(PLOT_SCRIPT, "plot_progressive_tps")
         with tempfile.TemporaryDirectory() as tmp:
