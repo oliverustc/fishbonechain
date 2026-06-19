@@ -11,7 +11,7 @@ import typer
 from rich.console import Console
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from fishbone.config import load, csv_set, filter_config_to_chains
+from fishbone.config import load, csv_set, filter_config_to_chains, apply_chain_profile_overrides
 from fishbone.remote import connect_all, RemoteNode
 from fishbone.service import render_service, service_name
 
@@ -150,9 +150,12 @@ def deploy(
     chains: str = typer.Option("", help="只部署指定链，逗号分隔（如 main,child1,child6）"),
     start: bool = typer.Option(True, help="部署后自动启动服务"),
     config: Path = typer.Option(DEPLOY_DIR / "config.toml", help="配置文件路径"),
+    profile_file: Path = typer.Option(None, help="实验 profile JSON，用于覆盖子链 runtime binary"),
 ):
     """部署 fishbone-node 到所有（或指定）节点。"""
     cfg = load(config)
+    if profile_file:
+        cfg = apply_chain_profile_overrides(cfg, profile_file)
 
     chain_ids = csv_set(chains)
     if chain_ids:
