@@ -36,6 +36,53 @@ CAPACITY_MONITOR_TIMEOUT="${CAPACITY_MONITOR_TIMEOUT:-300}"
 N_START="${N_START:-1}"
 N_END="${N_END:-6}"
 
+while (($#)); do
+  case "$1" in
+    --stage)
+      if [[ $# -lt 2 ]]; then
+        echo "usage: $0 [--stage n1..n6] [--n-start 1] [--n-end 6] [--profile-file path]" >&2
+        exit 2
+      fi
+      stage="$2"
+      if [[ ! "$stage" =~ ^n([1-6])$ ]]; then
+        echo "invalid stage: ${stage}; expected n1..n6" >&2
+        exit 2
+      fi
+      N_START="${BASH_REMATCH[1]}"
+      N_END="${BASH_REMATCH[1]}"
+      shift 2
+      ;;
+    --n-start)
+      if [[ $# -lt 2 ]]; then
+        echo "--n-start requires a value" >&2
+        exit 2
+      fi
+      N_START="$2"
+      shift 2
+      ;;
+    --n-end)
+      if [[ $# -lt 2 ]]; then
+        echo "--n-end requires a value" >&2
+        exit 2
+      fi
+      N_END="$2"
+      shift 2
+      ;;
+    --profile-file)
+      if [[ $# -lt 2 ]]; then
+        echo "--profile-file requires a path" >&2
+        exit 2
+      fi
+      PROFILE_FILE="$2"
+      shift 2
+      ;;
+    *)
+      echo "unknown argument: $1" >&2
+      exit 2
+      ;;
+  esac
+done
+
 declare -A WS=(
   [child1]="${CHILD1_WS:-ws://10.2.2.11:9945}"
   [child2]="${CHILD2_WS:-ws://10.2.2.14:9946}"
