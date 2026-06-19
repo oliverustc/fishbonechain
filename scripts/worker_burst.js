@@ -10,6 +10,7 @@
  *     --ws ws://10.2.2.11:9948 \
  *     --task-id 3 \
  *     --workers 1000 \
+ *     --worker-offset 0 \
  *     --parallel-per-worker 1 \
  *     --reward 0 \
  *     --data-size 64 \
@@ -30,6 +31,7 @@ function parseArgs() {
     ws: get("--ws", "ws://127.0.0.1:9945"),
     taskId: Number(get("--task-id", "0")),
     workers: Number(get("--workers", "1000")),
+    workerOffset: Number(get("--worker-offset", "0")),
     parallelPerWorker: Number(get("--parallel-per-worker", "1")),
     reward: BigInt(get("--reward", "0")),
     dataSize: Number(get("--data-size", "64")),
@@ -166,13 +168,13 @@ async function sendOne(api, signer, nonce, cfg, stats) {
 async function main() {
   const cfg = parseArgs();
   console.log(`[worker_burst] ws=${cfg.ws}`);
-  console.log(`[worker_burst] task_id=${cfg.taskId} workers=${cfg.workers} parallel_per_worker=${cfg.parallelPerWorker}`);
+  console.log(`[worker_burst] task_id=${cfg.taskId} workers=${cfg.workers} worker_offset=${cfg.workerOffset} parallel_per_worker=${cfg.parallelPerWorker}`);
   console.log(`[worker_burst] reward=${cfg.reward} data_size=${cfg.dataSize} duration=${cfg.duration}s`);
   console.log(`[worker_burst] submit_mode=${cfg.submitMode}`);
 
   const api = await ApiPromise.create({ provider: new WsProvider(cfg.ws) });
   const keyring = new Keyring({ type: "sr25519" });
-  const signers = Array.from({ length: cfg.workers }, (_, i) => keyring.addFromUri(`//Worker${i}`));
+  const signers = Array.from({ length: cfg.workers }, (_, i) => keyring.addFromUri(`//Worker${cfg.workerOffset + i}`));
   const stats = new Stats();
 
   const nextNonce = await Promise.all(signers.map(s => api.rpc.system.accountNextIndex(s.address)));
