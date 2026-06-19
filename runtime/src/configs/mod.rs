@@ -239,6 +239,10 @@ impl pallet_crowdsource::Config for Runtime {
 	type SyncingSlotBlocks = SyncingSlotBlocks;
 	type MaxSubmissionsPerEpoch = frame_support::traits::ConstU32<10000>;
 	type DataValidator = pallet_crowdsource::AlwaysValidate;
+	#[cfg(not(feature = "crowdsource-compact-events"))]
+	type FullSubmissionEvents = ConstBool<true>;
+	#[cfg(feature = "crowdsource-compact-events")]
+	type FullSubmissionEvents = ConstBool<false>;
 	type WeightInfo = ();
 }
 

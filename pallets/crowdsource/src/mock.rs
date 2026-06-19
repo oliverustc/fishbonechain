@@ -1,4 +1,7 @@
-use frame_support::{construct_runtime, derive_impl, parameter_types, traits::OnInitialize};
+use frame_support::{
+	construct_runtime, derive_impl, parameter_types,
+	traits::{ConstBool, OnInitialize},
+};
 use sp_runtime::BuildStorage;
 
 use crate::pallet::AlwaysValidate;
@@ -53,6 +56,7 @@ impl crate::Config for Test {
 	type SyncingSlotBlocks = TestSyncingSlot;
 	type MaxSubmissionsPerEpoch = frame_support::traits::ConstU32<100>;
 	type DataValidator = AlwaysValidate;
+	type FullSubmissionEvents = ConstBool<true>;
 	type WeightInfo = ();
 }
 

@@ -147,6 +147,29 @@ fn submit_data_accumulates_spent_budget() {
 }
 
 #[test]
+fn submit_data_emits_full_event_by_default() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Crowdsource::sync_task(
+			RuntimeOrigin::signed(1),
+			0,
+			1,
+			10_000,
+			BoundedVec::default()
+		));
+		assert_ok!(Crowdsource::submit_data(
+			RuntimeOrigin::signed(2),
+			0,
+			b"d1".to_vec().try_into().unwrap(),
+			3_000
+		));
+
+		System::assert_has_event(
+			Event::DataSubmitted { task_id: 0, worker: 2, reward: 3_000 }.into(),
+		);
+	});
+}
+
+#[test]
 fn submit_data_exceeds_budget_fails() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Crowdsource::sync_task(

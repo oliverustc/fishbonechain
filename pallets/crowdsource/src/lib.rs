@@ -98,6 +98,9 @@ pub mod pallet {
 		/// 数据验证器（可替换）
 		type DataValidator: ValidateSubmission<Self::AccountId>;
 
+		/// 是否在高频提交事件中携带完整 worker 字段。
+		type FullSubmissionEvents: Get<bool>;
+
 		type WeightInfo: WeightInfo;
 	}
 
@@ -138,6 +141,8 @@ pub mod pallet {
 		TaskSynced { task_id: TaskId },
 		/// 工作者提交数据
 		DataSubmitted { task_id: TaskId, worker: T::AccountId, reward: BalanceOf<T> },
+		/// 工作者提交数据的轻量事件，用于高压吞吐实验 runtime profile。
+		DataSubmittedCompact { task_id: TaskId, reward: BalanceOf<T> },
 		/// 进入同步时隙（S_s）
 		SyncingSlotStarted { epoch: EpochId, block: u32 },
 		/// Epoch 结算完成
@@ -264,7 +269,11 @@ pub mod pallet {
 				});
 			}
 
-			Self::deposit_event(Event::DataSubmitted { task_id, worker: who, reward });
+			if T::FullSubmissionEvents::get() {
+				Self::deposit_event(Event::DataSubmitted { task_id, worker: who, reward });
+			} else {
+				Self::deposit_event(Event::DataSubmittedCompact { task_id, reward });
+			}
 			Ok(())
 		}
 
