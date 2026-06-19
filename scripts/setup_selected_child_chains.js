@@ -7,6 +7,7 @@
  *
  * Usage:
  *   node setup_selected_child_chains.js --chains child4,child1,child6
+ *   node setup_selected_child_chains.js --chains child3 --worker-count 300
  */
 
 import { readFileSync } from "fs";
@@ -84,6 +85,7 @@ function parseArgs() {
     profileFile: get("--profile-file", ""),
     chunk: Number(get("--chunk", "200")),
     maxWorkers: Number(get("--max-workers", "0")),
+    workerCount: Number(get("--worker-count", "0")),
     workerUnit: BigInt(get("--worker-unit", "10")) * UNIT,
   };
 }
@@ -161,7 +163,9 @@ async function setupChain(chain, cfg, profile, keyring, alice, options) {
   );
   log(`${chain}: synced task ${cfg.taskId}`);
 
-  const workerCount = options.maxWorkers > 0 ? Math.min(cfg.workers, options.maxWorkers) : cfg.workers;
+  const workerCount = options.workerCount > 0
+    ? options.workerCount
+    : (options.maxWorkers > 0 ? Math.min(cfg.workers, options.maxWorkers) : cfg.workers);
   await fundWorkers(api, alice, keyring, workerCount, options.workerUnit, options.chunk, chain);
 
   const [task, worker0, epoch, subs] = await Promise.all([
