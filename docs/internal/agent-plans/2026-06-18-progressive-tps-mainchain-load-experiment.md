@@ -67,6 +67,25 @@ The current data already proves that the platform is not capped at the single-ch
 
 This plan therefore does not claim that a single unmodified child chain naturally reaches the paper simulation level. It demonstrates a staged engineering path: first reduce avoidable deployment and workload bottlenecks, then introduce progressively optimized child runtimes.
 
+## Prior Blockers and Resolution Strategy
+
+The previous attempt became blocked because the experimental story and implementation path were not tightly aligned. The main issue was not a single syntax defect; it was a mismatch between the desired midterm-defense result and a set of partial progressive TPS changes that did not reliably deliver the required one-figure, six-child-chain narrative.
+
+The blockers to keep in view during implementation are:
+
+- The progressive implementation must not drift into two separate figures or unrelated benchmark outputs. The final result is one combined figure with child-chain throughput bars and mainchain pressure line.
+- Current measured TPS is much lower than the paper simulation result. Treat the current `88 TPS` single-child value as a configuration and workload baseline, not as a theoretical ceiling.
+- Mainchain pressure must be measured from bridge-specific accepted records during the same pressure window as the child-chain workload. A claim that mainchain pressure is low needs monitor data and a percentage calculation.
+- Runtime optimization should start only after the N=1..3 tuned baseline is established, because the defense story depends on separating deployment/RPC/block/workload tuning from child-runtime optimization.
+
+The implementation strategy is:
+
+1. Audit current launch scripts, pressure workers, mainchain monitors, and crowdsource runtime/pallet code before adding new abstractions.
+2. First complete N=1..3 without changing the crowdsource business runtime semantics; tune deployment, block production, RPC, signer pools, worker concurrency, payload generation, and pressure windows.
+3. Then implement N=4..6 as explicitly progressive runtime profiles: partial hot-path optimization, stronger indexed/aggregated storage, and final batch/full optimization.
+4. Collect mainchain bridge pressure for every stage and summarize it in the same CSV as child-chain throughput.
+5. Commit each coherent implementation milestone with a professional message so that rollback and review remain precise.
+
 ## Files to Create or Modify
 
 - `scripts/run_exp_progressive_tps.sh`: orchestration for N=1..6 progressive runs, process startup, pressure workers, metrics capture, and output layout.
