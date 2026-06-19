@@ -215,20 +215,28 @@ Each `n*/` directory should contain:
 - Current branch: `exp/progressive-tps-main-load`.
 - First tooling milestone is committed: `744109e feat: add progressive tps experiment tooling`.
 - Bridge pressure calculation is corrected in: `d323f7e fix: avoid double counting mainchain bridge pressure`.
+- Progressive crowdsource experiment profile is committed: `24a4e57 feat: add progressive crowdsource profile`.
+- Staged run selection is committed: `879d050 fix: support staged progressive tps runs`.
+- Spec/deploy profile wiring is committed: `ec7a4cf feat: apply experiment profiles to deploy and specs`.
+- Staged pressure defaults are committed: `3e12f6a feat: add staged progressive pressure defaults`.
+- N=4 partial runtime optimization is committed: `a64a524 feat: add compact crowdsource submission events`.
 - Local validation run:
   - `python3 -m unittest tests.test_progressive_tps_tools tests.test_origin_style_preview`
   - `bash -n scripts/run_exp_progressive_tps.sh`
   - `python3 -m py_compile scripts/summarize_progressive_tps.py scripts/plot_progressive_tps.py`
+  - `python3 -m unittest tests.test_progressive_deploy_profile tests.test_progressive_tps_profile tests.test_progressive_tps_tools tests.test_origin_style_preview`
+  - `cargo test -p pallet-crowdsource`
+  - `cargo check -p fishbone-runtime --no-default-features --features std,scene-crowdsource,crowdsource-compact-events`
 - Important deployment finding: `deploy/config.toml`, `scripts/profiles/chains.json`, and `scripts/gen_child_specs.py` currently model `child6` as `DataTrade`, while this progressive experiment needs six crowdsource child-chain endpoints. The repo already contains `deploy/bin/fishbone-node-crowdsource-v1`, `deploy/bin/fishbone-node-crowdsource-v2`, and `deploy/bin/fishbone-node-crowdsource-v3`, so the next implementation step is to add an explicit progressive experiment profile that maps N=4..6 to crowdsource optimized runtimes without mutating unrelated data-trade workflows.
 
 ## Implementation Checklist
 
 - [x] Confirm the current branch is clean before implementation begins; create a feature branch for this experiment.
 - [x] Inspect existing chain launch scripts, pressure workers, and monitor scripts; identify the smallest extension points.
-- [ ] Add deployment config for six child chains with unique ports, base paths, chain specs, and RPC endpoints.
-- [ ] Add baseline pressure profiles for N=1..3, including signer pool size, concurrency, payload count, and target run duration.
-- [ ] Add runtime feature flags or profile selection for child4, child5, and child6 optimized crowdsource paths.
-- [ ] Implement N=4 partial optimization and unit tests for unchanged acceptance semantics.
+- [x] Add deployment config for six child chains with unique ports, base paths, chain specs, and RPC endpoints.
+- [x] Add baseline pressure profiles for N=1..3, including signer pool size, concurrency, payload count, and target run duration.
+- [x] Add runtime feature flags or profile selection for child4, child5, and child6 optimized crowdsource paths.
+- [x] Implement N=4 partial optimization and unit tests for unchanged acceptance semantics.
 - [ ] Implement N=5 indexed/aggregated storage optimization and unit tests for counters, duplicate handling, and task state.
 - [ ] Implement N=6 batch/full optimization and tests proving that accepted submission counts match the number of valid business submissions in each batch.
 - [x] Implement `scripts/run_exp_progressive_tps.sh` with deterministic output directories and per-stage logs.
