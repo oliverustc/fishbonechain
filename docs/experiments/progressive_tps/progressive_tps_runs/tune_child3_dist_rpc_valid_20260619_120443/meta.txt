@@ -1,0 +1,7 @@
+run_root=docs/experiments/progressive_tps/progressive_tps_runs/tune_child3_dist_rpc_valid_20260619_120443
+workers_per_rpc=100
+worker_offsets=0,100,200
+parallel_per_worker=4
+data_size=8
+cap=10000
+monitor_exit=0

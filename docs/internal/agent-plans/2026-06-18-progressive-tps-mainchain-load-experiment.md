@@ -228,6 +228,9 @@ Each `n*/` directory should contain:
   - `cargo test -p pallet-crowdsource`
   - `cargo check -p fishbone-runtime --no-default-features --features std,scene-crowdsource,crowdsource-compact-events`
 - Important deployment finding: `deploy/config.toml`, `scripts/profiles/chains.json`, and `scripts/gen_child_specs.py` currently model `child6` as `DataTrade`, while this progressive experiment needs six crowdsource child-chain endpoints. The repo already contains `deploy/bin/fishbone-node-crowdsource-v1`, `deploy/bin/fishbone-node-crowdsource-v2`, and `deploy/bin/fishbone-node-crowdsource-v3`, so the next implementation step is to add an explicit progressive experiment profile that maps N=4..6 to crowdsource optimized runtimes without mutating unrelated data-trade workflows.
+- N=1 tuned result is now effectively at target: `progressive_n1_3_data8_20260619_114714` measured child1 at `149.65` accepted submissions/s with `DATA_SIZE=8`, `WORKERS=200`, and `PARALLEL_PER_WORKER=4`.
+- N=3 tuned baseline is still below target: the same run measured `365.20` aggregate TPS because child3 took `155.795s` to reach 10000 accepted submissions.
+- Child3 diagnosis is recorded in `docs/experiments/progressive_tps/child3_tuning.md`. Pressure-only tuning did not make child3 reach 150 TPS on `f7/f8/f9`; distributed RPC reached `65.75` TPS, low pool pressure reached `81.91` TPS, and bounded `watch` mode reached `83.85` TPS. The next decision must be deployment remapping/isolation for the first three chains, or moving the performance jump into N=4..6 runtime optimization.
 
 ## Implementation Checklist
 

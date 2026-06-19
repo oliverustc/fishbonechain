@@ -1,0 +1,6 @@
+run_root=docs/experiments/progressive_tps/progressive_tps_runs/tune_child3_single_p1_20260619_120827
+workers=200
+parallel_per_worker=1
+data_size=8
+cap=10000
+monitor_exit=0
