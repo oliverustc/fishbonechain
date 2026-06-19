@@ -135,29 +135,38 @@ async function main() {
   }
 
   async function sample() {
-    const headHash = await api.rpc.chain.getFinalizedHead();
-    const headHeader = await api.rpc.chain.getHeader(headHash);
+    const headHeader = await api.rpc.chain.getHeader();
     const headNumber = headHeader.number.toNumber();
 
     const start = lastBlock < 0 ? headNumber : lastBlock + 1;
     for (let blockNumber = start; blockNumber <= headNumber; blockNumber++) {
-      await recordBlock(blockNumber);
+      try {
+        await recordBlock(blockNumber);
+      } catch (e) {
+        console.warn(`[metrics_main] 跳过区块 ${blockNumber}: ${e.message}`);
+      }
     }
     lastBlock = headNumber;
   }
 
-  await sample();
+  const initialHeader = await api.rpc.chain.getHeader();
+  lastBlock = initialHeader.number.toNumber();
+  console.log(`[metrics_main] 从当前 best block #${lastBlock} 之后开始采样`);
+
   const timer = setInterval(() => {
     sample().catch(e => console.warn(`[metrics_main] 采样失败: ${e.message}`));
   }, cfg.interval * 1000);
 
-  process.on("SIGINT", async () => {
+  const shutdown = async () => {
     clearInterval(timer);
     writer.close();
     await api.disconnect();
     console.log("\n[metrics_main] 已停止");
     process.exit(0);
-  });
+  };
+
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 
   await new Promise(() => {});
 }

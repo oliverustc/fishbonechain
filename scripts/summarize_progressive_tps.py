@@ -79,6 +79,34 @@ def load_capacity_summary(raw_dir: Path, n: int) -> tuple[dict[str, dict[str, fl
     return {}, "missing"
 
 
+def merge_precise_csv_partials(raw_dir: Path, n: int, chain_stats: dict[str, dict[str, float]]) -> None:
+    candidates = [
+        raw_dir / f"progressive_tps_n{n}_child_precise.csv",
+        raw_dir / f"exp_capacity_n{n}_precise.csv",
+    ]
+    path = next((item for item in candidates if item.exists()), None)
+    if path is None:
+        return
+
+    last_by_chain: dict[str, dict[str, str]] = {}
+    with path.open(newline="") as f:
+        for row in csv.DictReader(f):
+            last_by_chain[chain_name(row["chain_url"])] = row
+
+    for chain, row in last_by_chain.items():
+        current = chain_stats.get(chain)
+        if current and current.get("accepted_delta", 0.0) > 0:
+            continue
+        delta = as_float(row.get("delta_from_initial"))
+        elapsed_s = max(as_float(row.get("elapsed_s")), 0.001)
+        chain_stats[chain] = {
+            "accepted_delta": delta,
+            "elapsed_s": elapsed_s,
+            "accepted_tps": delta / elapsed_s,
+            "hit_cap": as_float(row.get("hit_cap")),
+        }
+
+
 def parse_precise_summary(data: dict) -> dict[str, dict[str, float]]:
     out: dict[str, dict[str, float]] = {}
     for url, item in data.get("hit_summary", {}).items():
@@ -181,6 +209,7 @@ def summarize_main_blocks(raw_dir: Path, n: int) -> dict[str, float]:
 def summarize_stage(raw_dir: Path, log_dir: Path, n: int, order: list[str]) -> dict[str, str]:
     active = active_chains_for(n, order)
     chain_stats, source = load_capacity_summary(raw_dir, n)
+    merge_precise_csv_partials(raw_dir, n, chain_stats)
     worker = summarize_worker_logs(log_dir, n)
     main = summarize_main_blocks(raw_dir, n)
 

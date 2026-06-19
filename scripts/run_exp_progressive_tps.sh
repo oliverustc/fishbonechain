@@ -32,6 +32,13 @@ MAIN_INTERVAL="${MAIN_INTERVAL:-3}"
 CAPACITY_CAP="${CAPACITY_CAP:-10000}"
 CAPACITY_MONITOR_INTERVAL_MS="${CAPACITY_MONITOR_INTERVAL_MS:-200}"
 CAPACITY_MONITOR_TIMEOUT="${CAPACITY_MONITOR_TIMEOUT:-300}"
+RESET_EACH_STAGE="${RESET_EACH_STAGE:-0}"
+SETUP_EACH_STAGE="${SETUP_EACH_STAGE:-$RESET_EACH_STAGE}"
+SETUP_MAX_WORKERS="${SETUP_MAX_WORKERS:-0}"
+WAIT_COLLECTING="${WAIT_COLLECTING:-$RESET_EACH_STAGE}"
+WAIT_MAX_SUBS="${WAIT_MAX_SUBS:-50}"
+WAIT_MIN_REMAINING_BLOCKS="${WAIT_MIN_REMAINING_BLOCKS:-300}"
+WAIT_TIMEOUT="${WAIT_TIMEOUT:-900}"
 
 N_START="${N_START:-1}"
 N_END="${N_END:-6}"
@@ -138,8 +145,13 @@ log() {
 }
 
 active_for_n() {
-  local n="$1"
-  printf '%s\n' "${ORDER[@]:0:n}"
+	local n="$1"
+	printf '%s\n' "${ORDER[@]:0:n}"
+}
+
+join_by_comma() {
+	local IFS=","
+	echo "$*"
 }
 
 stage_key_for_n() {
@@ -175,6 +187,13 @@ write_meta() {
     echo "capacity_cap=${CAPACITY_CAP}"
     echo "capacity_monitor_interval_ms=${CAPACITY_MONITOR_INTERVAL_MS}"
     echo "capacity_monitor_timeout=${CAPACITY_MONITOR_TIMEOUT}"
+    echo "reset_each_stage=${RESET_EACH_STAGE}"
+    echo "setup_each_stage=${SETUP_EACH_STAGE}"
+    echo "setup_max_workers=${SETUP_MAX_WORKERS}"
+    echo "wait_collecting=${WAIT_COLLECTING}"
+    echo "wait_max_subs=${WAIT_MAX_SUBS}"
+    echo "wait_min_remaining_blocks=${WAIT_MIN_REMAINING_BLOCKS}"
+    echo "wait_timeout=${WAIT_TIMEOUT}"
     echo "n_start=${N_START}"
     echo "n_end=${N_END}"
     echo "order=${ORDER[*]}"
@@ -204,6 +223,34 @@ run_one_n() {
   urls="${urls%,}"
 
   log "N=${n} stage=${stage_key} active=${active[*]} workers=${stage_workers} parallel=${stage_parallel} duration=${stage_duration}s"
+
+  if [[ "$RESET_EACH_STAGE" == "1" ]]; then
+    log "N=${n} reset active chains"
+    "${SCRIPT_DIR}/reset_child_chains.sh" "${active[@]}" > "${LOG_DIR}/n${n}_reset.log" 2>&1
+  fi
+
+  if [[ "$SETUP_EACH_STAGE" == "1" ]]; then
+    local active_csv
+    active_csv="$(join_by_comma "${active[@]}")"
+    log "N=${n} setup active chains: ${active_csv}"
+    node "${SCRIPT_DIR}/setup_selected_child_chains.js" \
+      --chains "$active_csv" \
+      --profile-file "$PROFILE_FILE" \
+      --max-workers "$SETUP_MAX_WORKERS" \
+      > "${LOG_DIR}/n${n}_setup.log" 2>&1
+  fi
+
+  if [[ "$WAIT_COLLECTING" == "1" ]]; then
+    log "N=${n} wait Collecting with clean submissions"
+    node "${SCRIPT_DIR}/wait_collecting.js" \
+      --chains "$urls" \
+      --max-subs "$WAIT_MAX_SUBS" \
+      --min-remaining-collecting-blocks "$WAIT_MIN_REMAINING_BLOCKS" \
+      --interval 5 \
+      --timeout "$WAIT_TIMEOUT" \
+      > "${LOG_DIR}/n${n}_wait_collecting.log" 2>&1
+  fi
+
   rm -f "${prefix}_child_precise.csv" "${prefix}_child_precise_summary.json" "${prefix}_main_blocks.csv"
   rm -f "${prefix}_monitor.ready" "${prefix}_monitor.start"
   PIDS=()
@@ -298,6 +345,8 @@ done
 python3 "${SCRIPT_DIR}/summarize_progressive_tps.py" \
   --runs "$RUN_DIR" \
   --log-dir "$LOG_DIR" \
+  --n-start "$N_START" \
+  --n-end "$N_END" \
   --out "${BASE_DIR}/progressive_tps_summary.csv"
 
 python3 "${SCRIPT_DIR}/plot_progressive_tps.py" \
