@@ -138,7 +138,39 @@ declare -A DEFAULT_DURATION=(
   [6]=240
 )
 
+load_profile_defaults() {
+  local profile="$1"
+  if [[ ! -f "$profile" ]]; then
+    echo "profile file not found: $profile" >&2
+    exit 2
+  fi
+
+  while IFS=$'\t' read -r child ws task_id; do
+    [[ -n "${child:-}" ]] || continue
+    local ws_env="${child^^}_WS"
+    local task_env="${child^^}_TASK_ID"
+    if [[ -n "${ws:-}" && -z "${!ws_env:-}" ]]; then
+      WS[$child]="$ws"
+    fi
+    if [[ -n "${task_id:-}" && -z "${!task_env:-}" ]]; then
+      TASK_ID[$child]="$task_id"
+    fi
+  done < <(node - "$profile" <<'NODE'
+const fs = require("fs");
+const path = process.argv[2];
+const raw = JSON.parse(fs.readFileSync(path, "utf8"));
+const profiles = raw.chains || raw;
+for (const [child, profile] of Object.entries(profiles)) {
+  const ws = profile.defaultWs || "";
+  const taskId = Number.isInteger(profile.taskId) ? String(profile.taskId) : "";
+  process.stdout.write(`${child}\t${ws}\t${taskId}\n`);
+}
+NODE
+  )
+}
+
 mkdir -p "$RUN_DIR" "$LOG_DIR"
+load_profile_defaults "$PROFILE_FILE"
 
 log() {
   printf '[progressive-tps %s] %s\n' "$(date --iso-8601=seconds)" "$*"
@@ -226,7 +258,7 @@ run_one_n() {
 
   if [[ "$RESET_EACH_STAGE" == "1" ]]; then
     log "N=${n} reset active chains"
-    "${SCRIPT_DIR}/reset_child_chains.sh" "${active[@]}" > "${LOG_DIR}/n${n}_reset.log" 2>&1
+    "${SCRIPT_DIR}/reset_child_chains.sh" --profile-file "$PROFILE_FILE" "${active[@]}" > "${LOG_DIR}/n${n}_reset.log" 2>&1
   fi
 
   if [[ "$SETUP_EACH_STAGE" == "1" ]]; then

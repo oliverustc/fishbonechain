@@ -96,6 +96,29 @@ function loadProfiles(profileFile) {
   return profiles.chains ?? profiles;
 }
 
+function cfgForProfile(chain, baseCfg, profile) {
+  if (!profile) {
+    return baseCfg;
+  }
+  const cfg = { ...baseCfg };
+  if (profile.defaultWs) {
+    cfg.ws = process.env[`${chain.toUpperCase()}_WS`] || profile.defaultWs;
+  }
+  if (Number.isInteger(profile.taskId)) {
+    cfg.taskId = profile.taskId;
+  }
+  if (Number.isInteger(profile.setupWorkers)) {
+    cfg.workers = profile.setupWorkers;
+  }
+  if (profile.description) {
+    cfg.description = profile.description;
+  }
+  if (profile.budgetPerEpochUnit) {
+    cfg.budgetPerEpoch = BigInt(profile.budgetPerEpochUnit) * UNIT;
+  }
+  return cfg;
+}
+
 function log(message) {
   console.log(`[setup_selected ${new Date().toISOString()}] ${message}`);
 }
@@ -184,7 +207,8 @@ async function main() {
   const keyring = new Keyring({ type: "sr25519" });
   const alice = keyring.addFromUri("//Alice");
   for (const chain of options.chains) {
-    await setupChain(chain, CHAINS[chain], chainProfiles[chain], keyring, alice, options);
+    const profile = chainProfiles[chain];
+    await setupChain(chain, cfgForProfile(chain, CHAINS[chain], profile), profile, keyring, alice, options);
   }
   log("done");
 }

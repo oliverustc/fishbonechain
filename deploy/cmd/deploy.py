@@ -76,6 +76,27 @@ async def generate_node_keys(remote: RemoteNode, cfg, node_id: str):
     console.print(f"  [{node_id}] ✓ node keys")
 
 
+async def populate_peer_ids(remotes: dict[str, RemoteNode], cfg, nodes: list[object]):
+    """Inspect remote node-key files and populate in-memory peer ids before service rendering."""
+    async def _inspect(node):
+        remote = remotes.get(node.id)
+        if not remote:
+            return
+        for chain in node.roles:
+            bin_path = cfg.chain_binary(chain)
+            key_path = f"{cfg.base_dir}/{chain}/node-key"
+            result = await remote.run(
+                f"{bin_path} key inspect-node-key --file {key_path} 2>/dev/null",
+                check=False,
+            )
+            peer_id = result.stdout.strip()
+            if result.returncode == 0 and peer_id:
+                node.peer_ids[chain] = peer_id
+
+    await asyncio.gather(*[_inspect(n) for n in nodes])
+    console.print("  ✓ peer ids inspected")
+
+
 async def inject_validator_keys(remote: RemoteNode, cfg, node: object):
     env_file = KEYS_DIR / f"{node.id}.env"
     if not env_file.exists():
@@ -131,15 +152,19 @@ async def start_services(remote: RemoteNode, cfg, node: object, chains: list[str
     for chain in chains:
         if chain in node.roles:
             svc = service_name(chain)
-            await remote.sudo(f"systemctl enable --now {svc}", check=False)
+            await remote.sudo(f"systemctl enable {svc}", check=False)
+            await remote.sudo(f"systemctl restart {svc}", check=False)
     console.print(f"  [{node.id}] ✓ services started")
 
 
-async def deploy_node(remote: RemoteNode, cfg, node):
+async def prepare_node(remote: RemoteNode, cfg, node):
     await setup_dirs(remote, cfg, node.id)
     await push_binaries(remote, cfg, node.id)
     await push_specs(remote, cfg, node.id)
     await generate_node_keys(remote, cfg, node.id)
+
+
+async def deploy_node(remote: RemoteNode, cfg, node):
     await inject_validator_keys(remote, cfg, node)
     await install_services(remote, cfg, node)
 
@@ -173,6 +198,13 @@ def deploy(
 
     async def _run():
         async with connect_all(nodes, cfg.sudo_pass) as remotes:
+            tasks = [
+                prepare_node(remotes[n.id], cfg, n)
+                for n in nodes
+                if n.id in remotes
+            ]
+            await asyncio.gather(*tasks)
+            await populate_peer_ids(remotes, cfg, nodes)
             tasks = [
                 deploy_node(remotes[n.id], cfg, n)
                 for n in nodes

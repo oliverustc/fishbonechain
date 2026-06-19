@@ -1,8 +1,36 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+PROFILE_FILE="${PROFILE_FILE:-}"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --profile-file)
+      if [[ $# -lt 2 ]]; then
+        echo "--profile-file requires a path" >&2
+        exit 2
+      fi
+      PROFILE_FILE="$2"
+      shift 2
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      echo "unknown argument: $1" >&2
+      exit 2
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
 if [[ $# -lt 1 ]]; then
-  echo "usage: $0 child4 [child1 ...]" >&2
+  echo "usage: $0 [--profile-file path] child4 [child1 ...]" >&2
   exit 2
 fi
 
@@ -14,6 +42,28 @@ declare -A HOSTS=(
   [child5]="f10 f11 f12"
   [child6]="f1 f2 f3 f4 f5"
 )
+
+if [[ -n "$PROFILE_FILE" ]]; then
+  if [[ ! -f "$PROFILE_FILE" ]]; then
+    echo "profile file not found: $PROFILE_FILE" >&2
+    exit 2
+  fi
+  while IFS=$'\t' read -r chain hosts; do
+    [[ -n "${chain:-}" && -n "${hosts:-}" ]] || continue
+    HOSTS[$chain]="$hosts"
+  done < <(node - "$PROFILE_FILE" <<'NODE'
+const fs = require("fs");
+const path = process.argv[2];
+const raw = JSON.parse(fs.readFileSync(path, "utf8"));
+const profiles = raw.chains || raw;
+for (const [chain, profile] of Object.entries(profiles)) {
+  if (Array.isArray(profile.validators) && profile.validators.length > 0) {
+    process.stdout.write(`${chain}\t${profile.validators.join(" ")}\n`);
+  }
+}
+NODE
+  )
+fi
 
 for chain in "$@"; do
   if [[ -z "${HOSTS[$chain]:-}" ]]; then

@@ -225,6 +225,8 @@ def apply_profile_overrides(chains: list[dict], profile_file: Path | None) -> li
             runtime_binary = profile.get("runtimeBinary")
             if runtime_binary:
                 cfg["binary"] = BIN_DIR / runtime_binary
+            if profile.get("validators"):
+                cfg["validators"] = profile["validators"]
             cfg["profile"] = {
                 "chainId": profile["chainId"],
                 "scene": profile["scene"],
