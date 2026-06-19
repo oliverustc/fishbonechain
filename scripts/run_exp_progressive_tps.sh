@@ -22,6 +22,7 @@ PROFILE_FILE="${PROFILE_FILE:-${REPO_DIR}/scripts/profiles/progressive_tps.json}
 DEPLOY_CONFIG="${DEPLOY_CONFIG:-${REPO_DIR}/deploy/config.toml}"
 CONTROL_PYTHON="${CONTROL_PYTHON:-${REPO_DIR}/deploy/.venv/bin/python}"
 CONTROL_SCRIPT="${CONTROL_SCRIPT:-${REPO_DIR}/deploy/cmd/control.py}"
+DEPLOY_SCRIPT="${DEPLOY_SCRIPT:-${REPO_DIR}/deploy/cmd/deploy.py}"
 
 MAIN_WS="${MAIN_WS:-ws://10.2.2.11:9944}"
 WORKERS="${WORKERS:-}"
@@ -246,6 +247,17 @@ control_children() {
     > "$log_path" 2>&1
 }
 
+deploy_children() {
+  local chains_csv="$1"
+  local log_path="$2"
+
+  "$CONTROL_PYTHON" "$DEPLOY_SCRIPT" \
+    --config "$DEPLOY_CONFIG" \
+    --profile-file "$PROFILE_FILE" \
+    --chains "$chains_csv" \
+    > "$log_path" 2>&1
+}
+
 cleanup() {
   for pid in "${PIDS[@]:-}"; do
     kill "$pid" 2>/dev/null || true
@@ -320,8 +332,10 @@ run_one_n() {
   fi
 
   if [[ "$RESET_EACH_STAGE" == "1" ]]; then
-    log "N=${n} reset active chains"
-    "${SCRIPT_DIR}/reset_child_chains.sh" --profile-file "$PROFILE_FILE" "${active[@]}" > "${LOG_DIR}/n${n}_reset.log" 2>&1
+    log "N=${n} stop-clean active chains: ${active_csv}"
+    control_children stop-clean "$active_csv" "${LOG_DIR}/n${n}_stop_clean.log"
+    log "N=${n} deploy active chains: ${active_csv}"
+    deploy_children "$active_csv" "${LOG_DIR}/n${n}_deploy.log"
   fi
 
   if [[ "$SETUP_EACH_STAGE" == "1" ]]; then

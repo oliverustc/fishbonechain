@@ -33,6 +33,15 @@ class ProgressiveTpsToolsTest(unittest.TestCase):
         self.assertIn("control_children start", script)
         self.assertIn("--chains \"$chains_csv\"", script)
 
+    def test_runner_resets_stages_with_deploy_control_stop_clean(self):
+        script = RUN_SCRIPT.read_text(encoding="utf-8")
+
+        self.assertIn("control_children stop-clean", script)
+        self.assertIn("deploy_children", script)
+        self.assertIn("n${n}_stop_clean.log", script)
+        self.assertIn("n${n}_deploy.log", script)
+        self.assertNotIn("reset_child_chains.sh", script)
+
     def test_runner_and_worker_support_batch_business_submissions(self):
         runner = RUN_SCRIPT.read_text(encoding="utf-8")
         worker = WORKER_BURST.read_text(encoding="utf-8")
