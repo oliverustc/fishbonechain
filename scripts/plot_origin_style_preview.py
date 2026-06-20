@@ -218,8 +218,8 @@ def plot_isolation_comparison(data_dir: Path, out_dir: Path, formats: tuple[str,
     ax.set_xticklabels(labels, fontproperties=cjk_font(20))
     ax.set_ylim(0, 132)
     origin_axes(ax)
-    origin_legend(ax, loc="upper center", ncol=2, fontsize=15, bbox_to_anchor=(0.5, 1.11))
-    fig.tight_layout()
+    origin_legend(ax, loc="upper center", ncol=2, fontsize=15, bbox_to_anchor=(0.5, 1.16))
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
     return save_figure(fig, out_dir, "origin_style_isolation_comparison", formats)
 
 

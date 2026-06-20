@@ -187,8 +187,8 @@ def build_isolation_figure(
     ax.set_ylim(0, 132)
 
     origin_axes(ax)
-    origin_legend(ax, loc="upper center", ncol=2, fontsize=15, bbox_to_anchor=(0.5, 1.11))
-    fig.tight_layout()
+    origin_legend(ax, loc="upper center", ncol=2, fontsize=15, bbox_to_anchor=(0.5, 1.16))
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
     return save_figure(fig, out_dir, "fig_isolation_comparison_v2", formats)
 
 
