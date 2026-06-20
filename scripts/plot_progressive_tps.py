@@ -116,7 +116,10 @@ def build_progressive_tps_figure(
     rows = sorted(read_rows(summary), key=lambda row: int(row["n"]))
     ns = np.array([int(row["n"]) for row in rows], dtype=float)
     child_tps = np.array([as_float(row, "aggregate_child_tps") for row in rows])
-    main_pressure = np.array([as_float(row, "main_bridge_pressure_pct") for row in rows])
+    main_pressure = np.array([
+        as_float(row, "mainchain_capacity_occupancy_pct", as_float(row, "main_bridge_pressure_pct"))
+        for row in rows
+    ])
     main_bridge_events = np.array([as_float(row, "main_bridge_events") for row in rows])
 
     labels = [f"N={int(n)}" for n in ns]
@@ -132,7 +135,7 @@ def build_progressive_tps_figure(
         markersize=9,
         markerfacecolor="white",
         markeredgewidth=1.8,
-        label="主链桥接压力",
+        label="主链容量占用率",
     )
 
     for bar, value in zip(bars, child_tps):
@@ -162,7 +165,7 @@ def build_progressive_tps_figure(
 
     ax.set_xlabel("并发子链数量 / 配置阶段", fontproperties=cjk_font(26, bold=True))
     ax.set_ylabel("子链聚合接受吞吐量（提交/s）", fontproperties=cjk_font(26, bold=True))
-    ax2.set_ylabel("主链桥接压力（%）", fontproperties=cjk_font(26, bold=True))
+    ax2.set_ylabel("主链容量占用率（%）", fontproperties=cjk_font(26, bold=True))
     ax.set_xlim(ns.min() - 0.65, ns.max() + 0.65)
     ax.set_ylim(0, max(child_tps.max() * 1.2, 1))
     ax2.set_ylim(0, pressure_axis_upper(main_pressure))

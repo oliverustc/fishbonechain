@@ -151,6 +151,19 @@ class ProgressiveTpsToolsTest(unittest.TestCase):
         self.assertIn("0.2000", content)
         self.assertIn("0.1000", content)
 
+    def test_summarizer_computes_mainchain_capacity_occupancy(self):
+        module = load_module(SUMMARY_SCRIPT, "summarize_progressive_tps_occupancy")
+
+        theoretical_bridge_tps, occupancy_pct = module.mainchain_capacity_occupancy(
+            n=6,
+            mainchain_max_tps=300,
+            bridge_epoch_seconds=120,
+            bridge_extrinsics_per_epoch=2,
+        )
+
+        self.assertAlmostEqual(theoretical_bridge_tps, 0.1, places=4)
+        self.assertAlmostEqual(occupancy_pct, 0.0333, places=4)
+
     def test_summarizer_uses_stage_batch_sizes_for_business_per_extrinsic(self):
         module = load_module(SUMMARY_SCRIPT, "summarize_progressive_tps_batch")
         with tempfile.TemporaryDirectory() as tmp:
@@ -244,6 +257,43 @@ class ProgressiveTpsToolsTest(unittest.TestCase):
             names = [path.name for path in outputs]
 
         self.assertEqual(names, ["progressive_tps_mainchain_load.png"])
+
+    def test_plotter_prefers_mainchain_capacity_occupancy_axis(self):
+        module = load_module(PLOT_SCRIPT, "plot_progressive_tps_occupancy")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            summary = root / "summary.csv"
+            out_dir = root / "figures"
+            summary.write_text(
+                "\n".join(
+                    [
+                        "n,stage_key,stage_label,profile_label,active_chains,measurement_source,accepted_submissions,child_window_seconds,aggregate_child_tps,conservative_child_tps,worker_sent,worker_ok,worker_reject,worker_fail,worker_elapsed_seconds,main_window_seconds,main_bridge_events,main_bridge_tps,main_total_extrinsics,main_total_tps,main_bridge_pressure_pct,main_bridge_share_pct,submissions_per_extrinsic,mainchain_capacity_occupancy_pct",
+                        "1,baseline-tuned,部署/出块/RPC 调优,基线调优-1链,child1,precise,1000,5,200,200,1000,1000,0,0,5,10,2,0.2,20,2,9.9,10,1,0.01",
+                        "2,baseline-tuned,部署/出块/RPC 调优,基线调优-2链,child1+child2,precise,2400,6,400,400,2400,2400,0,0,6,10,2,0.2,20,2,9.9,10,1,0.02",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            captured = {}
+            original_save = module.save_figure
+
+            def capture_figure(fig, out_dir, stem, formats):
+                fig.canvas.draw()
+                captured["fig"] = fig
+                return original_save(fig, out_dir, stem, formats)
+
+            module.save_figure = capture_figure
+            try:
+                module.build_progressive_tps_figure(summary, out_dir, formats=("png",))
+            finally:
+                module.save_figure = original_save
+
+        ax, ax2 = captured["fig"].axes
+        self.assertIn("主链容量占用率", ax.get_legend().get_texts()[1].get_text())
+        self.assertEqual(ax2.get_ylabel(), "主链容量占用率（%）")
+        self.assertLessEqual(ax2.get_ylim()[1], 0.1)
 
     def test_plotter_keeps_secondary_axis_clean_when_bridge_pressure_is_zero(self):
         module = load_module(PLOT_SCRIPT, "plot_progressive_tps_zero_pressure")

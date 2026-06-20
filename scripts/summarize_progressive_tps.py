@@ -274,7 +274,29 @@ def estimate_business_submissions_per_extrinsic(
     return accepted / estimated_extrinsics if estimated_extrinsics > 0 else 1.0
 
 
-def summarize_stage(raw_dir: Path, log_dir: Path, n: int, order: list[str]) -> dict[str, str]:
+def mainchain_capacity_occupancy(
+    n: int,
+    mainchain_max_tps: float,
+    bridge_epoch_seconds: float,
+    bridge_extrinsics_per_epoch: float,
+) -> tuple[float, float]:
+    if bridge_epoch_seconds <= 0:
+        return 0.0, 0.0
+    theoretical_bridge_tps = n * bridge_extrinsics_per_epoch / bridge_epoch_seconds
+    occupancy_pct = (theoretical_bridge_tps / mainchain_max_tps * 100) if mainchain_max_tps > 0 else 0.0
+    return theoretical_bridge_tps, occupancy_pct
+
+
+def summarize_stage(
+    raw_dir: Path,
+    log_dir: Path,
+    n: int,
+    order: list[str],
+    *,
+    mainchain_max_tps: float = 0.0,
+    bridge_epoch_seconds: float = 120.0,
+    bridge_extrinsics_per_epoch: float = 2.0,
+) -> dict[str, str]:
     active = active_chains_for(n, order)
     chain_stats, source = load_capacity_summary(raw_dir, n)
     merge_precise_csv_partials(raw_dir, n, chain_stats)
@@ -297,6 +319,12 @@ def summarize_stage(raw_dir: Path, log_dir: Path, n: int, order: list[str]) -> d
 
     main_bridge_tps = main["main_bridge_tps"]
     pressure_pct = (main_bridge_tps / sum_chain_tps * 100) if sum_chain_tps > 0 else 0.0
+    theoretical_bridge_tps, occupancy_pct = mainchain_capacity_occupancy(
+        n,
+        mainchain_max_tps,
+        bridge_epoch_seconds,
+        bridge_extrinsics_per_epoch,
+    )
     stage_key, stage_label, profile_label = STAGE_ROWS[n]
     submissions_per_extrinsic = estimate_business_submissions_per_extrinsic(chain_stats, active, batch_sizes)
 
@@ -326,6 +354,11 @@ def summarize_stage(raw_dir: Path, log_dir: Path, n: int, order: list[str]) -> d
         "main_bridge_share_pct": f"{main['main_bridge_share_pct']:.4f}",
         "bridge_measurement_status": bridge_measurement_status(stage_values, main),
         "submissions_per_extrinsic": f"{submissions_per_extrinsic:.4f}",
+        "mainchain_max_tps": f"{mainchain_max_tps:.4f}",
+        "bridge_epoch_seconds": f"{bridge_epoch_seconds:.3f}",
+        "bridge_extrinsics_per_epoch": f"{bridge_extrinsics_per_epoch:.3f}",
+        "theoretical_bridge_tps": f"{theoretical_bridge_tps:.4f}",
+        "mainchain_capacity_occupancy_pct": f"{occupancy_pct:.4f}",
     }
 
 
@@ -356,6 +389,11 @@ def write_summary(rows: list[dict[str, str]], out: Path) -> None:
         "main_bridge_share_pct",
         "bridge_measurement_status",
         "submissions_per_extrinsic",
+        "mainchain_max_tps",
+        "bridge_epoch_seconds",
+        "bridge_extrinsics_per_epoch",
+        "theoretical_bridge_tps",
+        "mainchain_capacity_occupancy_pct",
     ]
     out.parent.mkdir(parents=True, exist_ok=True)
     with out.open("w", newline="") as f:
@@ -376,6 +414,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--order", default=",".join(DEFAULT_ORDER), help="Comma-separated child-chain order")
     parser.add_argument("--n-start", type=int, default=1)
     parser.add_argument("--n-end", type=int, default=6)
+    parser.add_argument("--mainchain-max-tps", type=float, default=0.0)
+    parser.add_argument("--bridge-epoch-seconds", type=float, default=120.0)
+    parser.add_argument("--bridge-extrinsics-per-epoch", type=float, default=2.0)
     return parser.parse_args()
 
 
@@ -385,7 +426,18 @@ def main() -> None:
     log_dir = Path(args.log_dir) if args.log_dir else raw_dir
     out = Path(args.out)
     order = [item.strip() for item in args.order.split(",") if item.strip()]
-    rows = [summarize_stage(raw_dir, log_dir, n, order) for n in range(args.n_start, args.n_end + 1)]
+    rows = [
+        summarize_stage(
+            raw_dir,
+            log_dir,
+            n,
+            order,
+            mainchain_max_tps=args.mainchain_max_tps,
+            bridge_epoch_seconds=args.bridge_epoch_seconds,
+            bridge_extrinsics_per_epoch=args.bridge_extrinsics_per_epoch,
+        )
+        for n in range(args.n_start, args.n_end + 1)
+    ]
     write_summary(rows, out)
     print(f"[saved] {out} ({len(rows)} rows)")
 
