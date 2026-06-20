@@ -75,6 +75,15 @@ def origin_axes(ax, *, minor_y: bool = True) -> None:
         spine.set_color("black")
 
 
+def pressure_axis_upper(values: np.ndarray) -> float:
+    if values.size == 0:
+        return 0.05
+    max_value = float(values.max())
+    if max_value <= 0:
+        return 0.05
+    return max(max_value * 1.8, 0.05)
+
+
 def read_rows(path: Path) -> list[dict[str, str]]:
     with path.open(newline="") as f:
         return list(csv.DictReader(f))
@@ -108,6 +117,7 @@ def build_progressive_tps_figure(
     ns = np.array([int(row["n"]) for row in rows], dtype=float)
     child_tps = np.array([as_float(row, "aggregate_child_tps") for row in rows])
     main_pressure = np.array([as_float(row, "main_bridge_pressure_pct") for row in rows])
+    main_bridge_events = np.array([as_float(row, "main_bridge_events") for row in rows])
 
     labels = [f"N={int(n)}" for n in ns]
     fig, ax = plt.subplots(figsize=(9.4, 6.1))
@@ -138,17 +148,29 @@ def build_progressive_tps_figure(
     ax.axvline(3.5, color="black", linestyle="--", linewidth=1.4, alpha=0.75)
     ax.text(2.0, child_tps.max() * 1.08, "部署/出块/RPC 调优", ha="center", fontproperties=cjk_font(20))
     ax.text(5.0, child_tps.max() * 1.08, "递进式子链优化", ha="center", fontproperties=cjk_font(20))
+    if main_pressure.max() <= 0 and main_bridge_events.sum() <= 0:
+        ax.text(
+            ns.mean(),
+            child_tps.max() * 0.065,
+            "桥接事件=0",
+            ha="center",
+            va="center",
+            color=LINE_RED,
+            fontproperties=cjk_font(18),
+            bbox={"facecolor": "white", "edgecolor": LINE_RED, "boxstyle": "square,pad=0.22", "linewidth": 0.9},
+        )
 
     ax.set_xlabel("并发子链数量 / 配置阶段", fontproperties=cjk_font(26, bold=True))
     ax.set_ylabel("子链聚合接受吞吐量（提交/s）", fontproperties=cjk_font(26, bold=True))
     ax2.set_ylabel("主链桥接压力（%）", fontproperties=cjk_font(26, bold=True))
     ax.set_xlim(ns.min() - 0.65, ns.max() + 0.65)
     ax.set_ylim(0, max(child_tps.max() * 1.2, 1))
-    ax2.set_ylim(0, max(main_pressure.max() * 1.8, 1.0))
+    ax2.set_ylim(0, pressure_axis_upper(main_pressure))
     ax.set_xticks(ns)
     ax.set_xticklabels(labels)
 
     origin_axes(ax)
+    ax.tick_params(axis="y", which="both", right=False, labelright=False)
     ax2.tick_params(which="major", direction="in", top=True, right=True, length=8, width=1.8, pad=8)
     ax2.tick_params(which="minor", direction="in", top=True, right=True, length=4, width=1.5)
     ax2.yaxis.set_minor_locator(AutoMinorLocator(2))

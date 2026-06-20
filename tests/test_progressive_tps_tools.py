@@ -177,6 +177,44 @@ class ProgressiveTpsToolsTest(unittest.TestCase):
 
         self.assertEqual(names, ["progressive_tps_mainchain_load.png"])
 
+    def test_plotter_keeps_secondary_axis_clean_when_bridge_pressure_is_zero(self):
+        module = load_module(PLOT_SCRIPT, "plot_progressive_tps_zero_pressure")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            summary = root / "summary.csv"
+            out_dir = root / "figures"
+            summary.write_text(
+                "\n".join(
+                    [
+                        "n,stage_key,stage_label,profile_label,active_chains,measurement_source,accepted_submissions,child_window_seconds,aggregate_child_tps,conservative_child_tps,worker_sent,worker_ok,worker_reject,worker_fail,worker_elapsed_seconds,main_window_seconds,main_bridge_events,main_bridge_tps,main_total_extrinsics,main_total_tps,main_bridge_pressure_pct,main_bridge_share_pct,submissions_per_extrinsic",
+                        "1,baseline-tuned,部署/出块/RPC 调优,基线调优-1链,child1,precise,1000,5,150,150,1000,1000,0,0,5,10,0,0,20,2,0,0,1",
+                        "2,baseline-tuned,部署/出块/RPC 调优,基线调优-2链,child1+child2,precise,2000,6,310,310,2000,2000,0,0,6,10,0,0,20,2,0,0,1",
+                        "3,baseline-tuned,部署/出块/RPC 调优,基线调优-3链,child1+child2+child3,precise,3000,7,440,440,3000,3000,0,0,7,10,0,0,20,2,0,0,1",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            captured = {}
+            original_save = module.save_figure
+
+            def capture_figure(fig, out_dir, stem, formats):
+                fig.canvas.draw()
+                captured["fig"] = fig
+                return original_save(fig, out_dir, stem, formats)
+
+            module.save_figure = capture_figure
+            try:
+                module.build_progressive_tps_figure(summary, out_dir, formats=("png",))
+            finally:
+                module.save_figure = original_save
+
+        ax, ax2 = captured["fig"].axes
+        self.assertTrue(all(not tick.tick2line.get_visible() for tick in ax.yaxis.majorTicks))
+        self.assertLessEqual(ax2.get_ylim()[1], 0.1)
+        self.assertIn("桥接事件=0", [text.get_text() for text in ax.texts])
+
 
 if __name__ == "__main__":
     unittest.main()
