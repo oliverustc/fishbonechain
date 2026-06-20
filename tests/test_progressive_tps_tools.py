@@ -59,6 +59,9 @@ class ProgressiveTpsToolsTest(unittest.TestCase):
         script = RUN_SCRIPT.read_text(encoding="utf-8")
 
         self.assertIn("SETUP_MAINCHAIN_FOR_BRIDGE", script)
+        self.assertIn("RESET_MAINCHAIN_EACH_STAGE_FOR_BRIDGE", script)
+        self.assertIn("n${n}_main_stop_clean.log", script)
+        self.assertIn("n${n}_main_deploy.log", script)
         self.assertIn("setup_progressive_mainchain.js", script)
         self.assertIn("start_bridges_for_stage", script)
         self.assertIn("BRIDGE_MINER_SURI", script)

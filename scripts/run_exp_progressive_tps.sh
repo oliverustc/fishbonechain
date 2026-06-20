@@ -47,6 +47,7 @@ WAIT_TIMEOUT="${WAIT_TIMEOUT:-900}"
 STOP_ALL_CHILDREN_BEFORE_RUN="${STOP_ALL_CHILDREN_BEFORE_RUN:-1}"
 START_ACTIVE_CHILDREN_EACH_STAGE="${START_ACTIVE_CHILDREN_EACH_STAGE:-1}"
 SETUP_MAINCHAIN_FOR_BRIDGE="${SETUP_MAINCHAIN_FOR_BRIDGE:-1}"
+RESET_MAINCHAIN_EACH_STAGE_FOR_BRIDGE="${RESET_MAINCHAIN_EACH_STAGE_FOR_BRIDGE:-0}"
 RUN_BRIDGES_FOR_STAGE="${RUN_BRIDGES_FOR_STAGE:-1}"
 BRIDGE_EXIT_AFTER_EVENTS="${BRIDGE_EXIT_AFTER_EVENTS:-1}"
 FINALIZE_EPOCHS_FOR_BRIDGE="${FINALIZE_EPOCHS_FOR_BRIDGE:-1}"
@@ -359,6 +360,7 @@ write_meta() {
     echo "stop_all_children_before_run=${STOP_ALL_CHILDREN_BEFORE_RUN}"
     echo "start_active_children_each_stage=${START_ACTIVE_CHILDREN_EACH_STAGE}"
     echo "setup_mainchain_for_bridge=${SETUP_MAINCHAIN_FOR_BRIDGE}"
+    echo "reset_mainchain_each_stage_for_bridge=${RESET_MAINCHAIN_EACH_STAGE_FOR_BRIDGE}"
     echo "run_bridges_for_stage=${RUN_BRIDGES_FOR_STAGE}"
     echo "bridge_exit_after_events=${BRIDGE_EXIT_AFTER_EVENTS}"
     echo "finalize_epochs_for_bridge=${FINALIZE_EPOCHS_FOR_BRIDGE}"
@@ -408,6 +410,13 @@ run_one_n() {
     control_children stop-clean "$active_csv" "${LOG_DIR}/n${n}_stop_clean.log"
     log "N=${n} deploy active chains: ${active_csv}"
     deploy_children "$active_csv" "${LOG_DIR}/n${n}_deploy.log"
+  fi
+
+  if [[ "$RESET_MAINCHAIN_EACH_STAGE_FOR_BRIDGE" == "1" ]]; then
+    log "N=${n} stop-clean mainchain for bridge state"
+    control_children stop-clean "main" "${LOG_DIR}/n${n}_main_stop_clean.log"
+    log "N=${n} deploy mainchain for bridge state"
+    deploy_children "main" "${LOG_DIR}/n${n}_main_deploy.log"
   fi
 
   if [[ "$SETUP_MAINCHAIN_FOR_BRIDGE" == "1" ]]; then
