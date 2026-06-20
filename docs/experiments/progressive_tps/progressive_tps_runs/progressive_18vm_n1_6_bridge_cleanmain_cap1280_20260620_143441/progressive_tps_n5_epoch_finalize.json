@@ -1,0 +1,89 @@
+{
+  "results": [
+    {
+      "ws": "ws://10.2.2.11:9945",
+      "before": {
+        "epochId": "3",
+        "phase": "Syncing",
+        "startBlock": "195"
+      },
+      "after": {
+        "epochId": "4",
+        "phase": "Collecting",
+        "startBlock": "256"
+      },
+      "blockHash": "0x1e80c73482408a5c25f7b0df1afb72b511b077efc58169f8c70a7d808b51dc36",
+      "sawFinalized": true,
+      "alreadyFinalized": true,
+      "finalizeError": ""
+    },
+    {
+      "ws": "ws://10.2.2.14:9946",
+      "before": {
+        "epochId": "3",
+        "phase": "Syncing",
+        "startBlock": "195"
+      },
+      "after": {
+        "epochId": "4",
+        "phase": "Collecting",
+        "startBlock": "258"
+      },
+      "blockHash": "0xe5b43d2d1d4cd629d403cfc732bfc25474877d91ae8e006a7711cb7957e5961b",
+      "sawFinalized": true,
+      "alreadyFinalized": true,
+      "finalizeError": ""
+    },
+    {
+      "ws": "ws://10.2.2.17:9947",
+      "before": {
+        "epochId": "3",
+        "phase": "Syncing",
+        "startBlock": "195"
+      },
+      "after": {
+        "epochId": "4",
+        "phase": "Collecting",
+        "startBlock": "258"
+      },
+      "blockHash": "0x80b8003b3ad8fb11e17241d80669c7ab9cfbc9393319d5e2f860d8b33f55e0e1",
+      "sawFinalized": true,
+      "alreadyFinalized": true,
+      "finalizeError": ""
+    },
+    {
+      "ws": "ws://10.2.2.20:9948",
+      "before": {
+        "epochId": "3",
+        "phase": "Syncing",
+        "startBlock": "195"
+      },
+      "after": {
+        "epochId": "4",
+        "phase": "Collecting",
+        "startBlock": "259"
+      },
+      "blockHash": "0x09018446bf7b7caf354b4d3ef098cc4ae675cbc8744306f4ed6ecb6461a80060",
+      "sawFinalized": true,
+      "alreadyFinalized": true,
+      "finalizeError": ""
+    },
+    {
+      "ws": "ws://10.2.3.11:9949",
+      "before": {
+        "epochId": "3",
+        "phase": "Syncing",
+        "startBlock": "195"
+      },
+      "after": {
+        "epochId": "4",
+        "phase": "Collecting",
+        "startBlock": "258"
+      },
+      "blockHash": "0xc180e75c0605cfe829d490aed68eef70e6fc2c6e1ba2550f8f92adae352f8643",
+      "sawFinalized": true,
+      "alreadyFinalized": true,
+      "finalizeError": ""
+    }
+  ]
+}

@@ -1,0 +1,106 @@
+{
+  "results": [
+    {
+      "ws": "ws://10.2.2.11:9945",
+      "before": {
+        "epochId": "4",
+        "phase": "Syncing",
+        "startBlock": "260"
+      },
+      "after": {
+        "epochId": "5",
+        "phase": "Collecting",
+        "startBlock": "321"
+      },
+      "blockHash": "0x8bfeca0ec669ac70e83aff9ea93674a6cdd4418e423d1c7159eacd3fa44882e6",
+      "sawFinalized": true,
+      "alreadyFinalized": true,
+      "finalizeError": ""
+    },
+    {
+      "ws": "ws://10.2.2.14:9946",
+      "before": {
+        "epochId": "4",
+        "phase": "Syncing",
+        "startBlock": "260"
+      },
+      "after": {
+        "epochId": "5",
+        "phase": "Collecting",
+        "startBlock": "322"
+      },
+      "blockHash": "0x707e943dbd90e369834e7275e120d732c3385a39c964e61f79102b9327c1f55f",
+      "sawFinalized": true,
+      "alreadyFinalized": true,
+      "finalizeError": ""
+    },
+    {
+      "ws": "ws://10.2.2.17:9947",
+      "before": {
+        "epochId": "4",
+        "phase": "Syncing",
+        "startBlock": "260"
+      },
+      "after": {
+        "epochId": "5",
+        "phase": "Collecting",
+        "startBlock": "323"
+      },
+      "blockHash": "0xa813e19343b7a308481fd7ac2decec7e75249d2168097b18844c499631e92b1a",
+      "sawFinalized": true,
+      "alreadyFinalized": true,
+      "finalizeError": ""
+    },
+    {
+      "ws": "ws://10.2.2.20:9948",
+      "before": {
+        "epochId": "4",
+        "phase": "Syncing",
+        "startBlock": "260"
+      },
+      "after": {
+        "epochId": "5",
+        "phase": "Collecting",
+        "startBlock": "324"
+      },
+      "blockHash": "0xd36aad5fa5b55653d9c37355e8df4c187cefee4e44d48c4907c315d38bfdd9f0",
+      "sawFinalized": true,
+      "alreadyFinalized": true,
+      "finalizeError": ""
+    },
+    {
+      "ws": "ws://10.2.3.11:9949",
+      "before": {
+        "epochId": "4",
+        "phase": "Syncing",
+        "startBlock": "260"
+      },
+      "after": {
+        "epochId": "5",
+        "phase": "Collecting",
+        "startBlock": "321"
+      },
+      "blockHash": "0xf46b38de614ab7793e9c3ebdaa184e43fac6a3ed80581f4c919d861587a90b4c",
+      "sawFinalized": true,
+      "alreadyFinalized": true,
+      "finalizeError": ""
+    },
+    {
+      "ws": "ws://10.2.3.14:9950",
+      "before": {
+        "epochId": "4",
+        "phase": "Syncing",
+        "startBlock": "260"
+      },
+      "after": {
+        "epochId": "5",
+        "phase": "Collecting",
+        "startBlock": "324"
+      },
+      "blockHash": "0x0b17ab1920ca4a04d6b6fd0e45d2c2154a61205ff51364481e3c1743e9f044f9",
+      "sawFinalized": true,
+      "alreadyFinalized": true,
+      "finalizeError": ""
+    }
+  ]
+}

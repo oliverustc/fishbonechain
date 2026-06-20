@@ -1,0 +1,11 @@
+n=1
+stage_key=baseline-tuned
+active=child1
+workers=160
+parallel_per_worker=4
+duration=180
+batch_default=1
+batch_size_child1=1
+require_bridge_events=1
+failed=0
+finished_at=2026-06-20T14:39:55+08:00

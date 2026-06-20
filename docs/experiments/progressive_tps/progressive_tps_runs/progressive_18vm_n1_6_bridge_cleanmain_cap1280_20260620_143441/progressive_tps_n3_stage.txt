@@ -1,0 +1,13 @@
+n=3
+stage_key=baseline-tuned
+active=child1 child2 child3
+workers=220
+parallel_per_worker=5
+duration=210
+batch_default=1
+batch_size_child1=1
+batch_size_child2=1
+batch_size_child3=1
+require_bridge_events=1
+failed=0
+finished_at=2026-06-20T14:54:51+08:00

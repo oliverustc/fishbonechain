@@ -1,0 +1,21 @@
+{
+  "results": [
+    {
+      "ws": "ws://10.2.2.11:9945",
+      "before": {
+        "epochId": "1",
+        "phase": "Syncing",
+        "startBlock": "65"
+      },
+      "after": {
+        "epochId": "2",
+        "phase": "Collecting",
+        "startBlock": "127"
+      },
+      "blockHash": "0x07414bd7b21ffeeef24b24fc96c3c41273fe65e7ec744990b3be32419476688b",
+      "sawFinalized": true,
+      "alreadyFinalized": true,
+      "finalizeError": ""
+    }
+  ]
+}

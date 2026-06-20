@@ -1,0 +1,105 @@
+{
+  "start_ms": 1781940324656,
+  "finished_at_ms": 1781940341771,
+  "cap": 1280,
+  "baseline": {
+    "ws://10.2.2.11:9945": {
+      "block": 275,
+      "epoch": 4,
+      "phase": "Collecting",
+      "subs": 0
+    },
+    "ws://10.2.2.14:9946": {
+      "block": 275,
+      "epoch": 4,
+      "phase": "Collecting",
+      "subs": 0
+    },
+    "ws://10.2.2.17:9947": {
+      "block": 275,
+      "epoch": 4,
+      "phase": "Collecting",
+      "subs": 0
+    },
+    "ws://10.2.2.20:9948": {
+      "block": 275,
+      "epoch": 4,
+      "phase": "Collecting",
+      "subs": 0
+    },
+    "ws://10.2.3.11:9949": {
+      "block": 264,
+      "epoch": 4,
+      "phase": "Collecting",
+      "subs": 0
+    },
+    "ws://10.2.3.14:9950": {
+      "block": 266,
+      "epoch": 4,
+      "phase": "Collecting",
+      "subs": 0
+    }
+  },
+  "hit_summary": {
+    "ws://10.2.2.11:9945": {
+      "hit_at_ms": 1781940341688,
+      "elapsed_s": 17.032,
+      "initial_subs": 0,
+      "cap_subs": 2104,
+      "accepted_delta": 2104,
+      "cumulative_accepted": 2104,
+      "block_number": 283,
+      "epoch_id": 4
+    },
+    "ws://10.2.2.14:9946": {
+      "hit_at_ms": 1781940339610,
+      "elapsed_s": 14.954,
+      "initial_subs": 0,
+      "cap_subs": 1588,
+      "accepted_delta": 1588,
+      "cumulative_accepted": 1588,
+      "block_number": 282,
+      "epoch_id": 4
+    },
+    "ws://10.2.2.17:9947": {
+      "hit_at_ms": 1781940339330,
+      "elapsed_s": 14.674,
+      "initial_subs": 0,
+      "cap_subs": 1324,
+      "accepted_delta": 1324,
+      "cumulative_accepted": 1324,
+      "block_number": 282,
+      "epoch_id": 4
+    },
+    "ws://10.2.2.20:9948": {
+      "hit_at_ms": 1781940339610,
+      "elapsed_s": 14.954,
+      "initial_subs": 0,
+      "cap_subs": 1590,
+      "accepted_delta": 1590,
+      "cumulative_accepted": 1590,
+      "block_number": 282,
+      "epoch_id": 4
+    },
+    "ws://10.2.3.11:9949": {
+      "hit_at_ms": 1781940339610,
+      "elapsed_s": 14.954,
+      "initial_subs": 0,
+      "cap_subs": 2517,
+      "accepted_delta": 2517,
+      "cumulative_accepted": 2517,
+      "block_number": 271,
+      "epoch_id": 4
+    },
+    "ws://10.2.3.14:9950": {
+      "hit_at_ms": 1781940339610,
+      "elapsed_s": 14.954,
+      "initial_subs": 0,
+      "cap_subs": 8452,
+      "accepted_delta": 8452,
+      "cumulative_accepted": 8452,
+      "block_number": 273,
+      "epoch_id": 4
+    }
+  }
+}
