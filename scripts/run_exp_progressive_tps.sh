@@ -525,6 +525,7 @@ run_one_n() {
     for child in "${active[@]}"; do
       echo "batch_size_${child}=$(batch_size_for_child "$child" "$stage_batch_size")"
     done
+    echo "require_bridge_events=${RUN_BRIDGES_FOR_STAGE}"
     echo "failed=${failed}"
     echo "finished_at=$(date --iso-8601=seconds)"
   } > "${prefix}_stage.txt"

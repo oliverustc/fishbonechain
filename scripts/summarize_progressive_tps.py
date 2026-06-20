@@ -224,21 +224,39 @@ def summarize_main_blocks(raw_dir: Path, n: int) -> dict[str, float]:
     }
 
 
-def load_stage_batch_sizes(raw_dir: Path, n: int, active: list[str]) -> dict[str, float]:
+def load_stage_values(raw_dir: Path, n: int) -> dict[str, str]:
     path = raw_dir / f"progressive_tps_n{n}_stage.txt"
-    batch_sizes = {chain: 1.0 for chain in active}
+    values: dict[str, str] = {}
     if not path.exists():
-        return batch_sizes
+        return values
 
     with path.open(errors="replace") as f:
         for line in f:
-            key, _, value = line.strip().partition("=")
-            if not key.startswith("batch_size_") or not value:
-                continue
-            chain = key.removeprefix("batch_size_")
-            if chain in batch_sizes:
-                batch_sizes[chain] = max(as_float(value, 1.0), 1.0)
+            key, sep, value = line.strip().partition("=")
+            if sep:
+                values[key] = value
+    return values
+
+
+def load_stage_batch_sizes(raw_dir: Path, n: int, active: list[str]) -> dict[str, float]:
+    batch_sizes = {chain: 1.0 for chain in active}
+    values = load_stage_values(raw_dir, n)
+    for key, value in values.items():
+        if not key.startswith("batch_size_") or not value:
+            continue
+        chain = key.removeprefix("batch_size_")
+        if chain in batch_sizes:
+            batch_sizes[chain] = max(as_float(value, 1.0), 1.0)
     return batch_sizes
+
+
+def bridge_measurement_status(stage_values: dict[str, str], main: dict[str, float]) -> str:
+    required = stage_values.get("require_bridge_events") == "1"
+    if required and main["main_bridge_events"] <= 0:
+        return "missing_required_bridge_events"
+    if main["main_bridge_events"] > 0:
+        return "observed"
+    return "not_required_or_not_observed"
 
 
 def estimate_business_submissions_per_extrinsic(
@@ -262,6 +280,7 @@ def summarize_stage(raw_dir: Path, log_dir: Path, n: int, order: list[str]) -> d
     merge_precise_csv_partials(raw_dir, n, chain_stats)
     worker = summarize_worker_logs(log_dir, n)
     main = summarize_main_blocks(raw_dir, n)
+    stage_values = load_stage_values(raw_dir, n)
     batch_sizes = load_stage_batch_sizes(raw_dir, n, active)
 
     accepted = sum(chain_stats.get(chain, {}).get("accepted_delta", 0.0) for chain in active)
@@ -305,6 +324,7 @@ def summarize_stage(raw_dir: Path, log_dir: Path, n: int, order: list[str]) -> d
         "main_total_tps": f"{main['main_total_tps']:.4f}",
         "main_bridge_pressure_pct": f"{pressure_pct:.4f}",
         "main_bridge_share_pct": f"{main['main_bridge_share_pct']:.4f}",
+        "bridge_measurement_status": bridge_measurement_status(stage_values, main),
         "submissions_per_extrinsic": f"{submissions_per_extrinsic:.4f}",
     }
 
@@ -334,6 +354,7 @@ def write_summary(rows: list[dict[str, str]], out: Path) -> None:
         "main_total_tps",
         "main_bridge_pressure_pct",
         "main_bridge_share_pct",
+        "bridge_measurement_status",
         "submissions_per_extrinsic",
     ]
     out.parent.mkdir(parents=True, exist_ok=True)

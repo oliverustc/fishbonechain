@@ -180,6 +180,32 @@ class ProgressiveTpsToolsTest(unittest.TestCase):
 
         self.assertEqual(row["submissions_per_extrinsic"], "1.5000")
 
+    def test_summarizer_marks_missing_required_bridge_traffic(self):
+        module = load_module(SUMMARY_SCRIPT, "summarize_progressive_tps_required_bridge")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            raw_dir = root / "raw"
+            log_dir = root / "logs"
+            raw_dir.mkdir()
+            log_dir.mkdir()
+            (raw_dir / "progressive_tps_n1_child_precise_summary.json").write_text(
+                json.dumps({"hit_summary": {"ws://child": {"accepted_delta": 1000, "elapsed_s": 10, "cap_subs": 1000}}}),
+                encoding="utf-8",
+            )
+            (raw_dir / "progressive_tps_n1_main_blocks.csv").write_text(
+                "timestamp,block_number,block_hash,extrinsics_total,bridge_extrinsics,ccmc_digest_calls,fmc_bill_calls,ccmc_events,fmc_events\n"
+                "2026-06-20T00:00:00Z,1,0x1,1,0,0,0,0,0\n",
+                encoding="utf-8",
+            )
+            (raw_dir / "progressive_tps_n1_stage.txt").write_text(
+                "require_bridge_events=1\nfailed=0\n",
+                encoding="utf-8",
+            )
+
+            row = module.summarize_stage(raw_dir, log_dir, 1, module.DEFAULT_ORDER)
+
+        self.assertEqual(row["bridge_measurement_status"], "missing_required_bridge_events")
+
     def test_plotter_builds_single_combined_figure(self):
         module = load_module(PLOT_SCRIPT, "plot_progressive_tps")
         with tempfile.TemporaryDirectory() as tmp:
