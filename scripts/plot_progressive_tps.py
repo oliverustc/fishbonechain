@@ -81,7 +81,9 @@ def pressure_axis_upper(values: np.ndarray) -> float:
     max_value = float(values.max())
     if max_value <= 0:
         return 0.05
-    return max(max_value * 1.8, 0.05)
+    if max_value <= 0.15:
+        return 0.15
+    return max_value * 1.15
 
 
 def read_rows(path: Path) -> list[dict[str, str]]:
@@ -138,6 +140,18 @@ def build_progressive_tps_figure(
         label="主链容量占用率",
     )
 
+    pressure_upper = pressure_axis_upper(main_pressure)
+    for x, value in zip(ns, main_pressure):
+        ax2.text(
+            x,
+            value + pressure_upper * 0.025,
+            f"{value:.3f}",
+            ha="center",
+            va="bottom",
+            fontsize=12,
+            color=LINE_RED,
+        )
+
     for bar, value in zip(bars, child_tps):
         ax.text(
             bar.get_x() + bar.get_width() / 2,
@@ -168,7 +182,8 @@ def build_progressive_tps_figure(
     ax2.set_ylabel("主链容量占用率（%）", fontproperties=cjk_font(26, bold=True))
     ax.set_xlim(ns.min() - 0.65, ns.max() + 0.65)
     ax.set_ylim(0, max(child_tps.max() * 1.2, 1))
-    ax2.set_ylim(0, pressure_axis_upper(main_pressure))
+    ax2.set_ylim(0, pressure_upper)
+    ax2.set_yticks(np.arange(0, pressure_upper + 0.001, 0.05))
     ax.set_xticks(ns)
     ax.set_xticklabels(labels)
 

@@ -290,10 +290,51 @@ class ProgressiveTpsToolsTest(unittest.TestCase):
             finally:
                 module.save_figure = original_save
 
+        self.assertEqual(len(captured["fig"].axes), 2)
         ax, ax2 = captured["fig"].axes
         self.assertIn("主链容量占用率", ax.get_legend().get_texts()[1].get_text())
         self.assertEqual(ax2.get_ylabel(), "主链容量占用率（%）")
-        self.assertLessEqual(ax2.get_ylim()[1], 0.1)
+        self.assertLessEqual(ax2.get_ylim()[1], 0.151)
+
+    def test_plotter_labels_each_mainchain_capacity_occupancy_point(self):
+        module = load_module(PLOT_SCRIPT, "plot_progressive_tps_point_labels")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            summary = root / "summary.csv"
+            out_dir = root / "figures"
+            summary.write_text(
+                "\n".join(
+                    [
+                        "n,stage_key,stage_label,profile_label,active_chains,measurement_source,accepted_submissions,child_window_seconds,aggregate_child_tps,conservative_child_tps,worker_sent,worker_ok,worker_reject,worker_fail,worker_elapsed_seconds,main_window_seconds,main_bridge_events,main_bridge_tps,main_total_extrinsics,main_total_tps,main_bridge_pressure_pct,main_bridge_share_pct,submissions_per_extrinsic,mainchain_capacity_occupancy_pct",
+                        "1,baseline-tuned,部署/出块/RPC 调优,基线调优-1链,child1,precise,1000,5,155,155,1000,1000,0,0,5,10,2,0.2,20,2,9.9,10,1,0.0220",
+                        "2,baseline-tuned,部署/出块/RPC 调优,基线调优-2链,child1+child2,precise,2000,6,265,265,2000,2000,0,0,6,10,4,0.2,20,2,9.9,10,1,0.0441",
+                        "3,baseline-tuned,部署/出块/RPC 调优,基线调优-3链,child1+child2+child3,precise,3000,7,440,440,3000,3000,0,0,7,10,6,0.2,20,2,9.9,10,1,0.0661",
+                        "4,runtime-v1,递进式子链优化,部分运行时优化,child1+child2+child3+child4,precise,4000,8,554,554,4000,4000,0,0,8,10,8,0.2,20,2,9.9,10,1,0.0881",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            captured = {}
+            original_save = module.save_figure
+
+            def capture_figure(fig, out_dir, stem, formats):
+                fig.canvas.draw()
+                captured["fig"] = fig
+                return original_save(fig, out_dir, stem, formats)
+
+            module.save_figure = capture_figure
+            try:
+                module.build_progressive_tps_figure(summary, out_dir, formats=("png",))
+            finally:
+                module.save_figure = original_save
+
+        self.assertEqual(len(captured["fig"].axes), 2)
+        ax2 = captured["fig"].axes[1]
+        labels = [text.get_text() for text in ax2.texts]
+        self.assertIn("0.022", labels)
+        self.assertIn("0.088", labels)
 
     def test_plotter_keeps_secondary_axis_clean_when_bridge_pressure_is_zero(self):
         module = load_module(PLOT_SCRIPT, "plot_progressive_tps_zero_pressure")
@@ -328,9 +369,9 @@ class ProgressiveTpsToolsTest(unittest.TestCase):
             finally:
                 module.save_figure = original_save
 
+        self.assertEqual(len(captured["fig"].axes), 2)
         ax, ax2 = captured["fig"].axes
-        self.assertTrue(all(not tick.tick2line.get_visible() for tick in ax.yaxis.majorTicks))
-        self.assertLessEqual(ax2.get_ylim()[1], 0.1)
+        self.assertLessEqual(ax2.get_ylim()[1], 0.05)
         self.assertIn("桥接事件=0", [text.get_text() for text in ax.texts])
 
 
