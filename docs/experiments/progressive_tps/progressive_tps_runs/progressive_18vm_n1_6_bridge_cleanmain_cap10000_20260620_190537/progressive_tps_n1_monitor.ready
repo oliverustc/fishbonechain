@@ -1,0 +1,12 @@
+{
+  "ready_at_ms": 1781953721073,
+  "cap": 10000,
+  "baseline": {
+    "ws://10.2.2.11:9945": {
+      "block": 68,
+      "epoch": 1,
+      "phase": "Collecting",
+      "subs": 0
+    }
+  }
+}

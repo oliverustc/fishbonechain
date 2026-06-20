@@ -1,0 +1,89 @@
+{
+  "results": [
+    {
+      "ws": "ws://10.2.2.11:9945",
+      "before": {
+        "epochId": "3",
+        "phase": "Syncing",
+        "startBlock": "195"
+      },
+      "after": {
+        "epochId": "4",
+        "phase": "Collecting",
+        "startBlock": "259"
+      },
+      "blockHash": "0xfe3d985f8e5f39f4b4da3e9bb7a69a9680a538a1445f669517409fd72f46226a",
+      "sawFinalized": true,
+      "alreadyFinalized": true,
+      "finalizeError": ""
+    },
+    {
+      "ws": "ws://10.2.2.14:9946",
+      "before": {
+        "epochId": "3",
+        "phase": "Syncing",
+        "startBlock": "195"
+      },
+      "after": {
+        "epochId": "4",
+        "phase": "Collecting",
+        "startBlock": "260"
+      },
+      "blockHash": "",
+      "sawFinalized": false,
+      "alreadyFinalized": true,
+      "finalizeError": "crowdsource.finalizeEpoch failed: {\"module\":{\"index\":10,\"error\":\"0x01000000\"}}"
+    },
+    {
+      "ws": "ws://10.2.2.17:9947",
+      "before": {
+        "epochId": "4",
+        "phase": "Syncing",
+        "startBlock": "260"
+      },
+      "after": {
+        "epochId": "5",
+        "phase": "Collecting",
+        "startBlock": "321"
+      },
+      "blockHash": "0x2fe05c1684072d23849289a1f0e4f4fe95026dfea846dc4dad6c4405dfbbf0b3",
+      "sawFinalized": true,
+      "alreadyFinalized": true,
+      "finalizeError": ""
+    },
+    {
+      "ws": "ws://10.2.2.20:9948",
+      "before": {
+        "epochId": "4",
+        "phase": "Syncing",
+        "startBlock": "260"
+      },
+      "after": {
+        "epochId": "5",
+        "phase": "Collecting",
+        "startBlock": "322"
+      },
+      "blockHash": "0xf6ffe324aee62828c575b4b1dc6486975ecd3929d09c6deb22533ff154fbc47a",
+      "sawFinalized": true,
+      "alreadyFinalized": true,
+      "finalizeError": ""
+    },
+    {
+      "ws": "ws://10.2.3.11:9949",
+      "before": {
+        "epochId": "4",
+        "phase": "Syncing",
+        "startBlock": "260"
+      },
+      "after": {
+        "epochId": "5",
+        "phase": "Collecting",
+        "startBlock": "321"
+      },
+      "blockHash": "0x42941e6c72f62ce9f41cdc15da14d5bdda03cc42699c9f6f559833aae861b403",
+      "sawFinalized": true,
+      "alreadyFinalized": true,
+      "finalizeError": ""
+    }
+  ]
+}

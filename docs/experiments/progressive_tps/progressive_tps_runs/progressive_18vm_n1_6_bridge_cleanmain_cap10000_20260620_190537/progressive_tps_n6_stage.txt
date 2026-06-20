@@ -1,0 +1,16 @@
+n=6
+stage_key=runtime-v3
+active=child1 child2 child3 child4 child5 child6
+workers=400
+parallel_per_worker=8
+duration=240
+batch_default=4
+batch_size_child1=1
+batch_size_child2=1
+batch_size_child3=1
+batch_size_child4=1
+batch_size_child5=1
+batch_size_child6=4
+require_bridge_events=1
+failed=0
+finished_at=2026-06-20T20:05:11+08:00
