@@ -222,12 +222,20 @@ impl pallet_chain_profile::Config for Runtime {
 	type WeightInfo = ();
 }
 
-#[cfg(feature = "scene-crowdsource")]
+#[cfg(all(feature = "scene-crowdsource", not(feature = "crowdsource-short-epoch")))]
 // Configure pallet-crowdsource (Child Chain Crowdsourcing).
-// Slots: CollectingSlot=600 blocks (~60min), SyncingSlot=20 blocks (~2min)
+// Slots: CollectingSlot=600 blocks, SyncingSlot=20 blocks.
 parameter_types! {
 	pub const CollectingSlotBlocks: u32 = 600;
 	pub const SyncingSlotBlocks: u32    = 20;
+}
+
+#[cfg(all(feature = "scene-crowdsource", feature = "crowdsource-short-epoch"))]
+// Experiment-only bridge-pressure profile. Keeps TPS runtime profiles separate
+// while allowing EpochFinalized to occur inside short smoke/full-run windows.
+parameter_types! {
+	pub const CollectingSlotBlocks: u32 = 60;
+	pub const SyncingSlotBlocks: u32    = 5;
 }
 
 #[cfg(feature = "scene-crowdsource")]
