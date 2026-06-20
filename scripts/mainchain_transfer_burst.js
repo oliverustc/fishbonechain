@@ -27,6 +27,8 @@ function parseArgs() {
     duration: Number(get("--duration", "120")),
     reportInterval: Number(get("--report-interval", "5")),
     txTimeout: Number(get("--tx-timeout", "45")),
+    fundBatchSize: Number(get("--fund-batch-size", "50")),
+    receiverMode: get("--receiver-mode", "alice"),
     submitMode: get("--submit-mode", "watch"),
     out: get("--out", "docs/experiments/progressive_tps/mainchain_capacity/mainchain_transfer_burst_summary.json"),
   };
@@ -158,14 +160,35 @@ async function fundSenders(api, alice, senders, cfg) {
 
   console.log(`[mainchain-transfer-burst] funding ${needFunding.length}/${senders.length} senders from //Alice`);
   let aliceNonce = (await api.rpc.system.accountNextIndex(alice.address)).toNumber();
-  const chunkSize = 24;
+  const chunkSize = Math.max(cfg.fundBatchSize, 1);
   for (let i = 0; i < needFunding.length; i += chunkSize) {
     const chunk = needFunding.slice(i, i + chunkSize);
-    await Promise.all(chunk.map((sender, j) => {
-      const tx = transferTx(api, sender.address, cfg.fundAmount);
-      return included(api, tx, alice, aliceNonce + j, cfg.txTimeout);
-    }));
-    aliceNonce += chunk.length;
+    const transfers = chunk.map(sender => transferTx(api, sender.address, cfg.fundAmount));
+    const tx = api.tx.utility?.batchAll
+      ? api.tx.utility.batchAll(transfers)
+      : null;
+
+    if (tx) {
+      const kind = await included(api, tx, alice, aliceNonce, cfg.txTimeout);
+      aliceNonce++;
+      if (kind !== "ok") {
+        throw new Error(`funding batch failed with status=${kind} at sender ${i}`);
+      }
+    } else {
+      for (const sender of chunk) {
+        const kind = await included(api, transferTx(api, sender.address, cfg.fundAmount), alice, aliceNonce, cfg.txTimeout);
+        aliceNonce++;
+        if (kind !== "ok") {
+          throw new Error(`funding transfer failed with status=${kind} for ${sender.address}`);
+        }
+      }
+    }
+
+    const postBalances = await Promise.all(chunk.map(sender => freeBalance(api, sender.address)));
+    const underfunded = postBalances.filter(balance => balance < minFree).length;
+    if (underfunded > 0) {
+      throw new Error(`funding verification failed: ${underfunded}/${chunk.length} senders remain below ${minFree}`);
+    }
     console.log(`[mainchain-transfer-burst] funded ${Math.min(i + chunk.length, needFunding.length)}/${needFunding.length}`);
   }
 }
@@ -203,6 +226,8 @@ function writeSummary(path, cfg, stats) {
     parallelPerSender: cfg.parallelPerSender,
     amount: cfg.amount.toString(),
     fundAmount: cfg.fundAmount.toString(),
+    fundBatchSize: cfg.fundBatchSize,
+    receiverMode: cfg.receiverMode,
     duration: cfg.duration,
     submitMode: cfg.submitMode,
     sent: stats.sent,
@@ -222,13 +247,15 @@ async function main() {
   const cfg = parseArgs();
   console.log(`[mainchain-transfer-burst] ws=${cfg.ws}`);
   console.log(`[mainchain-transfer-burst] senders=${cfg.senders} sender_offset=${cfg.senderOffset} parallel_per_sender=${cfg.parallelPerSender}`);
-  console.log(`[mainchain-transfer-burst] amount=${cfg.amount} fund_amount=${cfg.fundAmount} duration=${cfg.duration}s submit_mode=${cfg.submitMode}`);
+  console.log(`[mainchain-transfer-burst] amount=${cfg.amount} fund_amount=${cfg.fundAmount} duration=${cfg.duration}s submit_mode=${cfg.submitMode} receiver_mode=${cfg.receiverMode}`);
 
   const api = await ApiPromise.create({ provider: new WsProvider(cfg.ws) });
   const keyring = new Keyring({ type: "sr25519" });
   const alice = keyring.addFromUri("//Alice");
   const senders = Array.from({ length: cfg.senders }, (_, i) => keyring.addFromUri(`//MainBenchSender${cfg.senderOffset + i}`));
-  const receivers = Array.from({ length: cfg.senders }, (_, i) => keyring.addFromUri(`//MainBenchReceiver${cfg.senderOffset + i}`));
+  const receivers = cfg.receiverMode === "alice"
+    ? Array.from({ length: cfg.senders }, () => alice)
+    : Array.from({ length: cfg.senders }, (_, i) => keyring.addFromUri(`//MainBenchReceiver${cfg.senderOffset + i}`));
 
   await fundSenders(api, alice, senders, cfg);
 
