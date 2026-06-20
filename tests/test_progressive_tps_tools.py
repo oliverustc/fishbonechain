@@ -12,6 +12,8 @@ PLOT_SCRIPT = ROOT / "scripts" / "plot_progressive_tps.py"
 RUN_SCRIPT = ROOT / "scripts" / "run_exp_progressive_tps.sh"
 WORKER_BURST = ROOT / "scripts" / "worker_burst.js"
 CAPACITY_MONITOR = ROOT / "scripts" / "capacity_monitor.js"
+BRIDGE_CROWDSOURCE = ROOT / "scripts" / "bridges" / "crowdsource.js"
+EPOCH_FINALIZER = ROOT / "scripts" / "finalize_progressive_epochs.js"
 
 
 def load_module(path: Path, name: str):
@@ -53,11 +55,37 @@ class ProgressiveTpsToolsTest(unittest.TestCase):
         self.assertIn("batchSize", worker)
         self.assertIn("submitDataBatch", worker)
 
+    def test_runner_initializes_mainchain_and_runs_bridges_for_pressure_measurement(self):
+        script = RUN_SCRIPT.read_text(encoding="utf-8")
+
+        self.assertIn("SETUP_MAINCHAIN_FOR_BRIDGE", script)
+        self.assertIn("setup_progressive_mainchain.js", script)
+        self.assertIn("start_bridges_for_stage", script)
+        self.assertIn("scripts/bridges/crowdsource.js", script)
+        self.assertIn("finalize_progressive_epochs.js", script)
+        self.assertIn("n${n}_bridge_${child}.log", script)
+
     def test_capacity_monitor_prefers_business_submission_counter(self):
         monitor = CAPACITY_MONITOR.read_text(encoding="utf-8")
 
         self.assertIn("acceptedSubmissionCount", monitor)
         self.assertIn("epochSubmissions", monitor)
+
+    def test_crowdsource_bridge_supports_bounded_exit_after_events(self):
+        bridge = BRIDGE_CROWDSOURCE.read_text(encoding="utf-8")
+
+        self.assertIn("EXIT_AFTER_EVENTS", bridge)
+        self.assertIn("--exit-after-events", bridge)
+        self.assertIn("processedCount >= EXIT_AFTER_EVENTS", bridge)
+
+    def test_epoch_finalizer_waits_for_syncing_and_calls_finalize_epoch(self):
+        self.assertTrue(EPOCH_FINALIZER.exists())
+        content = EPOCH_FINALIZER.read_text(encoding="utf-8")
+
+        self.assertIn("currentEpoch", content)
+        self.assertIn("Syncing", content)
+        self.assertIn("finalizeEpoch", content)
+        self.assertIn("EpochFinalized", content)
 
     def test_summarizer_combines_child_tps_and_mainchain_pressure(self):
         module = load_module(SUMMARY_SCRIPT, "summarize_progressive_tps")

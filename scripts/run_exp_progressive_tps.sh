@@ -46,6 +46,11 @@ WAIT_MIN_REMAINING_BLOCKS="${WAIT_MIN_REMAINING_BLOCKS:-300}"
 WAIT_TIMEOUT="${WAIT_TIMEOUT:-900}"
 STOP_ALL_CHILDREN_BEFORE_RUN="${STOP_ALL_CHILDREN_BEFORE_RUN:-1}"
 START_ACTIVE_CHILDREN_EACH_STAGE="${START_ACTIVE_CHILDREN_EACH_STAGE:-1}"
+SETUP_MAINCHAIN_FOR_BRIDGE="${SETUP_MAINCHAIN_FOR_BRIDGE:-1}"
+RUN_BRIDGES_FOR_STAGE="${RUN_BRIDGES_FOR_STAGE:-1}"
+BRIDGE_EXIT_AFTER_EVENTS="${BRIDGE_EXIT_AFTER_EVENTS:-1}"
+FINALIZE_EPOCHS_FOR_BRIDGE="${FINALIZE_EPOCHS_FOR_BRIDGE:-1}"
+FINALIZE_WAIT_SYNCING_SECONDS="${FINALIZE_WAIT_SYNCING_SECONDS:-900}"
 
 N_START="${N_START:-1}"
 N_END="${N_END:-6}"
@@ -133,6 +138,7 @@ declare -A TASK_ID=(
 
 ORDER=(child1 child2 child3 child4 child5 child6)
 PIDS=()
+BRIDGE_PIDS=()
 
 declare -A DEFAULT_WORKERS=(
   [1]=160
@@ -271,10 +277,48 @@ deploy_children() {
     > "$log_path" 2>&1
 }
 
+setup_mainchain_for_bridge() {
+  local chains_csv="$1"
+  local log_path="$2"
+
+  MAIN_WS="$MAIN_WS" node "${SCRIPT_DIR}/setup_progressive_mainchain.js" \
+    --profile-file "$PROFILE_FILE" \
+    --chains "$chains_csv" \
+    > "$log_path" 2>&1
+}
+
+start_bridges_for_stage() {
+  local n="$1"
+  shift
+  local active=("$@")
+  BRIDGE_PIDS=()
+
+  for child in "${active[@]}"; do
+    local idx="${child#child}"
+    local chain_id=$((idx - 1))
+    nohup env CHILD_WS="${WS[$child]}" MAIN_WS="$MAIN_WS" TASK_ID="${TASK_ID[$child]}" CHAIN_ID="$chain_id" \
+      node "${REPO_DIR}/scripts/bridges/crowdsource.js" \
+        --exit-after-events "$BRIDGE_EXIT_AFTER_EVENTS" \
+      > "${LOG_DIR}/n${n}_bridge_${child}.log" 2>&1 &
+    BRIDGE_PIDS+=("$!")
+  done
+}
+
+stop_bridges_for_stage() {
+  for pid in "${BRIDGE_PIDS[@]:-}"; do
+    kill "$pid" 2>/dev/null || true
+  done
+  for pid in "${BRIDGE_PIDS[@]:-}"; do
+    wait "$pid" 2>/dev/null || true
+  done
+  BRIDGE_PIDS=()
+}
+
 cleanup() {
   for pid in "${PIDS[@]:-}"; do
     kill "$pid" 2>/dev/null || true
   done
+  stop_bridges_for_stage
 }
 trap cleanup INT TERM
 
@@ -305,6 +349,11 @@ write_meta() {
     echo "wait_timeout=${WAIT_TIMEOUT}"
     echo "stop_all_children_before_run=${STOP_ALL_CHILDREN_BEFORE_RUN}"
     echo "start_active_children_each_stage=${START_ACTIVE_CHILDREN_EACH_STAGE}"
+    echo "setup_mainchain_for_bridge=${SETUP_MAINCHAIN_FOR_BRIDGE}"
+    echo "run_bridges_for_stage=${RUN_BRIDGES_FOR_STAGE}"
+    echo "bridge_exit_after_events=${BRIDGE_EXIT_AFTER_EVENTS}"
+    echo "finalize_epochs_for_bridge=${FINALIZE_EPOCHS_FOR_BRIDGE}"
+    echo "finalize_wait_syncing_seconds=${FINALIZE_WAIT_SYNCING_SECONDS}"
     echo "n_start=${N_START}"
     echo "n_end=${N_END}"
     echo "order=${ORDER[*]}"
@@ -351,6 +400,11 @@ run_one_n() {
     deploy_children "$active_csv" "${LOG_DIR}/n${n}_deploy.log"
   fi
 
+  if [[ "$SETUP_MAINCHAIN_FOR_BRIDGE" == "1" ]]; then
+    log "N=${n} setup mainchain bridge state: ${active_csv}"
+    setup_mainchain_for_bridge "$active_csv" "${LOG_DIR}/n${n}_setup_mainchain_bridge.log"
+  fi
+
   if [[ "$SETUP_EACH_STAGE" == "1" ]]; then
     log "N=${n} setup active chains: ${active_csv}"
     node "${SCRIPT_DIR}/setup_selected_child_chains.js" \
@@ -382,6 +436,11 @@ run_one_n() {
     > "${LOG_DIR}/n${n}_main_metrics.log" 2>&1 &
   local main_metrics_pid="$!"
   PIDS+=("$main_metrics_pid")
+
+  if [[ "$RUN_BRIDGES_FOR_STAGE" == "1" ]]; then
+    log "N=${n} start crowdsource bridges"
+    start_bridges_for_stage "$n" "${active[@]}"
+  fi
 
   nohup node "${SCRIPT_DIR}/capacity_monitor.js" \
     --chains "$urls" \
@@ -438,6 +497,18 @@ run_one_n() {
   for pid in "${worker_pids[@]}"; do
     wait "$pid" 2>/dev/null || true
   done
+
+  if [[ "$FINALIZE_EPOCHS_FOR_BRIDGE" == "1" ]]; then
+    log "N=${n} finalize epochs for bridge measurement"
+    node "${SCRIPT_DIR}/finalize_progressive_epochs.js" \
+      --chains "$urls" \
+      --out "${prefix}_epoch_finalize.json" \
+      --wait-syncing-seconds "$FINALIZE_WAIT_SYNCING_SECONDS" \
+      > "${LOG_DIR}/n${n}_finalize_epochs.log" 2>&1
+    sleep 20
+  fi
+
+  stop_bridges_for_stage
 
   kill "$main_metrics_pid" 2>/dev/null || true
   wait "$main_metrics_pid" 2>/dev/null || true
