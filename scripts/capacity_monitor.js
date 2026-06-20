@@ -80,6 +80,13 @@ async function main() {
   for (const { url, api } of apis) {
     baseline[url] = await sample(api);
   }
+  const trackers = {};
+  for (const { url } of apis) {
+    trackers[url] = {
+      lastSubs: baseline[url]?.subs ?? 0,
+      cumulativeAccepted: 0,
+    };
+  }
 
   writeFileSync(cfg.out, "timestamp_ms,elapsed_s,chain_url,block_number,epoch_id,phase,submissions_count,delta_from_initial,hit_cap\n");
   writeFileSync(cfg.readyFile, JSON.stringify({
@@ -102,8 +109,14 @@ async function main() {
       try {
         const item = await sample(api);
         const initial = baseline[url]?.subs ?? 0;
-        const delta = Math.max(0, item.subs - initial);
-        const didHit = item.subs >= cfg.cap ? 1 : 0;
+        const tracker = trackers[url];
+        const increment = item.subs < tracker.lastSubs
+          ? item.subs
+          : Math.max(0, item.subs - tracker.lastSubs);
+        tracker.cumulativeAccepted += increment;
+        tracker.lastSubs = item.subs;
+        const delta = tracker.cumulativeAccepted;
+        const didHit = tracker.cumulativeAccepted >= cfg.cap ? 1 : 0;
         appendFileSync(cfg.out, csv(
           nowMs,
           elapsedS.toFixed(3),
@@ -123,6 +136,7 @@ async function main() {
             initial_subs: initial,
             cap_subs: item.subs,
             accepted_delta: delta,
+            cumulative_accepted: tracker.cumulativeAccepted,
             block_number: item.block,
             epoch_id: item.epoch,
           });

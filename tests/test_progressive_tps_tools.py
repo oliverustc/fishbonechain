@@ -73,6 +73,13 @@ class ProgressiveTpsToolsTest(unittest.TestCase):
         self.assertIn("acceptedSubmissionCount", monitor)
         self.assertIn("epochSubmissions", monitor)
 
+    def test_capacity_monitor_accumulates_across_epoch_counter_resets(self):
+        monitor = CAPACITY_MONITOR.read_text(encoding="utf-8")
+
+        self.assertIn("cumulativeAccepted", monitor)
+        self.assertIn("item.subs < tracker.lastSubs", monitor)
+        self.assertIn("tracker.cumulativeAccepted >= cfg.cap", monitor)
+
     def test_crowdsource_bridge_supports_bounded_exit_after_events(self):
         bridge = BRIDGE_CROWDSOURCE.read_text(encoding="utf-8")
 
