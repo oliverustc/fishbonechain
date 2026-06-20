@@ -41,3 +41,9 @@ progress.md
 
 # Generated experiment data
 /docs/figures/data/
+/docs/experiments/progressive_tps/progressive_tps_runs/
+
+# Python caches
+__pycache__/
+**/__pycache__/
+*.py[cod]
