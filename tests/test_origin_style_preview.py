@@ -6,6 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "plot_origin_style_preview.py"
+CAPITAL_SCRIPT = ROOT / "scripts" / "plot_capital_capacity.py"
 
 
 def load_module():
@@ -16,7 +17,32 @@ def load_module():
     return module
 
 
+def load_capital_module():
+    spec = importlib.util.spec_from_file_location("plot_capital_capacity", CAPITAL_SCRIPT)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
 class OriginStylePreviewTest(unittest.TestCase):
+    def test_isolation_series_uses_chinese_names_and_gain_labels(self):
+        module = load_module()
+        rows = [
+            {
+                "scenario": "a",
+                "scenario_name": "快递配送",
+                "single_chain_success_rate": "12.46",
+                "dedicated_chain_success_rate": "100.00",
+                "improvement_x": "8.03",
+            }
+        ]
+
+        series = module.build_isolation_series(rows)
+
+        self.assertEqual(series["labels"], ["快递配送"])
+        self.assertEqual(series["gain_labels"], ["8.03x"])
+
     def test_builds_expected_origin_style_figures_only(self):
         module = load_module()
         with tempfile.TemporaryDirectory() as tmp:
@@ -74,6 +100,20 @@ class OriginStylePreviewTest(unittest.TestCase):
             ],
         )
         self.assertNotIn("origin_style_scale_mainchain_load.png", names)
+
+    def test_capital_capacity_groups_are_derived_from_horizon_ratios(self):
+        module = load_capital_module()
+        rows = [
+            {"horizon_epochs": "3", "locked_reduction_x": "3.00"},
+            {"horizon_epochs": "10", "locked_reduction_x": "10.00"},
+            {"horizon_epochs": "20", "locked_reduction_x": "20.00"},
+        ]
+
+        series = module.build_capacity_group_series(rows)
+
+        self.assertEqual(series["horizons"], [3, 10, 20])
+        self.assertEqual(series["traditional_groups"], [1, 1, 1])
+        self.assertEqual(series["fishbone_groups"], [3, 10, 20])
 
 
 if __name__ == "__main__":

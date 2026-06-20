@@ -113,10 +113,18 @@ def origin_axes(ax, *, minor_y: bool = True) -> None:
         spine.set_color("black")
 
 
-def origin_legend(ax, *, loc: str = "upper left", ncol: int = 1) -> None:
+def origin_legend(
+    ax,
+    *,
+    loc: str = "upper left",
+    ncol: int = 1,
+    fontsize: int = 23,
+    bbox_to_anchor: tuple[float, float] | None = None,
+) -> None:
     legend = ax.legend(
         loc=loc,
         ncol=ncol,
+        bbox_to_anchor=bbox_to_anchor,
         frameon=True,
         fancybox=False,
         framealpha=1,
@@ -125,7 +133,7 @@ def origin_legend(ax, *, loc: str = "upper left", ncol: int = 1) -> None:
         borderpad=0.45,
         handlelength=2.4,
         handletextpad=0.45,
-        prop=cjk_font(23),
+        prop=cjk_font(fontsize),
     )
     legend.get_frame().set_linewidth(0.9)
 
@@ -176,31 +184,66 @@ def plot_capacity_scaling(data_dir: Path, out_dir: Path, formats: tuple[str, ...
 
 
 def plot_isolation_comparison(data_dir: Path, out_dir: Path, formats: tuple[str, ...]) -> list[Path]:
-    rows = read_rows(data_dir / "exp_isolation_summary.csv")
-    labels = [row.get("scenario", "").strip() or str(i + 1) for i, row in enumerate(rows)]
-    single = np.array([as_float(row, "single_chain_success_rate") for row in rows])
-    dedicated = np.array([as_float(row, "dedicated_chain_success_rate") for row in rows])
-    x = np.arange(len(rows), dtype=float)
+    series = build_isolation_series(read_rows(data_dir / "exp_isolation_summary.csv"))
+    labels = series["labels"]
+    single = np.array(series["single"], dtype=float)
+    dedicated = np.array(series["dedicated"], dtype=float)
+    gain_labels = series["gain_labels"]
+    x = np.arange(len(labels), dtype=float)
     width = 0.34
 
-    fig, ax = plt.subplots(figsize=(8.0, 5.8))
+    fig, ax = plt.subplots(figsize=(8.4, 5.9))
     ax.bar(x - width / 2, single, width, color=BAR_BLUE, label="单链混跑")
     ax.bar(x + width / 2, dedicated, width, color=RED, label="多子链隔离")
 
     for i, value in enumerate(dedicated):
-        ax.text(i + width / 2 - 0.08, value + 2.5, f"{value:.0f}", fontsize=20)
+        ax.text(i + width / 2, value + 2.5, f"{value:.0f}%", fontsize=19, ha="center")
     for i, value in enumerate(single):
-        ax.text(i - width / 2 - 0.12, value + 2.5, f"{value:.1f}", fontsize=18)
+        ax.text(i - width / 2, value + 2.5, f"{value:.1f}%", fontsize=17, ha="center")
+    for i, label in enumerate(gain_labels):
+        ax.text(
+            i,
+            122,
+            label,
+            fontsize=17,
+            color=RED,
+            ha="center",
+            va="center",
+            fontproperties=cjk_font(17, bold=True),
+        )
 
     ax.set_xlabel("应用场景", fontproperties=cjk_font(28, bold=True))
     ax.set_ylabel("提交成功率（%）", fontproperties=cjk_font(28, bold=True))
     ax.set_xticks(x)
-    ax.set_xticklabels(labels)
-    ax.set_ylim(0, 180)
+    ax.set_xticklabels(labels, fontproperties=cjk_font(20))
+    ax.set_ylim(0, 132)
     origin_axes(ax)
-    origin_legend(ax, loc="upper left")
+    origin_legend(ax, loc="upper center", ncol=2, fontsize=15, bbox_to_anchor=(0.5, 1.11))
     fig.tight_layout()
     return save_figure(fig, out_dir, "origin_style_isolation_comparison", formats)
+
+
+def build_isolation_series(rows: list[dict[str, str]]) -> dict[str, list]:
+    labels = [
+        row.get("scenario_name", "").strip()
+        or row.get("scenario", "").strip()
+        or str(i + 1)
+        for i, row in enumerate(rows)
+    ]
+    single = [as_float(row, "single_chain_success_rate") for row in rows]
+    dedicated = [as_float(row, "dedicated_chain_success_rate") for row in rows]
+    gains = [
+        as_float(row, "improvement_x")
+        or (dedicated[i] / single[i] if single[i] > 0 else 0.0)
+        for i, row in enumerate(rows)
+    ]
+    return {
+        "labels": labels,
+        "single": single,
+        "dedicated": dedicated,
+        "gains": gains,
+        "gain_labels": [f"{gain:.2f}x" for gain in gains],
+    }
 
 
 def plot_liquidity_ratio(data_dir: Path, out_dir: Path, formats: tuple[str, ...]) -> list[Path]:

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 from pathlib import Path
 
 import matplotlib
@@ -16,6 +17,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUT_DIR = ROOT / "docs" / "experiments" / "figures"
+DEFAULT_SUMMARY = DEFAULT_OUT_DIR / "data" / "exp_liquidity_horizon_summary.csv"
 
 BLUE_DARK = "#1565C0"
 BLUE_LIGHT = "#90CAF9"
@@ -23,16 +25,6 @@ ORANGE_DARK = "#E65100"
 ORANGE_LIGHT = "#FFCC80"
 CJK_REGULAR = "/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc"
 CJK_BOLD = "/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc"
-
-SUM_BUDGET = 71502.5
-T_PLANNED = 3
-TOTAL_DEPOSIT = T_PLANNED * SUM_BUDGET
-CHILD3_BUDGET = 40000
-
-FB_LOCKED = SUM_BUDGET
-FB_FREE = TOTAL_DEPOSIT - FB_LOCKED
-TRAD_LOCKED = TOTAL_DEPOSIT
-TRAD_FREE = 0.0
 
 
 def cjk_font(size: int, *, bold: bool = False) -> fm.FontProperties:
@@ -78,7 +70,7 @@ def origin_axes(ax, *, minor_y: bool = True) -> None:
         spine.set_color("black")
 
 
-def origin_legend(ax, *, loc: str = "upper left", ncol: int = 1) -> None:
+def origin_legend(ax, *, loc: str = "upper left", ncol: int = 1, fontsize: int = 23) -> None:
     legend = ax.legend(
         loc=loc,
         ncol=ncol,
@@ -90,7 +82,7 @@ def origin_legend(ax, *, loc: str = "upper left", ncol: int = 1) -> None:
         borderpad=0.45,
         handlelength=2.4,
         handletextpad=0.45,
-        prop=cjk_font(23),
+        prop=cjk_font(fontsize),
     )
     legend.get_frame().set_linewidth(0.9)
 
@@ -106,77 +98,92 @@ def save_figure(fig, out_dir: Path, stem: str, formats: tuple[str, ...]) -> list
     return outputs
 
 
+def read_rows(path: Path) -> list[dict[str, str]]:
+    with path.open(newline="") as f:
+        return list(csv.DictReader(f))
+
+
+def as_float(row: dict[str, str], key: str, default: float = 0.0) -> float:
+    try:
+        return float(row.get(key, ""))
+    except (TypeError, ValueError):
+        return default
+
+
+def build_capacity_group_series(rows: list[dict[str, str]]) -> dict[str, list[int]]:
+    horizons = [int(round(as_float(row, "horizon_epochs"))) for row in rows]
+    fishbone_groups = [
+        max(1, int(round(as_float(row, "locked_reduction_x") or horizon)))
+        for row, horizon in zip(rows, horizons)
+    ]
+    traditional_groups = [1 for _ in rows]
+    return {
+        "horizons": horizons,
+        "traditional_groups": traditional_groups,
+        "fishbone_groups": fishbone_groups,
+    }
+
+
 def build_capital_capacity_figure(
+    summary: Path = DEFAULT_SUMMARY,
     out_dir: Path = DEFAULT_OUT_DIR,
     formats: tuple[str, ...] = ("pdf", "png"),
 ) -> list[Path]:
     apply_origin_style()
 
-    methods = ["FishboneChain", "传统预锁方案"]
-    locked_vals = [FB_LOCKED, TRAD_LOCKED]
-    free_vals = [FB_FREE, TRAD_FREE]
+    series = build_capacity_group_series(read_rows(summary))
+    horizons = np.array(series["horizons"], dtype=int)
+    traditional = np.array(series["traditional_groups"], dtype=float)
+    fishbone = np.array(series["fishbone_groups"], dtype=float)
 
-    fig, ax = plt.subplots(figsize=(10.0, 4.8))
+    x = np.arange(len(horizons), dtype=float)
+    width = 0.34
 
-    ax.barh(
-        methods, locked_vals,
-        color=[BLUE_DARK, ORANGE_DARK],
-        height=0.45,
-    )
-    ax.barh(
-        methods, free_vals, left=locked_vals,
-        color=[BLUE_LIGHT, ORANGE_LIGHT],
-        height=0.45,
-    )
+    fig, ax = plt.subplots(figsize=(8.6, 5.7))
 
-    ax.text(
-        TRAD_LOCKED - TOTAL_DEPOSIT * 0.01, 1,
-        f"{TRAD_LOCKED:,.0f} U (100%)",
-        ha="right", va="center", color="white",
-        fontsize=20, fontweight="bold",
-    )
-    ax.text(
-        FB_LOCKED / 2, 0,
-        f"{FB_LOCKED:,.0f} U\n({FB_LOCKED / TOTAL_DEPOSIT * 100:.1f}%)",
-        ha="center", va="center", color="white",
-        fontsize=20, fontweight="bold",
-    )
-    ax.text(
-        FB_LOCKED + FB_FREE / 2, 0,
-        f"{FB_FREE:,.0f} U\n({FB_FREE / TOTAL_DEPOSIT * 100:.1f}%)",
-        ha="center", va="center", color="#333",
-        fontsize=20, fontweight="bold",
-    )
+    ax.bar(x - width / 2, traditional, width, color=ORANGE_DARK, label="传统预锁方案")
+    ax.bar(x + width / 2, fishbone, width, color=BLUE_DARK, label="FishboneChain")
 
-    new_tasks_fb = int(FB_FREE / CHILD3_BUDGET)
-    ax.text(
-        TOTAL_DEPOSIT * 0.62, 0.43,
-        f"剩余资金可再激活 {new_tasks_fb} 个 child3 规格任务",
-        ha="center", va="center", fontsize=18,
-        color=BLUE_DARK, fontweight="bold",
-        fontproperties=cjk_font(18),
-    )
-    ax.text(
-        TOTAL_DEPOSIT * 0.5, 1,
-        "资金全部锁定",
-        ha="center", va="center", color="white",
-        fontsize=18, fontstyle="italic", alpha=0.9,
-        fontproperties=cjk_font(18),
-    )
+    for xpos, value in zip(x - width / 2, traditional):
+        ax.text(xpos, value + 0.45, f"{value:.0f}组", ha="center", fontsize=18, fontproperties=cjk_font(18))
+    for xpos, value in zip(x + width / 2, fishbone):
+        ax.text(
+            xpos,
+            value + 0.45,
+            f"{value:.0f}组",
+            ha="center",
+            fontsize=19,
+            color=BLUE_DARK,
+            fontproperties=cjk_font(19, bold=True),
+        )
 
-    ax.set_yticks([0, 1])
-    ax.set_yticklabels(methods, fontproperties=cjk_font(24))
-    ax.set_xlabel("资金量（UNIT）", fontproperties=cjk_font(28, bold=True))
-    ax.set_xlim(0, TOTAL_DEPOSIT * 1.12)
-    ax.set_ylim(-0.65, 1.65)
+    for i, value in enumerate(fishbone):
+        ax.text(
+            i,
+            value + 2.3,
+            f"{value:.0f}x",
+            ha="center",
+            fontsize=18,
+            color=BLUE_DARK,
+            fontproperties=cjk_font(18, bold=True),
+        )
+
+    ax.set_xlabel("规划周期（Epoch）", fontproperties=cjk_font(28, bold=True))
+    ax.set_ylabel("可支持的6任务组数量", fontproperties=cjk_font(28, bold=True))
+    ax.set_xticks(x)
+    ax.set_xticklabels([str(h) for h in horizons])
+    ax.set_xlim(x.min() - 0.6, x.max() + 0.6)
+    ax.set_ylim(0, max(fishbone.max(), traditional.max()) * 1.25)
 
     origin_axes(ax, minor_y=False)
+    origin_legend(ax, loc="upper left", fontsize=18)
     fig.tight_layout()
     return save_figure(fig, out_dir, "fig7b_capital_capacity_v2", formats)
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--summary", type=Path, default=DEFAULT_SUMMARY)
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
     parser.add_argument("--formats", default="pdf,png")
     return parser.parse_args()
@@ -185,7 +192,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     formats = tuple(fmt.strip().lower() for fmt in args.formats.split(",") if fmt.strip())
-    outputs = build_capital_capacity_figure(args.out_dir, formats)
+    outputs = build_capital_capacity_figure(args.summary, args.out_dir, formats)
     for path in outputs:
         print(f"[saved] {path}")
 
