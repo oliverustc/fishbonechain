@@ -61,6 +61,8 @@ class ProgressiveTpsToolsTest(unittest.TestCase):
         self.assertIn("SETUP_MAINCHAIN_FOR_BRIDGE", script)
         self.assertIn("setup_progressive_mainchain.js", script)
         self.assertIn("start_bridges_for_stage", script)
+        self.assertIn("BRIDGE_MINER_SURI", script)
+        self.assertIn('MINER_SURI="${BRIDGE_MINER_SURI[$child]}"', script)
         self.assertIn("scripts/bridges/crowdsource.js", script)
         self.assertIn("finalize_progressive_epochs.js", script)
         self.assertIn("n${n}_bridge_${child}.log", script)
@@ -86,6 +88,8 @@ class ProgressiveTpsToolsTest(unittest.TestCase):
         self.assertIn("Syncing", content)
         self.assertIn("finalizeEpoch", content)
         self.assertIn("EpochFinalized", content)
+        self.assertIn("alreadyFinalized", content)
+        self.assertIn("epochIdValue(after) > epochIdValue(before)", content)
 
     def test_summarizer_combines_child_tps_and_mainchain_pressure(self):
         module = load_module(SUMMARY_SCRIPT, "summarize_progressive_tps")

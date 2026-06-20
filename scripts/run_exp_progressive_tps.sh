@@ -136,6 +136,15 @@ declare -A TASK_ID=(
   [child6]="${CHILD6_TASK_ID:-5}"
 )
 
+declare -A BRIDGE_MINER_SURI=(
+  [child1]="${CHILD1_BRIDGE_MINER_SURI:-0x52390bf081065e3ff296ab72c42bc234cedbdf9ddc40b6c7b6aee5fd01e08880}"
+  [child2]="${CHILD2_BRIDGE_MINER_SURI:-0x8b7aeb4590e1607db466c3cea45b4096f0b912364da41689f1be5166df3fee83}"
+  [child3]="${CHILD3_BRIDGE_MINER_SURI:-0x92ed7c0c05a5b080b5193514043e2bbd33401e2428e50e85cfbd2a20558b5652}"
+  [child4]="${CHILD4_BRIDGE_MINER_SURI:-0xcb829a57912d649c46808a673d2f466b9f954208ab15ddd748567af6bbf81082}"
+  [child5]="${CHILD5_BRIDGE_MINER_SURI:-//Alice//f13}"
+  [child6]="${CHILD6_BRIDGE_MINER_SURI:-//Alice//f16}"
+)
+
 ORDER=(child1 child2 child3 child4 child5 child6)
 PIDS=()
 BRIDGE_PIDS=()
@@ -296,7 +305,7 @@ start_bridges_for_stage() {
   for child in "${active[@]}"; do
     local idx="${child#child}"
     local chain_id=$((idx - 1))
-    nohup env CHILD_WS="${WS[$child]}" MAIN_WS="$MAIN_WS" TASK_ID="${TASK_ID[$child]}" CHAIN_ID="$chain_id" \
+    nohup env CHILD_WS="${WS[$child]}" MAIN_WS="$MAIN_WS" TASK_ID="${TASK_ID[$child]}" CHAIN_ID="$chain_id" MINER_SURI="${BRIDGE_MINER_SURI[$child]}" \
       node "${REPO_DIR}/scripts/bridges/crowdsource.js" \
         --exit-after-events "$BRIDGE_EXIT_AFTER_EVENTS" \
       > "${LOG_DIR}/n${n}_bridge_${child}.log" 2>&1 &
@@ -360,6 +369,7 @@ write_meta() {
     for child in "${ORDER[@]}"; do
       echo "${child}_ws=${WS[$child]}"
       echo "${child}_task_id=${TASK_ID[$child]}"
+      echo "${child}_bridge_miner_suri=${BRIDGE_MINER_SURI[$child]}"
     done
   } > "${RUN_DIR}/meta.txt"
   cp "$PROFILE_FILE" "${RUN_DIR}/profile_manifest.json"

@@ -22,6 +22,11 @@ function phaseName(epoch) {
   return human.phase || human.Phase || JSON.stringify(human);
 }
 
+function epochIdValue(epoch) {
+  const human = epoch.toHuman();
+  return Number(epoch.epochId?.toString?.() ?? epoch.epoch_id?.toString?.() ?? human.epochId ?? human.epoch_id ?? human.EpochId ?? 0);
+}
+
 async function sendTx(api, tx, signer, label) {
   return new Promise((resolve, reject) => {
     tx.signAndSend(signer, async ({ status, dispatchError }) => {
@@ -60,15 +65,34 @@ async function finalizeOne(ws, keyring, cfg) {
   const alice = keyring.addFromUri("//Alice");
   try {
     const before = await waitForSyncing(api, cfg.waitSyncing, cfg.pollMs);
-    const blockHash = await sendTx(
-      api,
-      api.tx.crowdsource.finalizeEpoch(),
-      alice,
-      "crowdsource.finalizeEpoch",
-    );
-    const sawFinalized = await blockHasEpochFinalized(api, blockHash);
+    let blockHash = "";
+    let sawFinalized = false;
+    let finalizeError = "";
+    try {
+      blockHash = await sendTx(
+        api,
+        api.tx.crowdsource.finalizeEpoch(),
+        alice,
+        "crowdsource.finalizeEpoch",
+      );
+      sawFinalized = await blockHasEpochFinalized(api, blockHash);
+    } catch (e) {
+      finalizeError = e.message;
+    }
     const after = await api.query.crowdsource.currentEpoch();
-    return { ws, before: before.toHuman(), after: after.toHuman(), blockHash, sawFinalized };
+    const alreadyFinalized = epochIdValue(after) > epochIdValue(before);
+    if (finalizeError && !alreadyFinalized) {
+      throw new Error(finalizeError);
+    }
+    return {
+      ws,
+      before: before.toHuman(),
+      after: after.toHuman(),
+      blockHash,
+      sawFinalized,
+      alreadyFinalized,
+      finalizeError,
+    };
   } finally {
     await api.disconnect();
   }
