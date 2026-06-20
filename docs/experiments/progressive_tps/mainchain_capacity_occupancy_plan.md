@@ -71,8 +71,8 @@ Create `scripts/mainchain_transfer_burst.js` with:
 
 Required behavior:
 
-- Parse `--ws`, `--senders`, `--parallel-per-sender`, `--duration`, `--amount`, `--fund-amount`, `--sender-offset`, `--submit-mode`, `--report-interval`, `--tx-timeout`, and `--out`.
-- Build senders from `//MainBenchSender${offset + i}` and receivers from `//MainBenchReceiver${offset + i}`.
+- Parse `--ws`, `--senders`, `--parallel-per-sender`, `--duration`, `--amount`, `--fund-amount`, `--sender-offset`, `--receiver-mode`, `--submit-mode`, `--report-interval`, `--tx-timeout`, and `--out`.
+- Build senders from `//MainBenchSender${offset + i}`. Use Alice as the receiver when `--receiver-mode alice`; otherwise build paired receivers from `//MainBenchReceiver${offset + i}`.
 - If sender free balance is below `fundAmount / 2`, fund it from `//Alice` before measurement.
 - Submit `balances.transferAllowDeath(receiver, amount)` if available, otherwise fall back to `balances.transfer(receiver, amount)`.
 - In `watch` mode count only `status.isInBlock` with no dispatch error as `ok`.
@@ -223,14 +223,18 @@ Use the 18-validator mainchain endpoint:
 ```bash
 MAIN_WS=ws://10.2.2.11:9944 node scripts/mainchain_transfer_burst.js \
   --ws ws://10.2.2.11:9944 \
-  --senders 300 \
-  --parallel-per-sender 1 \
+  --senders 113 \
+  --sender-offset 0 \
+  --parallel-per-sender 4 \
   --duration 120 \
+  --amount 1 \
+  --fund-amount 1000000000000 \
+  --receiver-mode alice \
   --submit-mode watch \
   --out docs/experiments/progressive_tps/mainchain_capacity/mainchain_transfer_burst_summary.json
 ```
 
-Record the measured `mainchainMaxTps`.
+This command uses the first 113 already-funded deterministic benchmark senders and transfers to the existing Alice account to avoid receiver existential-deposit effects. Record the measured `mainchainMaxTps`; the 2026-06-20 run measured `75.6638 TPS` with `9341/9341` successful in-block transfers.
 
 - [ ] **Step 2: Regenerate progressive summary with measured capacity**
 
