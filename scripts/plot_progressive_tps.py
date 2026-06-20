@@ -126,7 +126,7 @@ def build_progressive_tps_figure(
 
     labels = [f"N={int(n)}" for n in ns]
     fig, ax = plt.subplots(figsize=(9.4, 6.1))
-    bars = ax.bar(ns, child_tps, width=0.58, color=BAR_BLUE, label="子链聚合吞吐量")
+    bars = ax.bar(ns, child_tps, width=0.58, color=BAR_BLUE, label="子链总吞吐量")
 
     ax2 = ax.twinx()
     ax2.plot(
@@ -145,10 +145,10 @@ def build_progressive_tps_figure(
         ax2.text(
             x,
             value + pressure_upper * 0.025,
-            f"{value:.3f}",
+            f"{value:.3f}%",
             ha="center",
             va="bottom",
-            fontsize=12,
+            fontsize=15,
             color=LINE_RED,
         )
 
@@ -177,13 +177,13 @@ def build_progressive_tps_figure(
             bbox={"facecolor": "white", "edgecolor": LINE_RED, "boxstyle": "square,pad=0.22", "linewidth": 0.9},
         )
 
-    ax.set_xlabel("并发子链数量 / 配置阶段", fontproperties=cjk_font(26, bold=True))
-    ax.set_ylabel("子链聚合接受吞吐量（提交/s）", fontproperties=cjk_font(26, bold=True))
-    ax2.set_ylabel("主链容量占用率（%）", fontproperties=cjk_font(26, bold=True))
+    ax.set_xlabel("子链数量", fontproperties=cjk_font(26, bold=True))
+    ax.set_ylabel("子链总吞吐量（TPS）", fontproperties=cjk_font(26, bold=True))
+    ax2.set_ylabel("主链吞吐量占用率（%）", fontproperties=cjk_font(26, bold=True))
     ax.set_xlim(ns.min() - 0.65, ns.max() + 0.65)
     ax.set_ylim(0, max(child_tps.max() * 1.2, 1))
-    ax2.set_ylim(0, pressure_upper)
-    ax2.set_yticks(np.arange(0, pressure_upper + 0.001, 0.05))
+    ax2.set_ylim(0, 0.5)
+    ax2.set_yticks(np.arange(0, 0.51, 0.05))
     ax.set_xticks(ns)
     ax.set_xticklabels(labels)
 
