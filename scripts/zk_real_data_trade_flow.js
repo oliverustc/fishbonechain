@@ -13,7 +13,8 @@
 
 import { ApiPromise, WsProvider, Keyring } from "@polkadot/api";
 import { spawnSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { hashNTimes, paymentPreimageForRemaining } from "./lib/hash_chain.js";
 import { sampleListing } from "./lib/data_trade_sample.js";
 import { findEvent, eventDataNumber } from "./lib/data_trade_events.js";
@@ -29,14 +30,54 @@ function parseArg(flag) {
   const idx = process.argv.indexOf(flag);
   return idx !== -1 ? process.argv[idx + 1] : null;
 }
+function hasArg(flag) {
+  return process.argv.includes(flag);
+}
 
 const PROFILE = parseProfileArg();
 const PROFILE_CONFIG = PROFILE ? loadTradeProfile(PROFILE) : null;
 const MAIN_WS = parseArg("--main") || PROFILE_CONFIG?.main_ws || "ws://127.0.0.1:9944";
 const CHILD_WS = parseArg("--child") || PROFILE_CONFIG?.child_ws || "ws://127.0.0.1:9950";
 const ZK_CMD = process.env.ZK_VERIFIER_CMD || PROFILE_CONFIG?.zk_verifier_cmd || "target/tools/fishbone-zk";
-const BUSINESS_WITNESS = parseArg("--business-witness") || PROFILE_CONFIG?.business_witness || "scripts/fixtures/data_trade_business_sample.json";
-const VERBOSE = process.argv.includes("--verbose");
+const BUSINESS_WITNESS = parseArg("--business-witness");
+const DATASET = parseArg("--dataset");
+const REQUEST = parseArg("--request");
+const EVIDENCE_OUT = parseArg("--evidence-out");
+const VERBOSE = hasArg("--verbose");
+const DRY_RUN_DYNAMIC = hasArg("--dry-run-dynamic");
+
+// ── Mode selection ──
+const HAS_DYNAMIC = DATASET !== null && REQUEST !== null;
+const HAS_PARTIAL = (DATASET !== null) !== (REQUEST !== null);
+const HAS_EXPLICIT_WITNESS = BUSINESS_WITNESS !== null;
+
+if (HAS_DYNAMIC && HAS_EXPLICIT_WITNESS) {
+  console.error("ambiguous: --dataset/--request and --business-witness cannot be used together");
+  process.exit(2);
+}
+if (HAS_PARTIAL) {
+  console.error("--dataset and --request must both be provided for dynamic mode");
+  process.exit(2);
+}
+const DYNAMIC_MODE = HAS_DYNAMIC;
+const WITNESS_PATH = HAS_EXPLICIT_WITNESS
+  ? BUSINESS_WITNESS
+  : (PROFILE_CONFIG?.business_witness || "scripts/fixtures/data_trade_business_sample.json");
+
+// ── Read request in dynamic mode ──
+let DYNAMIC_REQUEST = null;
+if (DYNAMIC_MODE) {
+  try {
+    DYNAMIC_REQUEST = JSON.parse(readFileSync(REQUEST, "utf8"));
+    if (!DYNAMIC_REQUEST.request_hash || typeof DYNAMIC_REQUEST.request_hash !== "string") {
+      console.error("request JSON missing request_hash");
+      process.exit(2);
+    }
+  } catch (e) {
+    console.error(`failed to read request JSON: ${e.message}`);
+    process.exit(2);
+  }
+}
 
 function log(msg) {
   console.log(`[zk-real-e2e ${new Date().toISOString()}] ${msg}`);
@@ -87,18 +128,23 @@ async function main() {
   log(`主链: ${await mainApi.rpc.system.chain()}  子链: ${await childApi.rpc.system.chain()}`);
 
   const sample = sampleListing();
+  const requestHash = DYNAMIC_MODE ? DYNAMIC_REQUEST.request_hash : sample.requestHash;
   const maxRounds = 3;
   const pricePerRound = 100;
   const depositHint = 500;
   const seed = "zk-real-data-trade-secret";
   const hashChainAnchor = hashNTimes(seed, maxRounds);
   log(`hash_chain_anchor (H^${maxRounds}(seed)): ${hashChainAnchor}`);
+  if (DYNAMIC_MODE) {
+    log(`mode=dynamic dataset=${DATASET} request=${REQUEST}`);
+    log(`dynamic request_hash=${requestHash}`);
+  }
 
   try {
     // ── Setup: publish, escrow, lock, session ──
     const publishResult = await submitTx(bob, childApi.tx.dataRegistry.publishData(
       sample.imtRoot, sample.description, pricePerRound, maxRounds, depositHint,
-      sample.requestHash, sample.proofParamsHash,
+      requestHash, sample.proofParamsHash,
     ), "publishData");
     const listingId = eventDataNumber(findEvent(publishResult, "dataRegistry", "DataPublished"), "listingId");
     log(`listing_id=${listingId}`);
@@ -118,7 +164,7 @@ async function main() {
     });
 
     const sessionResult = await submitTx(alice, childApi.tx.tradeSession.createSession(
-      listingId, escrowId, bob.address, sample.requestHash,
+      listingId, escrowId, bob.address, requestHash,
       pricePerRound, maxRounds, hashChainAnchor, "MainEscrow",
     ), "createSession");
     const sessionId = eventDataNumber(findEvent(sessionResult, "tradeSession", "SessionCreated"), "sessionId");
@@ -141,8 +187,8 @@ async function main() {
 
       // 1. Generate fixture via fishbone-zk CLI
       const fixResult = spawnSync(ZK_CMD, [
-        "business-fixture", "--witness", BUSINESS_WITNESS, "--out", outDir,
-        "--request-hash", sample.requestHash,
+        "business-fixture", "--witness", WITNESS_PATH, "--out", outDir,
+        "--request-hash", requestHash,
         "--session-id", String(sessionId),
         "--round-index", String(round),
       ], { stdio: "inherit" });
