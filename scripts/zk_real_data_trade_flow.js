@@ -107,9 +107,36 @@ async function submitTx(signer, tx, label) {
   });
 }
 
+// ── Evidence accumulator ──
+const evidence = {
+  version: 1,
+  mode: DYNAMIC_MODE ? "dynamic" : "legacy-witness",
+  profile: PROFILE || null,
+  main_ws: MAIN_WS,
+  child_ws: CHILD_WS,
+  dataset_path: DATASET || null,
+  request_path: REQUEST || null,
+  request_hash: null,
+  listing_id: null,
+  escrow_id: null,
+  session_id: null,
+  rounds: [],
+  settlement: null,
+  result: null,
+};
+if (DRY_RUN_DYNAMIC) {
+  evidence.mode = "dynamic-dry-run";
+}
+
 async function main() {
   log(`连接主链: ${MAIN_WS}  子链: ${CHILD_WS}`);
   log(`ZK CLI: ${ZK_CMD}`);
+
+  if (DRY_RUN_DYNAMIC) {
+    log("dry-run mode: skipping chain connection");
+    await dryRunDynamic();
+    return;
+  }
 
   const [mainApi, childApi] = await Promise.all([
     ApiPromise.create({ provider: new WsProvider(MAIN_WS) }),
@@ -185,9 +212,22 @@ async function main() {
       const outDir = `target/data-trade-zk/session-${sessionId}-round-${round}`;
       mkdirSync(outDir, { recursive: true });
 
+      // 0. In dynamic mode, generate witness before fixture
+      if (DYNAMIC_MODE) {
+        const witnessPath = `${outDir}/witness.json`;
+        const mwResult = spawnSync(ZK_CMD, [
+          "make-witness", "--dataset", DATASET, "--request", REQUEST,
+          "--out", witnessPath,
+          "--session-id", String(sessionId), "--round-index", String(round),
+        ], { stdio: "inherit" });
+        if (mwResult.status !== 0) throw new Error(`fishbone-zk make-witness failed: ${mwResult.status}`);
+        if (VERBOSE) log(`  witness=${witnessPath}`);
+      }
+      const roundWitnessPath = DYNAMIC_MODE ? `${outDir}/witness.json` : WITNESS_PATH;
+
       // 1. Generate fixture via fishbone-zk CLI
       const fixResult = spawnSync(ZK_CMD, [
-        "business-fixture", "--witness", WITNESS_PATH, "--out", outDir,
+        "business-fixture", "--witness", roundWitnessPath, "--out", outDir,
         "--request-hash", requestHash,
         "--session-id", String(sessionId),
         "--round-index", String(round),
@@ -230,9 +270,24 @@ async function main() {
       await submitTx(alice, childApi.tx.tradeSession.submitProofSignature(sessionId, round, ch), `submitProofSignature(${round})`);
       await submitTx(bob, childApi.tx.tradeSession.submitDataDeliveryHash(sessionId, round, ch), `submitDataDeliveryHash(${round})`);
       await submitTx(alice, childApi.tx.tradeSession.submitPaymentPreimage(sessionId, round, ch), `submitPaymentPreimage(${round})`);
+
+      // Record round evidence
+      evidence.rounds.push({
+        round_index: round,
+        witness_path: roundWitnessPath,
+        artifact_path: artifactPath,
+        proof_digest: artifact.proof_digest,
+        business_input_hash: artifact.business_input_hash,
+        public_input_hash: artifact.public_input_hash,
+      });
     }
 
     // ── Settlement ──
+    evidence.request_hash = requestHash;
+    evidence.listing_id = listingId;
+    evidence.escrow_id = escrowId;
+    evidence.session_id = sessionId;
+
     const remainingRounds = 1;
     const preimage = paymentPreimageForRemaining(seed, remainingRounds);
     log(`claimSettlement (${maxRounds - remainingRounds}/${maxRounds} rounds)...`);
@@ -247,8 +302,79 @@ async function main() {
     log(`Alice free = ${aliceBal.data.free}, reserved = ${aliceBal.data.reserved}`);
     log("✅ Real ZK-attested path 完成！");
     log("verifier=gnark-groth16-bn254 (off-chain proof, on-chain attestation)");
+
+    evidence.settlement = { completed_rounds: maxRounds - remainingRounds, remaining_rounds: remainingRounds };
+    evidence.result = "accepted";
+    writeEvidence();
   } finally {
+    if (evidence.result === null) evidence.result = "failed";
+    writeEvidence();
     await Promise.all([mainApi.disconnect(), childApi.disconnect()]);
+  }
+}
+
+async function dryRunDynamic() {
+  if (!DYNAMIC_MODE) {
+    console.error("--dry-run-dynamic requires --dataset and --request");
+    process.exit(2);
+  }
+  const requestHash = DYNAMIC_REQUEST.request_hash;
+  const sessionId = 0;
+  const round = 0;
+  const outDir = `target/data-trade-zk/session-${sessionId}-round-${round}`;
+  mkdirSync(outDir, { recursive: true });
+
+  log(`dry-run: make-witness...`);
+  const witnessPath = `${outDir}/witness.json`;
+  const mwResult = spawnSync(ZK_CMD, [
+    "make-witness", "--dataset", DATASET, "--request", REQUEST,
+    "--out", witnessPath,
+    "--session-id", String(sessionId), "--round-index", String(round),
+  ], { stdio: "inherit" });
+  if (mwResult.status !== 0) throw new Error(`make-witness failed: ${mwResult.status}`);
+
+  log(`dry-run: business-fixture...`);
+  const fixResult = spawnSync(ZK_CMD, [
+    "business-fixture", "--witness", witnessPath, "--out", outDir,
+    "--request-hash", requestHash,
+    "--session-id", String(sessionId), "--round-index", String(round),
+  ], { stdio: "inherit" });
+  if (fixResult.status !== 0) throw new Error(`business-fixture failed: ${fixResult.status}`);
+
+  const artifactPath = `${outDir}/artifact.json`;
+  const artifact = assertValidZkArtifact(readZkArtifact(artifactPath));
+
+  log(`dry-run: verify...`);
+  const verifyResult = spawnSync(ZK_CMD, ["verify", "--artifact", artifactPath], { encoding: "utf8" });
+  if (verifyResult.status !== 0 || !verifierAccepted(verifyResult.stdout)) {
+    throw new Error(`verify rejected: ${verifyResult.stderr || verifyResult.stdout}`);
+  }
+
+  evidence.request_hash = requestHash;
+  evidence.session_id = sessionId;
+  evidence.rounds.push({
+    round_index: round,
+    witness_path: witnessPath,
+    artifact_path: artifactPath,
+    proof_digest: artifact.proof_digest,
+    business_input_hash: artifact.business_input_hash,
+    public_input_hash: artifact.public_input_hash,
+  });
+  evidence.result = "dry-run-accepted";
+  writeEvidence();
+
+  log(`proof_digest=${artifact.proof_digest}`);
+  log(`business_input_hash=${artifact.business_input_hash}`);
+  log("✅ dynamic dry-run 完成！");
+}
+
+function writeEvidence() {
+  const outPath = EVIDENCE_OUT || `target/data-trade-zk/session-${evidence.session_id || 0}-evidence.json`;
+  try {
+    writeFileSync(outPath, JSON.stringify(evidence, null, 2) + "\n");
+    if (VERBOSE) log(`evidence written: ${outPath}`);
+  } catch (e) {
+    log(`WARNING: failed to write evidence: ${e.message}`);
   }
 }
 
