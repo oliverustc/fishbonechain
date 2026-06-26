@@ -70,7 +70,7 @@
 - [x] Stage 3: Multi Trade Subchain Profiles (complete)
 - [x] Stage 4: Security Model and Paper Alignment
 
-## 推荐执行顺序
+## 历史执行顺序（所有阶段已完成）
 
 - 近期第一步：执行 Stage 2 Task 1-3，先锁定论文业务 witness 的最小数据模型。
 - Stage 2 最小业务 proof 跑通后：执行 Stage 3，抽象多子链 profile。

@@ -20,6 +20,8 @@
 - Read-only reference: `pallets/trade-session/src/lib.rs`
 - Read-only reference: `pallets/main-escrow/src/lib.rs` if present; otherwise use `rg "pallet.*main.*escrow|mainEscrow|settleByPreimage"`.
 
+> **Note:** All task checkboxes below are historical. Completion is recorded in the Execution Record (see `### 2026-06-26 CodeWhale Stage 4 Execution Complete`).
+
 ## Task 1: Extract Paper Flow Claims
 
 - [ ] Step 1: Locate paper process sections.
