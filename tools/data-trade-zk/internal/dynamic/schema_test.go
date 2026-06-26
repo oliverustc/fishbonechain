@@ -134,12 +134,15 @@ func TestReadDatasetRejectsOverflowValue(t *testing.T) {
 }
 
 func TestReadDatasetRejectsOverflowMaskDelta(t *testing.T) {
-	b := []byte(`{"version":1,"dataset_id":"t","schema_version":1,"records":[{"record_id":"r","fields":{"f":{"type":"uint64","value":1,"salt_hex":"0x1111111111111111111111111111111111111111111111111111111111111111","mask_delta":` + maxUint64PlusOne() + `}}]}`)
+	b := []byte(`{"version":1,"dataset_id":"t","schema_version":1,"records":[{"record_id":"r","fields":{"f":{"type":"uint64","value":1,"salt_hex":"0x1111111111111111111111111111111111111111111111111111111111111111","mask_delta":` + maxUint64PlusOne() + `}}}]}`)
 	p := mkTemp(t, string(b))
 	defer os.Remove(p)
 	_, err := ReadDataset(p)
 	if err == nil {
 		t.Fatal("overflow mask_delta should reject")
+	}
+	if err != nil && err.Error() == "" {
+		t.Fatal("expected non-empty error")
 	}
 }
 
