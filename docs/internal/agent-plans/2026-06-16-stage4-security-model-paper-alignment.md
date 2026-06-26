@@ -290,3 +290,20 @@ Source: `references/data_trade_paper/main.tex` (580 lines, IEEEtran, English)
   - Task 2 template updated per current progress: Stage 2.2 circuit-level business witness is complete, Stage 3 multi-subchain profiles are complete — template facts updated from "pending" to "complete"
 - Questions for Codex/Owner: none remaining
 - Remaining risks: none — this is a documentation-only stage; all security claims reflect current prototype limitations truthfully
+
+### 2026-06-26 CodeWhale Review Fixes Applied
+
+Review: `docs/internal/agent-reviews/2026-06-26-data-trade-stage4-code-review.md`
+Decision: `approved-with-required-fixes`
+
+Required fixes (applied in `fcb9465`):
+- Added `docs/architecture/data-trade-security-model.md` to `docs/README.md` under 架构与设计
+- Updated stale Stage 1 fixture baseline in roadmap to Stage 2.2 BusinessRangeProof fact
+
+Recommendations (applied in `527e2a9`):
+- Renamed roadmap "推荐执行顺序" to "历史执行顺序（所有阶段已完成）"
+- Added note in Stage 4 plan that task checkboxes are historical and execution record is authoritative
+
+Commits:
+- `fcb9465 fix: address Stage 4 code review required fixes`
+- `527e2a9 docs: address Stage 4 code review recommendations`
