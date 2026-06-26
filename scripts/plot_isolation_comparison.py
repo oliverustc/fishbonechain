@@ -177,13 +177,13 @@ def build_isolation_figure(
             color=RED,
             ha="center",
             va="center",
-            fontproperties=cjk_font(17, bold=True),
+            fontproperties=cjk_font(16, bold=True),
         )
 
-    ax.set_xlabel("应用场景", fontproperties=cjk_font(28, bold=True))
-    ax.set_ylabel("提交成功率（%）", fontproperties=cjk_font(28, bold=True))
+    ax.set_xlabel("应用场景", fontproperties=cjk_font(18))
+    ax.set_ylabel("提交成功率（%）", fontproperties=cjk_font(18))
     ax.set_xticks(x)
-    ax.set_xticklabels(labels, fontproperties=cjk_font(20))
+    ax.set_xticklabels(labels, fontproperties=cjk_font(18))
     ax.set_ylim(0, 132)
 
     origin_axes(ax)

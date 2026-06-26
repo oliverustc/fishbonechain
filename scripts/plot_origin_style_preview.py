@@ -298,8 +298,8 @@ def plot_liquidity_ratio(data_dir: Path, out_dir: Path, formats: tuple[str, ...]
     ax.text(elapsed[0] + 0.6, traditional[0] - 8, f"{traditional[0]:.0f}", fontsize=21)
     ax.text(elapsed[0] + 0.6, fishbone[0] + 3, f"{fishbone[0]:.0f}", fontsize=21)
 
-    ax.set_xlabel("运行时长（分钟）", fontproperties=cjk_font(28, bold=True))
-    ax.set_ylabel("锁定资金比例（%）", fontproperties=cjk_font(28, bold=True))
+    ax.set_xlabel("运行时长（分钟）", fontproperties=cjk_font(20))
+    ax.set_ylabel("锁定资金比例（%）", fontproperties=cjk_font(20))
     ax.set_xlim(0, x_max)
     ax.set_ylim(0, max(traditional.max(), fishbone.max()) * 1.12)
     origin_axes(ax)

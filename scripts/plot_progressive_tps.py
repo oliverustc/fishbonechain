@@ -177,13 +177,14 @@ def build_progressive_tps_figure(
             bbox={"facecolor": "white", "edgecolor": LINE_RED, "boxstyle": "square,pad=0.22", "linewidth": 0.9},
         )
 
-    ax.set_xlabel("子链数量", fontproperties=cjk_font(26, bold=True))
-    ax.set_ylabel("子链总吞吐量（TPS）", fontproperties=cjk_font(26, bold=True))
-    ax2.set_ylabel("主链吞吐量占用率（%）", fontproperties=cjk_font(26, bold=True))
+    ax.set_xlabel("子链数量", fontproperties=cjk_font(18))
+    ax.set_ylabel("子链总吞吐量（TPS）", fontproperties=cjk_font(18))
+    ax2.set_ylabel("主链容量占用率（%）", fontproperties=cjk_font(18))
     ax.set_xlim(ns.min() - 0.65, ns.max() + 0.65)
     ax.set_ylim(0, max(child_tps.max() * 1.2, 1))
-    ax2.set_ylim(0, 0.5)
-    ax2.set_yticks(np.arange(0, 0.51, 0.05))
+    ax2.set_ylim(0, pressure_upper)
+    tick_step = 0.05 if pressure_upper <= 0.5 else 0.1
+    ax2.set_yticks(np.arange(0, pressure_upper + tick_step / 2, tick_step))
     ax.set_xticks(ns)
     ax.set_xticklabels(labels)
 

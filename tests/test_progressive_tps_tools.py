@@ -333,8 +333,8 @@ class ProgressiveTpsToolsTest(unittest.TestCase):
         self.assertEqual(len(captured["fig"].axes), 2)
         ax2 = captured["fig"].axes[1]
         labels = [text.get_text() for text in ax2.texts]
-        self.assertIn("0.022", labels)
-        self.assertIn("0.088", labels)
+        self.assertIn("0.022%", labels)
+        self.assertIn("0.088%", labels)
 
     def test_plotter_keeps_secondary_axis_clean_when_bridge_pressure_is_zero(self):
         module = load_module(PLOT_SCRIPT, "plot_progressive_tps_zero_pressure")
