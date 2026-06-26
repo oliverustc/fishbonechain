@@ -5,6 +5,7 @@
 ## 接管入口
 
 - [../agent.md](../agent.md)：Codex/agent 工作入口，包含当前状态、命令和维护边界
+- [internal/agent-collaboration.md](internal/agent-collaboration.md)：Codex、CodeWhale 和其他 agent 的协作规范
 - [development/developer-guide.md](development/developer-guide.md)：开发者指南，介绍 runtime、pallet、部署框架和开发流程
 - [implementation/implementation-record.md](implementation/implementation-record.md)：项目实现记录，覆盖当前 1 主链 + 6 子链实验系统
 
@@ -14,6 +15,7 @@
 - [architecture/fishbonechain.md](architecture/fishbonechain.md)：FishboneChain 主链 + 多子链众包架构
 - [architecture/cdt.md](architecture/cdt.md)：可定制可验证数据交易协议
 - [architecture/cross-chain-proof.md](architecture/cross-chain-proof.md)：BPiano / 高效跨链状态证明
+- [architecture/data-trade-security-model.md](architecture/data-trade-security-model.md)：数据交易安全模型，覆盖参与方、信任假设、攻击场景与论文对齐矩阵
 - [architecture/topology-diagram.md](architecture/topology-diagram.md)：部署矩阵图和图表入口
 
 ## 实现与开发
@@ -41,7 +43,9 @@
 
 ## 内部资料
 
+- [internal/agent-collaboration.md](internal/agent-collaboration.md)：多 agent 分工、计划、执行记录、review 和提交追踪规范
 - [internal/agent-plans/](internal/agent-plans/)：仍需保留的 agent 实施计划，作为过程记录，不作为当前事实来源
+- [internal/agent-reviews/](internal/agent-reviews/)：Codex/其他 agent 的 plan review 与 code review 记录
 - `plan/`：旧临时计划区；内容已合并到正式文档并清理，后续不要作为事实来源
 - [../env-setup/README.md](../env-setup/README.md)：Nix/flake 环境配置
 - [../references/](../references/)：外部参考代码和文档，默认不修改
