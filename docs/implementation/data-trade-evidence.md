@@ -17,9 +17,11 @@
 
 ## Current Commit
 
-- Commit: `afe0720a19ebd22b908f9206fd25817381cf76c4`
+- Validation commit: `afe0720a19ebd22b908f9206fd25817381cf76c4`
 - Branch at validation time: `main`
 - Validation time: `2026-06-26 21:17:47 CST`
+
+The local validation commands were run after the Stage 5 plan commit and before the evidence/matrix commits were created. The later Stage 5 commits only changed documentation; no Rust, Go, JavaScript, runtime, deployment, or script code changed between the validation commit and the final Stage 5 deliverable.
 
 ## Local Validation
 
