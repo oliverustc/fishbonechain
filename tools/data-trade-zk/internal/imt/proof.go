@@ -20,6 +20,12 @@ type PreparedProof struct {
 	Root3  []byte
 	Index0 int
 	Index1 int
+
+	// Stage 7 structured metadata (informational, not used by circuit).
+	EntryRoot     []byte
+	DatasetRoot   []byte
+	AggregateRoot []byte
+	PublishedRoot []byte
 }
 
 const (
