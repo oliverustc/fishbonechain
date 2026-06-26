@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"fishbone-data-trade-zk/internal/artifact"
+	"fishbone-data-trade-zk/internal/imt"
 
 	"gnarkabc/gnarkwrapper"
 	"gnarkabc/hash/mimchash"
@@ -114,6 +115,24 @@ func (rop *RootObfuscationProof) Assign(curveName string, args ...interface{}) {
 	rop.Root3 = mimchash.MiMCHash(hashFunc, [][]byte{mimchash.Convert2Byte(utils.RandStr(10), mod)})
 	rop.Index0 = 0
 	rop.Index1 = 0
+}
+
+// AssignFixture assigns the circuit from a deterministic IMT proof
+// (Stage 6). All inputs must come from imt.PrepareProof.
+func (rop *RootObfuscationProof) AssignFixture(curveName string, pp imt.PreparedProof) {
+	depth := len(pp.Path)
+	mod := gnarkwrapper.CurveMap[curveName].ScalarField()
+	rop.Path = make([]frontend.Variable, depth)
+	for i := range pp.Path {
+		rop.Path[i] = mimchash.Convert2Byte(string(pp.Path[i]), mod)
+	}
+	rop.Leaf = mimchash.Convert2Byte(string(pp.Leaf), mod)
+	rop.Root0 = mimchash.Convert2Byte(string(pp.Root0), mod)
+	rop.Root1 = mimchash.Convert2Byte(string(pp.Root1), mod)
+	rop.Root2 = mimchash.Convert2Byte(string(pp.Root2), mod)
+	rop.Root3 = mimchash.Convert2Byte(string(pp.Root3), mod)
+	rop.Index0 = pp.Index0
+	rop.Index1 = pp.Index1
 }
 
 // ── Fixture Generation ──────────────────────────────────────────────────

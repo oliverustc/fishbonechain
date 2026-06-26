@@ -76,11 +76,17 @@ func ReadRangeWitness(path string) (RangeWitness, error) {
 	if err != nil {
 		return w, err
 	}
+	// Check whether "imt" key exists in the JSON before unmarshalling.
+	// Only fill the default fixture when the key is completely missing,
+	// not when it is present with partial fields.
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return w, err
+	}
 	if err := json.Unmarshal(b, &w); err != nil {
 		return w, err
 	}
-	// Backward compatibility: use default IMT fixture when omitted.
-	if w.IMT.Version == 0 && w.IMT.Depth == 0 {
+	if _, hasIMT := raw["imt"]; !hasIMT {
 		w.IMT = imt.DefaultFixture()
 	}
 	if err := w.Validate(); err != nil {

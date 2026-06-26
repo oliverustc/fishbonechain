@@ -85,6 +85,103 @@ func TestBusinessFixtureRejectsWrongMaskedValueHash(t *testing.T) {
 	}
 }
 
+func TestBusinessInputHashDeterministicAcrossRuns(t *testing.T) {
+	dir := t.TempDir()
+	w := business.RangeWitness{
+		RequestHash: "0x1111111111111111111111111111111111111111111111111111111111111111",
+		SessionID:   1,
+		RoundIndex:  0,
+		RawValue:    42,
+		MinValue:    18,
+		MaxValue:    65,
+		MaskDelta:   1000,
+		SaltHex:     "0x2222222222222222222222222222222222222222222222222222222222222222",
+	}
+	out1, err := GenerateBusinessRangeFixture(w, dir)
+	if err != nil {
+		t.Fatalf("generate 1: %v", err)
+	}
+	out2, err := GenerateBusinessRangeFixture(w, dir)
+	if err != nil {
+		t.Fatalf("generate 2: %v", err)
+	}
+	if out1.Artifact.BusinessInputHash != out2.Artifact.BusinessInputHash {
+		t.Fatalf("business_input_hash should be deterministic across runs: %s != %s",
+			out1.Artifact.BusinessInputHash, out2.Artifact.BusinessInputHash)
+	}
+}
+
+func TestBusinessInputHashChangesWithDatasetID(t *testing.T) {
+	dir := t.TempDir()
+	w1 := business.RangeWitness{
+		RequestHash: "0x1111111111111111111111111111111111111111111111111111111111111111",
+		SessionID:   1,
+		RoundIndex:  0,
+		RawValue:    42,
+		MinValue:    18,
+		MaxValue:    65,
+		MaskDelta:   1000,
+		SaltHex:     "0x2222222222222222222222222222222222222222222222222222222222222222",
+	}
+	// Validate() auto-fills zero IMT with default fixture.
+	if err := w1.Validate(); err != nil {
+		t.Fatalf("validate w1: %v", err)
+	}
+	out1, err := GenerateBusinessRangeFixture(w1, dir)
+	if err != nil {
+		t.Fatalf("generate 1: %v", err)
+	}
+
+	w2 := w1
+	w2.IMT.DatasetID = "other-dataset"
+	out2, err := GenerateBusinessRangeFixture(w2, dir)
+	if err != nil {
+		t.Fatalf("generate 2: %v", err)
+	}
+
+	if out1.Artifact.BusinessInputHash == out2.Artifact.BusinessInputHash {
+		t.Fatal("business_input_hash should change when dataset_id changes")
+	}
+}
+
+func TestBusinessInputHashBytesStringEncoding(t *testing.T) {
+	// Verify that strLE encoding with 4-byte LE length prefix distinguishes
+	// strings of different lengths: "A" and "AB" must produce different hashes.
+	dir := t.TempDir()
+	wBase := business.RangeWitness{
+		RequestHash: "0x1111111111111111111111111111111111111111111111111111111111111111",
+		SessionID:   1,
+		RoundIndex:  0,
+		RawValue:    42,
+		MinValue:    18,
+		MaxValue:    65,
+		MaskDelta:   1000,
+		SaltHex:     "0x2222222222222222222222222222222222222222222222222222222222222222",
+	}
+	// Pre-validate to fill default IMT, then override dataset_id.
+	if err := wBase.Validate(); err != nil {
+		t.Fatalf("validate base: %v", err)
+	}
+
+	wA := wBase
+	wA.IMT.DatasetID = "A"
+	outA, err := GenerateBusinessRangeFixture(wA, dir)
+	if err != nil {
+		t.Fatalf("generate A: %v", err)
+	}
+
+	wAB := wBase
+	wAB.IMT.DatasetID = "AB"
+	outAB, err := GenerateBusinessRangeFixture(wAB, dir)
+	if err != nil {
+		t.Fatalf("generate AB: %v", err)
+	}
+
+	if outA.Artifact.BusinessInputHash == outAB.Artifact.BusinessInputHash {
+		t.Fatal("different-length strings should produce different business_input_hash")
+	}
+}
+
 func TestBusinessArtifactIsValidAndVerifiable(t *testing.T) {
 	dir := t.TempDir()
 	w := business.RangeWitness{
