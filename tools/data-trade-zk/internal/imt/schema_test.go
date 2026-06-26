@@ -191,6 +191,45 @@ func TestExplicitInvalidZeroRejects(t *testing.T) {
 	}
 }
 
+func TestDepthAliasInvalidRejects(t *testing.T) {
+	// depth: 8 with omitted published_depth must reject (not silently repair to 10).
+	b := []byte(`{"version":1,"depth":8,"root_list_index":0,"dataset_id":"test","field_name":"f"}`)
+	_, err := UnmarshalFixtureJSON(b, DefaultFixture())
+	if err == nil {
+		t.Fatal("expected depth=8 with no published_depth to reject")
+	}
+}
+
+func TestLeafIndexAliasInvalidRejects(t *testing.T) {
+	b := []byte(`{"version":1,"leaf_index":1,"root_list_index":0,"dataset_id":"test","field_name":"f"}`)
+	_, err := UnmarshalFixtureJSON(b, DefaultFixture())
+	if err == nil {
+		t.Fatal("expected leaf_index=1 with no published_leaf_index to reject")
+	}
+}
+
+func TestDepthAliasValidAccepts(t *testing.T) {
+	b := []byte(`{"version":1,"depth":10,"root_list_index":0,"dataset_id":"test","field_name":"f"}`)
+	f, err := UnmarshalFixtureJSON(b, DefaultFixture())
+	if err != nil {
+		t.Fatalf("expected depth=10 with no published_depth to accept: %v", err)
+	}
+	if f.PublishedDepth != 10 {
+		t.Fatalf("expected published_depth=10, got %d", f.PublishedDepth)
+	}
+}
+
+func TestLeafIndexAliasValidAccepts(t *testing.T) {
+	b := []byte(`{"version":1,"leaf_index":0,"root_list_index":0,"dataset_id":"test","field_name":"f"}`)
+	f, err := UnmarshalFixtureJSON(b, DefaultFixture())
+	if err != nil {
+		t.Fatalf("expected leaf_index=0 to accept: %v", err)
+	}
+	if f.PublishedLeafIndex != 0 {
+		t.Fatalf("expected published_leaf_index=0, got %d", f.PublishedLeafIndex)
+	}
+}
+
 func TestUnmarshalFixtureJSONRoundTripsDefault(t *testing.T) {
 	def := DefaultFixture()
 	b, err := json.Marshal(def)

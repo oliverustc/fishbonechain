@@ -172,7 +172,11 @@ func defaultFromRaw(raw map[string]json.RawMessage, f *Fixture, def Fixture) err
 		f.PublishedLeafIndex = f.LeafIndex
 	}
 
-	// Default omitted fields.
+	// Default omitted fields. Fields already set via deprecated aliases
+	// must not be overwritten by defaults.
+	publishedDepthFromAlias := has("depth") && !has("published_depth")
+	publishedLeafFromAlias := has("leaf_index") && !has("published_leaf_index")
+
 	if !has("record_id") {
 		f.RecordID = def.RecordID
 	}
@@ -188,7 +192,7 @@ func defaultFromRaw(raw map[string]json.RawMessage, f *Fixture, def Fixture) err
 	if !has("aggregate_depth") {
 		f.AggregateDepth = def.AggregateDepth
 	}
-	if !has("published_depth") {
+	if !has("published_depth") && !publishedDepthFromAlias {
 		f.PublishedDepth = def.PublishedDepth
 	}
 	if !has("entry_index") {
@@ -200,7 +204,7 @@ func defaultFromRaw(raw map[string]json.RawMessage, f *Fixture, def Fixture) err
 	if !has("aggregate_index") {
 		f.AggregateIndex = def.AggregateIndex
 	}
-	if !has("published_leaf_index") {
+	if !has("published_leaf_index") && !publishedLeafFromAlias {
 		f.PublishedLeafIndex = def.PublishedLeafIndex
 	}
 	// Always default deprecated aliases to match their canonical counterparts.
