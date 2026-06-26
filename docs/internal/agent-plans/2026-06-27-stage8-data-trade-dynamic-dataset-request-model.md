@@ -137,6 +137,10 @@ Validation rules:
 - `salt_hex` must be 32-byte hex
 - `mask_delta` must fit `uint64`
 
+Implementation requirement:
+
+- Do not rely on a plain `json.Unmarshal` into `uint64` alone for `value` or `mask_delta`. Use `json.Decoder.UseNumber`, `json.Number`, raw JSON number validation, or an equivalent helper so out-of-range values such as `18446744073709551616` reject instead of silently producing a wrong witness.
+
 ### Request JSON
 
 Create deterministic request fixtures under `scripts/fixtures/data_trade_requests/`.
@@ -231,6 +235,8 @@ Add at least three request fixtures:
   - duplicate record id rejects.
   - unsupported field type rejects.
   - invalid salt rejects.
+  - `value` larger than `math.MaxUint64` rejects.
+  - `mask_delta` larger than `math.MaxUint64` rejects.
   - valid request accepts.
   - non-range `constraint_kind` rejects.
   - `min_value > max_value` rejects.
@@ -367,6 +373,7 @@ Required wording:
 - Stage 8 does not implement frontend UI.
 - Stage 8 does not change runtime, artifact schema, or attestation payloads.
 - Existing `business-fixture --witness` remains supported.
+- In the long-term roadmap, add a short Stage 8 progress/update note: `make-witness` now provides the dataset/request -> `RangeWitness` conversion layer, while full scripted chain E2E orchestration remains deferred to Stage 9.
 
 Suggested gap matrix updates:
 
