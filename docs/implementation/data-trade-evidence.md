@@ -184,3 +184,20 @@ Child7 profile smoke, only when `child7` is deployed and reachable:
 ```bash
 node scripts/zk_real_data_trade_flow.js --profile child7-business-trade
 ```
+
+## Stage 9 动态脚本化 E2E 证据
+
+Stage 9 引入 per-run evidence JSON（`session-\<id\>-evidence.json`），通过 `--dry-run-dynamic` 在无链环境下验证完整 ZK pipeline。
+
+可复现 dry-run smoke 命令：
+
+```bash
+go -C tools/data-trade-zk build -o ../../target/tools/fishbone-zk ./cmd/fishbone-zk
+ZK_VERIFIER_CMD=target/tools/fishbone-zk node scripts/zk_real_data_trade_flow.js \
+  --dataset scripts/fixtures/data_trade_datasets/factory_sensors.json \
+  --request scripts/fixtures/data_trade_requests/factory_temperature_range.json \
+  --evidence-out /tmp/evidence.json \
+  --dry-run-dynamic
+```
+
+Dry-run 证据格式示例见 `target/data-trade-zk/session-0-evidence.json`。注意：dry-run 证据不涉及链上交互，`listing_id`、`escrow_id` 和 `settlement` 字段为 `null`。历史 VM/live-chain 证据（Stage 5）不受影响。

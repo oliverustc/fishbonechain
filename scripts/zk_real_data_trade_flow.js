@@ -371,6 +371,8 @@ async function dryRunDynamic() {
 function writeEvidence() {
   const outPath = EVIDENCE_OUT || `target/data-trade-zk/session-${evidence.session_id || 0}-evidence.json`;
   try {
+    const dir = outPath.substring(0, outPath.lastIndexOf("/"));
+    if (dir) mkdirSync(dir, { recursive: true });
     writeFileSync(outPath, JSON.stringify(evidence, null, 2) + "\n");
     if (VERBOSE) log(`evidence written: ${outPath}`);
   } catch (e) {
