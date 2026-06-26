@@ -163,11 +163,13 @@ Validation rules:
 
 - `version == 1`
 - `depth == 10` remains accepted as backward-compatible alias for `published_depth`
+- Treat `depth` as deprecated alias: if `depth` is present and `published_depth` is omitted, copy `depth` into `published_depth`; if both are present and disagree, reject.
 - `published_depth == 10`
 - `entry_depth == 4`
 - `dataset_depth == 4`
 - `aggregate_depth == 2`
 - `leaf_index == 0` remains accepted as backward-compatible alias for `published_leaf_index`
+- Treat `leaf_index` as deprecated alias: if `leaf_index` is present and `published_leaf_index` is omitted, copy `leaf_index` into `published_leaf_index`; if both are present and disagree, reject.
 - `published_leaf_index == 0`
 - `root_list_index == 0`
 - `entry_index == 0`
@@ -217,6 +219,14 @@ Do not use random tree construction.
 ## Prepared Proof Contract
 
 Keep `imt.PreparedProof` owned by `internal/imt`.
+
+Add a new function for Stage 7:
+
+```go
+func PrepareStructuredProof(curveName string, maskedValueHash []byte, f Fixture) (PreparedProof, error)
+```
+
+Keep the existing Stage 6 `PrepareProof(...)` function available and signature-stable for legacy tests and compatibility. Do not replace it or change its meaning. `GenerateBusinessRangeFixture` must switch to `PrepareStructuredProof(...)`.
 
 It may be extended with structured metadata for tests and documentation, for example:
 
@@ -326,7 +336,8 @@ git commit -m "feat(zk): build structured IMT membership fixture"
 
 ### Task 3: Wire Structured IMT Into Business Fixture
 
-- [ ] Update `PrepareProof` or add `PrepareStructuredProof` so business fixture uses structured IMT by default.
+- [ ] Add `PrepareStructuredProof` and keep existing `PrepareProof` unchanged.
+- [ ] Update `GenerateBusinessRangeFixture` to call `PrepareStructuredProof`.
 - [ ] Keep `RootObfuscationProof.AssignFixture` signature stable if practical.
 - [ ] Update `GenerateBusinessRangeFixture` to include new IMT metadata in `business_input_hash`.
 - [ ] Add tests:
