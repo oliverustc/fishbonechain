@@ -137,6 +137,10 @@ VM E2E 结果（main @ `ws://10.2.2.11:9944`，child6 @ `ws://10.2.2.11:9950`，
 - **Settlement 模式**：仅实现 `MainEscrow`。`FmcAssisted` 和 `Hybrid` 预留为后续。
 - **单 verifier**：`VerifierAuthority` 是单一 dev 账户（Charlie），不是多签委员会。
 
+### 安全模型与论文对齐
+
+安全模型与论文对齐见 `docs/architecture/data-trade-security-model.md`。当前实现是链下 gnark proof verification + 链上 verifier attestation，不是链上 Groth16 verifier；bridge/session-escrow 仍是开发期链下协调。
+
 ## 测试状态
 
 ```bash
