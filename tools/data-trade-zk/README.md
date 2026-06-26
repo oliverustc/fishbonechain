@@ -11,7 +11,8 @@ This tool wraps the paper prototype in `references/data_trade_code/snarks/gnarkz
 ## Commands
 
 - `fishbone-zk fixture` — generate proof artifact fixture
-- `fishbone-zk business-fixture` — generate business range proof with deterministic IMT coupling (Stage 6)
+- `fishbone-zk business-fixture` — generate business range proof with structured IMT (Stage 6-7)
+- `fishbone-zk make-witness` — generate `RangeWitness` from dynamic dataset + request JSON (Stage 8)
 - `fishbone-zk setup` — compile + trusted setup
 - `fishbone-zk prove` — generate proof (alias to fixture for Stage 1)
 - `fishbone-zk verify --artifact <path>` — verify artifact and embedded proofs

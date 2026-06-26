@@ -103,7 +103,11 @@
 - 至少 2 个 dataset fixture、每个 dataset 至少 2 条 record、至少 2 个 numeric field。
 - 同一脚本可以针对不同 field/request 生成不同 proof artifact。
 - `fishbone-zk verify` 通过。
-- 文档明确说明这是“动态 fixture/request 原型”，不是生产数据管理系统。
+- 文档明确说明这是"动态 fixture/request 原型"，不是生产数据管理系统。
+
+### 进度（2026-06-27）
+
+- ✅ **Stage 8 完成**：`make-witness` 提供 dataset/request → `RangeWitness` 转换层。`internal/dynamic` 包实现 dataset/request schema 验证（含 uint64 overflow guard）和 `BuildRangeWitness` 跨文档一致性检查。`factory_sensors`、`vehicle_telematics` 两个 demo dataset + 三个 request fixture 已通过 `make-witness → business-fixture → verify` E2E smoke（两个 accepted，一个 out-of-range 正确 reject）。完整脚本化链上 E2E 编排推迟到 Stage 9。
 
 ## Stage 9：脚本化完整 E2E 编排
 
