@@ -408,4 +408,24 @@ CodeWhale must stop and ask Codex before:
 
 ## Execution Record
 
-Not started.
+### 2026-06-26 CodeWhale Stage 6 Execution Complete
+
+- Branch: `feat/data-trade-stage6-imt-coupling`
+- Commits:
+  - `503ec9d feat(zk): add deterministic IMT fixture schema`
+  - `9ac5ecc feat(zk): attach IMT fixture to business witness`
+  - `bc10266 feat(zk): derive deterministic IMT range proof inputs`
+  - `8424384 feat(zk): bind business range proof to deterministic IMT root`
+  - `4e1982c docs: record deterministic IMT business coupling`
+- Tasks completed: Task 1-8 (all)
+- Tests run:
+  - Go: `go -C tools/data-trade-zk test ./...` — `internal/imt` (14 tests), `internal/business` (7 tests), `internal/gnarkadapter` (9 tests, incl. 3 new), `internal/artifact` (6 tests) — all passed
+  - JS: `node --check` on `zk_real_data_trade_flow.js`, `zk_artifact.js`, `zk_verifier_client.js`, `zk_attestation.js` — all passed
+  - Rust: `SKIP_WASM_BUILD=1 cargo test -p pallet-trade-session` — 19 passed
+- CLI smoke: `fishbone-zk business-fixture` + `fishbone-zk verify` — `accepted`
+- Deviations from plan:
+  - Decoy roots derivation now uses `dataset_id` + `field_name` in domain string (plan review finding #1 — ensures fixture metadata changes observable)
+  - `Validate()` auto-fills default IMT for backward compatibility; `ReadRangeWitness` detects missing `"imt"` JSON key via `json.RawMessage`
+  - `PreparedProof` type placed in `internal/imt` per plan review recommendation
+- Questions for Codex/Owner: none
+- Remaining risks: none — Stage 6 is Go-only, no Rust/JS/artifact encoding changes
