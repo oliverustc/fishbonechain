@@ -51,13 +51,10 @@ func TestPrepareProofChangingDatasetIDChangesRoot(t *testing.T) {
 	mvh := dummyHash()
 	pp1, _ := PrepareProof(testCurve, mvh, f1)
 	pp2, _ := PrepareProof(testCurve, mvh, f2)
-	// Decoy roots are derived from fixture metadata, so changing dataset_id
-	// must change at least one decoy root.
-	sameDecoys := bytes.Equal(pp1.Root1, pp2.Root1) &&
-		bytes.Equal(pp1.Root2, pp2.Root2) &&
-		bytes.Equal(pp1.Root3, pp2.Root3)
-	if sameDecoys {
-		t.Fatal("changing dataset_id did not change any decoy root")
+	// Padding leaves include fixture metadata, so changing dataset_id
+	// must change the selected Root0.
+	if bytes.Equal(pp1.Root0, pp2.Root0) {
+		t.Fatal("changing dataset_id did not change Root0")
 	}
 }
 

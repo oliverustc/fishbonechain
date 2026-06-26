@@ -429,3 +429,16 @@ CodeWhale must stop and ask Codex before:
   - `PreparedProof` type placed in `internal/imt` per plan review recommendation
 - Questions for Codex/Owner: none
 - Remaining risks: none — Stage 6 is Go-only, no Rust/JS/artifact encoding changes
+
+### 2026-06-26 CodeWhale Review Fixes Applied
+
+Review: `docs/internal/agent-reviews/2026-06-26-data-trade-stage6-code-review.md`
+Decision: `changes requested` → 3 findings fixed
+
+- Finding 1 (Medium): Padding leaf derivation now includes `dataset_id` + `field_name`
+  via `fixtureString()`. `TestPrepareProofChangingDatasetIDChangesRoot` now asserts
+  `Root0` changes, not only decoy roots.
+- Finding 2 (Low): `strLE` extracted to package-level function. Added `TestStrLEEncodesExactly`
+  verifying exact bytes: `"demo"` → `04 00 00 00 64 65 6d 6f` and `""` → `00 00 00 00`.
+- Finding 3 (Low): Documentation fixed — "9 padding leaves" → "1023 padding leaves"
+  in `data-trade-implementation.md` and `tools/data-trade-zk/README.md`.

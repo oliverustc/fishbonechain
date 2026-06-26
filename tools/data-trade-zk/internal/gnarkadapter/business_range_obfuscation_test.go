@@ -182,6 +182,26 @@ func TestBusinessInputHashBytesStringEncoding(t *testing.T) {
 	}
 }
 
+func TestStrLEEncodesExactly(t *testing.T) {
+	// "demo" → 04 00 00 00 64 65 6d 6f
+	expected := []byte{4, 0, 0, 0, 'd', 'e', 'm', 'o'}
+	got := strLE("demo")
+	if len(got) != len(expected) {
+		t.Fatalf("strLE(\"demo\") length: expected %d, got %d", len(expected), len(got))
+	}
+	for i := range expected {
+		if got[i] != expected[i] {
+			t.Fatalf("strLE(\"demo\")[%d]: expected 0x%02x, got 0x%02x", i, expected[i], got[i])
+		}
+	}
+
+	// Empty string → 00 00 00 00
+	empty := strLE("")
+	if len(empty) != 4 || empty[0] != 0 || empty[1] != 0 || empty[2] != 0 || empty[3] != 0 {
+		t.Fatalf("strLE(\"\") expected [0,0,0,0], got %v", empty)
+	}
+}
+
 func TestBusinessArtifactIsValidAndVerifiable(t *testing.T) {
 	dir := t.TempDir()
 	w := business.RangeWitness{

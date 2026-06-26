@@ -36,6 +36,10 @@ func decoyString(prefix, datasetID, fieldName string, idx int) string {
 	return fmt.Sprintf("%s%c%s%c%s%c%d", prefix, separator, datasetID, separator, fieldName, separator, idx)
 }
 
+func fixtureString(prefix, datasetID, fieldName string, idx int) string {
+	return fmt.Sprintf("%s%c%s%c%s%c%d", prefix, separator, datasetID, separator, fieldName, separator, idx)
+}
+
 func deterministicMiMC(curveName string, data []byte) ([]byte, error) {
 	curve, ok := gnarkwrapper.CurveMap[curveName]
 	if !ok {
@@ -85,7 +89,7 @@ func PrepareProof(curveName string, maskedValueHash []byte, f Fixture) (Prepared
 	leaves := make([][]byte, 1<<f.Depth)
 	leaves[0] = maskedValueHash
 	for i := 1; i < len(leaves); i++ {
-		padLabel := []byte(padString(domainPad, i))
+		padLabel := []byte(fixtureString(domainPad, f.DatasetID, f.FieldName, i))
 		padLeaf, err := deterministicMiMC(curveName, padLabel)
 		if err != nil {
 			return PreparedProof{}, fmt.Errorf("padding leaf %d: %w", i, err)

@@ -15,6 +15,18 @@ import (
 	"gnarkabc/gnarkwrapper"
 )
 
+// strLE encodes a string as 4-byte little-endian length prefix + raw UTF-8 bytes.
+// Used in business_input_hash construction for IMT fixture metadata fields (Stage 6).
+func strLE(s string) []byte {
+	b := []byte(s)
+	lenBuf := make([]byte, 4)
+	binary.LittleEndian.PutUint32(lenBuf, uint32(len(b)))
+	out := make([]byte, 4+len(b))
+	copy(out, lenBuf)
+	copy(out[4:], b)
+	return out
+}
+
 // GenerateBusinessRangeFixture generates a full proof artifact using the
 // BusinessRangeProof circuit (Stage 2.2) instead of the old random-witness
 // RangeHashProof. The RO proof is still generated with RandomWitness.
@@ -143,15 +155,6 @@ func GenerateBusinessRangeFixture(w business.RangeWitness, outDir string) (Gener
 		var out [8]byte
 		binary.LittleEndian.PutUint64(out[:], v)
 		return out[:]
-	}
-	strLE := func(s string) []byte {
-		b := []byte(s)
-		lenBuf := make([]byte, 4)
-		binary.LittleEndian.PutUint32(lenBuf, uint32(len(b)))
-		out := make([]byte, 4+len(b))
-		copy(out, lenBuf)
-		copy(out[4:], b)
-		return out
 	}
 	saltBytes, err := hex.DecodeString(strings.TrimPrefix(w.SaltHex, "0x"))
 	if err != nil {
