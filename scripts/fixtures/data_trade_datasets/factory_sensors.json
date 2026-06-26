@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "dataset_id": "factory-sensors",
+  "description": "Factory sensor readings demo dataset",
+  "schema_version": 1,
+  "records": [
+    {
+      "record_id": "sensor-a-0001",
+      "fields": {
+        "temperature": {
+          "type": "uint64",
+          "value": 42,
+          "salt_hex": "0x2222222222222222222222222222222222222222222222222222222222222222",
+          "mask_delta": 1000
+        },
+        "humidity": {
+          "type": "uint64",
+          "value": 58,
+          "salt_hex": "0x3333333333333333333333333333333333333333333333333333333333333333",
+          "mask_delta": 2000
+        }
+      }
+    },
+    {
+      "record_id": "sensor-b-0002",
+      "fields": {
+        "temperature": {
+          "type": "uint64",
+          "value": 31,
+          "salt_hex": "0x4444444444444444444444444444444444444444444444444444444444444444",
+          "mask_delta": 1500
+        },
+        "pressure": {
+          "type": "uint64",
+          "value": 1013,
+          "salt_hex": "0x5555555555555555555555555555555555555555555555555555555555555555",
+          "mask_delta": 5000
+        }
+      }
+    }
+  ]
+}

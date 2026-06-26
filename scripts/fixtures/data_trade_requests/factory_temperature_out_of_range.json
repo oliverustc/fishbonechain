@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "constraint_kind": "range",
+  "request_hash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "dataset_id": "factory-sensors",
+  "record_id": "sensor-a-0001",
+  "field_name": "temperature",
+  "range": {
+    "min_value": 100,
+    "max_value": 200
+  }
+}

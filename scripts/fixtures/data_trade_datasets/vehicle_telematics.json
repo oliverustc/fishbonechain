@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "dataset_id": "vehicle-telematics",
+  "description": "Vehicle telematics demo dataset",
+  "schema_version": 1,
+  "records": [
+    {
+      "record_id": "vehicle-v-0001",
+      "fields": {
+        "speed": {
+          "type": "uint64",
+          "value": 65,
+          "salt_hex": "0x6666666666666666666666666666666666666666666666666666666666666666",
+          "mask_delta": 3000
+        },
+        "rpm": {
+          "type": "uint64",
+          "value": 2800,
+          "salt_hex": "0x7777777777777777777777777777777777777777777777777777777777777777",
+          "mask_delta": 50000
+        }
+      }
+    },
+    {
+      "record_id": "vehicle-v-0002",
+      "fields": {
+        "speed": {
+          "type": "uint64",
+          "value": 42,
+          "salt_hex": "0x8888888888888888888888888888888888888888888888888888888888888888",
+          "mask_delta": 2500
+        },
+        "fuel_level": {
+          "type": "uint64",
+          "value": 75,
+          "salt_hex": "0x9999999999999999999999999999999999999999999999999999999999999999",
+          "mask_delta": 100
+        }
+      }
+    }
+  ]
+}
