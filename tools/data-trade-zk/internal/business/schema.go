@@ -44,7 +44,8 @@ func validHex32(value string) bool {
 
 func (w *RangeWitness) Validate() error {
 	// Backward compatibility: use default IMT fixture when omitted.
-	if w.IMT.Version == 0 && w.IMT.Depth == 0 {
+	// Stage 6 used Version+Depth; Stage 7 also checks SchemaVersion+PublishedDepth.
+	if w.IMT.SchemaVersion == 0 && w.IMT.PublishedDepth == 0 {
 		w.IMT = imt.DefaultFixture()
 	}
 	if !validHex32(w.RequestHash) {
@@ -88,6 +89,13 @@ func ReadRangeWitness(path string) (RangeWitness, error) {
 	}
 	if _, hasIMT := raw["imt"]; !hasIMT {
 		w.IMT = imt.DefaultFixture()
+	} else if imtRaw, ok := raw["imt"]; ok {
+		// Use UnmarshalFixtureJSON for proper defaulting of new Stage 7 fields.
+		f, err := imt.UnmarshalFixtureJSON(imtRaw, imt.DefaultFixture())
+		if err != nil {
+			return w, fmt.Errorf("imt: %w", err)
+		}
+		w.IMT = f
 	}
 	if err := w.Validate(); err != nil {
 		return w, err

@@ -71,7 +71,7 @@ func TestPrepareProofPathLengthIs10(t *testing.T) {
 
 func TestPrepareProofRejectsInvalidFixture(t *testing.T) {
 	f := DefaultFixture()
-	f.Depth = 5
+	f.PublishedDepth = 5
 	_, err := PrepareProof(testCurve, dummyHash(), f)
 	if err == nil {
 		t.Fatal("expected error for invalid fixture")
