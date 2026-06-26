@@ -106,14 +106,14 @@ func GenerateBusinessRangeFixture(w business.RangeWitness, outDir string) (Gener
 		return GenerateOutput{}, fmt.Errorf("write vk bundle: %w", err)
 	}
 
-	// Stage 6: Use deterministic IMT fixture instead of random Assign.
+	// Stage 7: Use structured IMT membership proof.
 	mvhBytes, err := hex.DecodeString(strings.TrimPrefix(w.MaskedValueHash, "0x"))
 	if err != nil {
 		return GenerateOutput{}, fmt.Errorf("decode masked_value_hash for IMT: %w", err)
 	}
-	imtProof, err := imt.PrepareProof(curveName, mvhBytes, w.IMT)
+	imtProof, err := imt.PrepareStructuredProof(curveName, mvhBytes, w.IMT)
 	if err != nil {
-		return GenerateOutput{}, fmt.Errorf("prepare IMT proof: %w", err)
+		return GenerateOutput{}, fmt.Errorf("prepare structured IMT proof: %w", err)
 	}
 	roCircuit.AssignFixture(curveName, imtProof)
 	roZk.SetAssignment(&roCircuit)
@@ -168,12 +168,21 @@ func GenerateBusinessRangeFixture(w business.RangeWitness, outDir string) (Gener
 		u64leFn(w.MaskDelta),
 		saltBytes,
 		mvhBytes,
-		// Stage 6: IMT fixture metadata in business_input_hash.
+		// Stage 6+7: IMT fixture metadata in business_input_hash.
 		strLE(w.IMT.DatasetID),
 		strLE(w.IMT.FieldName),
-		u64leFn(uint64(w.IMT.Depth)),
-		u64leFn(uint64(w.IMT.LeafIndex)),
+		u64leFn(uint64(w.IMT.PublishedDepth)),
+		u64leFn(uint64(w.IMT.PublishedLeafIndex)),
 		u64leFn(uint64(w.IMT.RootListIndex)),
+		// Stage 7: structured IMT metadata.
+		strLE(w.IMT.RecordID),
+		u64leFn(uint64(w.IMT.SchemaVersion)),
+		u64leFn(uint64(w.IMT.EntryDepth)),
+		u64leFn(uint64(w.IMT.DatasetDepth)),
+		u64leFn(uint64(w.IMT.AggregateDepth)),
+		u64leFn(uint64(w.IMT.EntryIndex)),
+		u64leFn(uint64(w.IMT.DatasetIndex)),
+		u64leFn(uint64(w.IMT.AggregateIndex)),
 	)
 
 	rel := func(p string) string {

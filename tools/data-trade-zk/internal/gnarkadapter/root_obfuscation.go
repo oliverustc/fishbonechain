@@ -118,7 +118,7 @@ func (rop *RootObfuscationProof) Assign(curveName string, args ...interface{}) {
 }
 
 // AssignFixture assigns the circuit from a deterministic IMT proof
-// (Stage 6). All inputs must come from imt.PrepareProof.
+// (Stage 6/7). All inputs come from imt.PrepareProof or imt.PrepareStructuredProof.
 func (rop *RootObfuscationProof) AssignFixture(curveName string, pp imt.PreparedProof) {
 	depth := len(pp.Path)
 	mod := gnarkwrapper.CurveMap[curveName].ScalarField()

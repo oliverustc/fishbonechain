@@ -83,15 +83,15 @@ func TestRangeWitnessDefaultsIMT(t *testing.T) {
 		MaskDelta:   1000,
 		SaltHex:     "0x2222222222222222222222222222222222222222222222222222222222222222",
 	}
-	// Simulate what ReadRangeWitness does when imt is omitted: fill default.
-	if w.IMT.Version == 0 && w.IMT.Depth == 0 {
+	// Simulate Validate's backward-compatible default fill for omitted IMT.
+	if w.IMT.SchemaVersion == 0 && w.IMT.PublishedDepth == 0 {
 		w.IMT = imt.DefaultFixture()
 	}
 	if err := w.Validate(); err != nil {
 		t.Fatalf("default IMT must validate: %v", err)
 	}
-	if w.IMT.Depth != 10 {
-		t.Fatalf("expected depth 10, got %d", w.IMT.Depth)
+	if w.IMT.PublishedDepth != 10 {
+		t.Fatalf("expected published_depth 10, got %d", w.IMT.PublishedDepth)
 	}
 }
 
@@ -106,12 +106,16 @@ func TestRangeWitnessRejectsInvalidIMTDepth(t *testing.T) {
 		MaskDelta:   1000,
 		SaltHex:     "0x2222222222222222222222222222222222222222222222222222222222222222",
 		IMT: imt.Fixture{
-			Version:       1,
-			Depth:         5,
-			LeafIndex:     0,
-			RootListIndex: 0,
-			DatasetID:     "test",
-			FieldName:     "f",
+			Version:        1,
+			PublishedDepth: 5,
+			RootListIndex:  0,
+			DatasetID:      "test",
+			FieldName:      "f",
+			RecordID:       "r",
+			SchemaVersion:  1,
+			EntryDepth:     4,
+			DatasetDepth:   4,
+			AggregateDepth: 2,
 		},
 	}
 	if err := w.Validate(); err == nil {
