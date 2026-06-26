@@ -22,6 +22,7 @@ This document describes the security model of FishboneChain data-trade scenarios
 - `fishbone-zk verify` verifies gnark proof artifacts off-chain and rejects proof/VK/public input hash mismatch.
 - **Stage 2.2**: `BusinessRangeProof` gnark circuit proves `raw_value ∈ [min, max]`, `masked_value = raw_value + delta`, and `masked_value_hash = MiMC(masked_value, salt)`. `business_input_hash` is bound to the on-chain proof digest and verifier attestation.
 - **Stage 3**: Multiple data-trade subchain profiles supported via `trade_profiles` in `chains.json`; child6 and child7 are configured and VM-verified.
+- **Stage 6**: Deterministic IMT fixture coupling links the RO proof to a deterministic Merkle tree (depth 10) where leaf 0 is `masked_value_hash`. `business_input_hash` includes IMT fixture metadata (`dataset_id`, `field_name`, `depth`, `leaf_index`, `root_list_index`). This is fixture-level coupling, not full production IMT.
 
 ## Current Non-Guarantees
 

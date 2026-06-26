@@ -132,7 +132,8 @@ VM E2E 结果（main @ `ws://10.2.2.11:9944`，child6 @ `ws://10.2.2.11:9950`，
 ### 边界与限制
 
 - **ZK 验证路径**：`DataTradeProofVerifier = AlwaysPassVerifier`。Groth16 验证在链下 CLI (`fishbone-zk verify`) 完成，链上只验证 attestation 签名和 digest 绑定。
-- **业务 witness (Stage 2.2 complete)**：`BusinessRangeProof` 电路已实现，gnark 证明 `raw_value ∈ [min, max]` + `masked_value = raw_value + delta` + `masked_value_hash = MiMC(masked_value, salt)`。`business_input_hash` 包含 `raw_value`、`min/max`、`mask_delta`、`salt`、`masked_value_hash` 的 canonical LE 编码，绑定到 `proof_digest` 和链上 attestation。RO/IMT、subset/substr、链上 verifier、trustless bridge 仍是后续工作。
+- **业务 witness (Stage 2.2 complete)**：`BusinessRangeProof` 电路已实现，gnark 证明 `raw_value ∈ [min, max]` + `masked_value = raw_value + delta` + `masked_value_hash = MiMC(masked_value, salt)`。`business_input_hash` 包含 `raw_value`、`min/max`、`mask_delta`、`salt`、`masked_value_hash` 的 canonical LE 编码，绑定到 `proof_digest` 和链上 attestation。
+- **Stage 6 确定性 IMT fixture 耦合**：`business-fixture` 的 RO proof 已从随机 Merkle 树切换为确定性 IMT fixture（depth 10，leaf 0 = `masked_value_hash`，9 个 padding leaves，4 个 decoy roots 由 fixture metadata 派生）。`business_input_hash` 扩展包含 `dataset_id`、`field_name`、`depth`、`leaf_index`、`root_list_index`（字符串使用 4-byte LE 长度前缀编码）。这是确定性 fixture 耦合，不是完整生产 IMT；完整 IMT membership、subset/substr、链上 verifier 和 trustless bridge 仍是后续工作。
 - **Bridge 非 trustless**：session-escrow 绑定由 E2E/bridge 脚本在链下校验，未接入 CCMC/Merkle proof 做链上跨链验证。
 - **Settlement 模式**：仅实现 `MainEscrow`。`FmcAssisted` 和 `Hybrid` 预留为后续。
 - **单 verifier**：`VerifierAuthority` 是单一 dev 账户（Charlie），不是多签委员会。
