@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"fishbone-data-trade-zk/internal/imt"
 )
 
 type RangeWitness struct {
@@ -17,7 +19,8 @@ type RangeWitness struct {
 	MaxValue        uint64 `json:"max_value"`
 	MaskDelta       uint64 `json:"mask_delta"`
 	SaltHex         string `json:"salt_hex"`
-	MaskedValueHash string `json:"masked_value_hash,omitempty"`
+	MaskedValueHash string      `json:"masked_value_hash,omitempty"`
+	IMT             imt.Fixture `json:"imt,omitempty"`
 }
 
 // Deprecated: ComputeMaskedValueHash always returns "".
@@ -39,7 +42,11 @@ func validHex32(value string) bool {
 	return err == nil && len(b) == 32
 }
 
-func (w RangeWitness) Validate() error {
+func (w *RangeWitness) Validate() error {
+	// Backward compatibility: use default IMT fixture when omitted.
+	if w.IMT.Version == 0 && w.IMT.Depth == 0 {
+		w.IMT = imt.DefaultFixture()
+	}
 	if !validHex32(w.RequestHash) {
 		return fmt.Errorf("request_hash must be 32-byte hex")
 	}
@@ -57,6 +64,9 @@ func (w RangeWitness) Validate() error {
 			return fmt.Errorf("masked_value_hash must be 32-byte hex if provided")
 		}
 	}
+	if err := w.IMT.Validate(); err != nil {
+		return fmt.Errorf("imt: %w", err)
+	}
 	return nil
 }
 
@@ -66,8 +76,18 @@ func ReadRangeWitness(path string) (RangeWitness, error) {
 	if err != nil {
 		return w, err
 	}
+	// Check whether "imt" key exists in the JSON before unmarshalling.
+	// Only fill the default fixture when the key is completely missing,
+	// not when it is present with partial fields.
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return w, err
+	}
 	if err := json.Unmarshal(b, &w); err != nil {
 		return w, err
+	}
+	if _, hasIMT := raw["imt"]; !hasIMT {
+		w.IMT = imt.DefaultFixture()
 	}
 	if err := w.Validate(); err != nil {
 		return w, err

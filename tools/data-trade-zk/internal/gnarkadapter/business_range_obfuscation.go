@@ -10,9 +10,22 @@ import (
 
 	"fishbone-data-trade-zk/internal/artifact"
 	"fishbone-data-trade-zk/internal/business"
+	"fishbone-data-trade-zk/internal/imt"
 
 	"gnarkabc/gnarkwrapper"
 )
+
+// strLE encodes a string as 4-byte little-endian length prefix + raw UTF-8 bytes.
+// Used in business_input_hash construction for IMT fixture metadata fields (Stage 6).
+func strLE(s string) []byte {
+	b := []byte(s)
+	lenBuf := make([]byte, 4)
+	binary.LittleEndian.PutUint32(lenBuf, uint32(len(b)))
+	out := make([]byte, 4+len(b))
+	copy(out, lenBuf)
+	copy(out[4:], b)
+	return out
+}
 
 // GenerateBusinessRangeFixture generates a full proof artifact using the
 // BusinessRangeProof circuit (Stage 2.2) instead of the old random-witness
@@ -93,7 +106,16 @@ func GenerateBusinessRangeFixture(w business.RangeWitness, outDir string) (Gener
 		return GenerateOutput{}, fmt.Errorf("write vk bundle: %w", err)
 	}
 
-	roCircuit.Assign(curveName, 10)
+	// Stage 6: Use deterministic IMT fixture instead of random Assign.
+	mvhBytes, err := hex.DecodeString(strings.TrimPrefix(w.MaskedValueHash, "0x"))
+	if err != nil {
+		return GenerateOutput{}, fmt.Errorf("decode masked_value_hash for IMT: %w", err)
+	}
+	imtProof, err := imt.PrepareProof(curveName, mvhBytes, w.IMT)
+	if err != nil {
+		return GenerateOutput{}, fmt.Errorf("prepare IMT proof: %w", err)
+	}
+	roCircuit.AssignFixture(curveName, imtProof)
 	roZk.SetAssignment(&roCircuit)
 	roZk.GenerateWitness(false)
 	roZk.Prove()
@@ -129,7 +151,7 @@ func GenerateBusinessRangeFixture(w business.RangeWitness, outDir string) (Gener
 	publicInputHash := artifact.Blake2Hex(chPublicBytes, roPublicBytes)
 
 	// ── Business Input Hash ──────────────────────────────────────────
-	u64le := func(v uint64) []byte {
+	u64leFn := func(v uint64) []byte {
 		var out [8]byte
 		binary.LittleEndian.PutUint64(out[:], v)
 		return out[:]
@@ -138,17 +160,20 @@ func GenerateBusinessRangeFixture(w business.RangeWitness, outDir string) (Gener
 	if err != nil {
 		return GenerateOutput{}, fmt.Errorf("decode salt: %w", err)
 	}
-	mvhBytes, err := hex.DecodeString(strings.TrimPrefix(w.MaskedValueHash, "0x"))
-	if err != nil {
-		return GenerateOutput{}, fmt.Errorf("decode masked_value_hash: %w", err)
-	}
+	// mvhBytes already decoded above for IMT proof.
 	businessHash := artifact.Blake2Hex(
-		u64le(w.RawValue),
-		u64le(w.MinValue),
-		u64le(w.MaxValue),
-		u64le(w.MaskDelta),
+		u64leFn(w.RawValue),
+		u64leFn(w.MinValue),
+		u64leFn(w.MaxValue),
+		u64leFn(w.MaskDelta),
 		saltBytes,
 		mvhBytes,
+		// Stage 6: IMT fixture metadata in business_input_hash.
+		strLE(w.IMT.DatasetID),
+		strLE(w.IMT.FieldName),
+		u64leFn(uint64(w.IMT.Depth)),
+		u64leFn(uint64(w.IMT.LeafIndex)),
+		u64leFn(uint64(w.IMT.RootListIndex)),
 	)
 
 	rel := func(p string) string {

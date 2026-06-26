@@ -7,5 +7,13 @@
   "max_value": 65,
   "mask_delta": 1000,
   "salt_hex": "0x2222222222222222222222222222222222222222222222222222222222222222",
-  "masked_value_hash": ""
+  "masked_value_hash": "",
+  "imt": {
+    "version": 1,
+    "depth": 10,
+    "leaf_index": 0,
+    "root_list_index": 0,
+    "dataset_id": "demo-range-dataset",
+    "field_name": "sensor_value"
+  }
 }
