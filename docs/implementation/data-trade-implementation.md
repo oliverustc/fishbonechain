@@ -141,6 +141,11 @@ VM E2E 结果（main @ `ws://10.2.2.11:9944`，child6 @ `ws://10.2.2.11:9950`，
 
 安全模型与论文对齐见 `docs/architecture/data-trade-security-model.md`。当前实现是链下 gnark proof verification + 链上 verifier attestation，不是链上 Groth16 verifier；bridge/session-escrow 仍是开发期链下协调。
 
+### 证据与论文差距
+
+- 可复现证据见 `docs/implementation/data-trade-evidence.md`。
+- 论文实现差距矩阵见 `docs/implementation/data-trade-paper-gap-matrix.md`。
+
 ## 测试状态
 
 ```bash

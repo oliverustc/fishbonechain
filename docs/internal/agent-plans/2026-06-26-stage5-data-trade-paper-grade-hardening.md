@@ -137,8 +137,8 @@ bash -n scripts/run_data_trade_vm_regression.sh
 Suggested read-only checks:
 
 ```bash
-node scripts/lib/wait_for_ws_chain.js --ws ws://10.2.2.11:9944 --timeout 30
-node scripts/lib/wait_for_ws_chain.js --ws ws://10.2.2.11:9950 --timeout 30
+node scripts/lib/wait_for_ws_chain.js --main ws://10.2.2.11:9944 --child ws://10.2.2.11:9950 --min-blocks 1 --timeout-ms 30000
+node scripts/lib/wait_for_ws_chain.js --main ws://10.2.2.11:9944 --child ws://10.2.2.11:9951 --min-blocks 1 --timeout-ms 30000
 ```
 
 - [ ] Step 2: If the owner confirms the VM can be clean-reset, run the main regression.
@@ -308,4 +308,28 @@ JS syntax checks from Task 1 should also be rerun if any scripts change.
 
 ## Execution Record
 
-Not started.
+### 2026-06-26 Stage 5A/5B Evidence Pass
+
+- Branch: `main`
+- Commit at start: `afe0720a19ebd22b908f9206fd25817381cf76c4`
+- Local validation:
+  - `SKIP_WASM_BUILD=1 cargo test -p pallet-data-registry`: 12 passed.
+  - `SKIP_WASM_BUILD=1 cargo test -p pallet-trade-session`: 19 passed.
+  - `SKIP_WASM_BUILD=1 cargo test -p pallet-main-escrow`: 9 passed.
+  - `go -C tools/data-trade-zk test ./...`: passed.
+  - Data-trade JS `node --check` commands and `bash -n scripts/run_data_trade_vm_regression.sh`: passed.
+- VM read-only reachability:
+  - `main` at `ws://10.2.2.11:9944`: reachable and advancing.
+  - `child6` at `ws://10.2.2.11:9950`: timed out.
+  - `child7` at `ws://10.2.2.11:9951`: timed out.
+- VM regression:
+  - Current destructive clean redeploy was not run in this pass because child RPC was unavailable and clean reset should be an explicit operational decision.
+  - Historical full VM regression exists at `target/data-trade-vm-regression/summary.md`, status `passed`, covering base happy, invalid proof, requester refuses payment, dev-zk attested, and real gnark ZK paths on 2026-06-16.
+- Plan correction:
+  - The initial suggested `wait_for_ws_chain.js --ws` command was wrong; the script requires `--main` and `--child`. Task 2 was updated to the actual command shape.
+- Documents created:
+  - `docs/implementation/data-trade-evidence.md`
+  - `docs/implementation/data-trade-paper-gap-matrix.md`
+- Formal docs updated:
+  - `docs/implementation/data-trade-implementation.md`
+  - `docs/README.md`

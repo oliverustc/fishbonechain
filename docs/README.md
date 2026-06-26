@@ -22,6 +22,8 @@
 
 - [implementation/implementation-record.md](implementation/implementation-record.md)：当前实现记录
 - [implementation/data-trade-implementation.md](implementation/data-trade-implementation.md)：数据交易场景实现记录
+- [implementation/data-trade-evidence.md](implementation/data-trade-evidence.md)：数据交易实现证据记录，本地验证、VM 回归摘要和复现命令
+- [implementation/data-trade-paper-gap-matrix.md](implementation/data-trade-paper-gap-matrix.md)：数据交易论文要求与当前实现的差距矩阵
 - [implementation/data-trade-flow.md](implementation/data-trade-flow.md)：数据交易 E2E 运行手册（happy path + negative scenarios）
 - [implementation/data-trade-zk-verifier-plan.md](implementation/data-trade-zk-verifier-plan.md)：ZK verifier 接入计划
 - [implementation/implementation-plan.md](implementation/implementation-plan.md)：早期总体实现规划，已被当前实现记录覆盖的部分仅作历史参考
