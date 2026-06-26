@@ -430,4 +430,24 @@ CodeWhale must stop and ask Codex before:
 
 ## Execution Record
 
-Not started.
+### 2026-06-27 CodeWhale Stage 8 Execution Complete
+
+- Branch: `feat/data-trade-stage8-dynamic-requests`
+- Commits:
+  - `876aa92 feat(zk): add dynamic data trade dataset request schema`
+  - `fb000c4 feat(zk): build range witness from dynamic dataset request`
+  - `c10f871 feat(zk): add dynamic witness generation command`
+  - `980c6c2 test(zk): add dynamic data trade dataset request fixtures`
+- Tasks completed: Task 1-6 (all)
+- Tests run:
+  - Go: `go test ./...` — `internal/dynamic` (18 tests), `internal/business`, `internal/imt`, `internal/gnarkadapter`, `internal/artifact` — all passed
+  - JS: `node --check` on 4 files — all passed
+- CLI smoke:
+  - `factory_sensors/temperature` → `accepted` ✅
+  - `vehicle_telematics/speed` → `accepted` ✅ (different `business_input_hash`)
+  - `out_of_range` → correctly rejected ✅
+- Deviations from plan:
+  - `uint64` overflow guard uses two-pass `json.Decoder.UseNumber` + manual `uint64Strict` check
+  - `readDatasetJSON` re-opens file for typed decode after raw map check
+- Questions for Codex/Owner: none
+- Remaining risks: none — Go-only, no Rust/JS/artifact schema changes

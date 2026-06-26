@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "constraint_kind": "range",
+  "request_hash": "0x7c8d9e0f1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5",
+  "dataset_id": "vehicle-telematics",
+  "record_id": "vehicle-v-0001",
+  "field_name": "speed",
+  "range": {
+    "min_value": 0,
+    "max_value": 120
+  }
+}
