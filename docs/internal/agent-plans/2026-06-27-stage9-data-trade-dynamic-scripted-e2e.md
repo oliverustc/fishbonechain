@@ -342,6 +342,11 @@ Required wording:
 - Stage 9 composes dynamic dataset/request witness generation into the real ZK E2E script.
 - Stage 9 supports dry-run dynamic validation without chain RPC.
 - Live chain E2E should be recorded only if actually run.
+- In `docs/implementation/data-trade-evidence.md`, add a short Stage 9 section that:
+  - references the per-run evidence JSON format, e.g. `session-<id>-evidence.json`;
+  - records the reproducible `--dry-run-dynamic` smoke command;
+  - clearly labels dry-run evidence as chainless ZK pipeline validation;
+  - does not overwrite or recharacterize historical VM/live-chain evidence unless a live Stage 9 run actually happened.
 - Still range-only.
 - Still off-chain verifier + on-chain attestation.
 - No frontend, runtime, artifact schema, JS digest, or attestation encoding changes.
