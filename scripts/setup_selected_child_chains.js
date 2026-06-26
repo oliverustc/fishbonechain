@@ -7,14 +7,13 @@
  *
  * Usage:
  *   node setup_selected_child_chains.js --chains child4,child1,child6
+ *   node setup_selected_child_chains.js --chains child3 --worker-count 300
  */
 
 import { readFileSync } from "fs";
 import { ApiPromise, WsProvider, Keyring } from "@polkadot/api";
 
-const CHAIN_PROFILES = JSON.parse(
-  readFileSync(new URL("./profiles/chains.json", import.meta.url), "utf8")
-);
+const DEFAULT_PROFILE_FILE = new URL("./profiles/chains.json", import.meta.url);
 
 const UNIT = 1_000_000_000_000n;
 
@@ -83,10 +82,41 @@ function parseArgs() {
   }
   return {
     chains,
+    profileFile: get("--profile-file", ""),
     chunk: Number(get("--chunk", "200")),
     maxWorkers: Number(get("--max-workers", "0")),
+    workerCount: Number(get("--worker-count", "0")),
     workerUnit: BigInt(get("--worker-unit", "10")) * UNIT,
   };
+}
+
+function loadProfiles(profileFile) {
+  const path = profileFile ? new URL(profileFile, `file://${process.cwd()}/`) : DEFAULT_PROFILE_FILE;
+  const profiles = JSON.parse(readFileSync(path, "utf8"));
+  return profiles.chains ?? profiles;
+}
+
+function cfgForProfile(chain, baseCfg, profile) {
+  if (!profile) {
+    return baseCfg;
+  }
+  const cfg = { ...baseCfg };
+  if (profile.defaultWs) {
+    cfg.ws = process.env[`${chain.toUpperCase()}_WS`] || profile.defaultWs;
+  }
+  if (Number.isInteger(profile.taskId)) {
+    cfg.taskId = profile.taskId;
+  }
+  if (Number.isInteger(profile.setupWorkers)) {
+    cfg.workers = profile.setupWorkers;
+  }
+  if (profile.description) {
+    cfg.description = profile.description;
+  }
+  if (profile.budgetPerEpochUnit) {
+    cfg.budgetPerEpoch = BigInt(profile.budgetPerEpochUnit) * UNIT;
+  }
+  return cfg;
 }
 
 function log(message) {
@@ -125,7 +155,7 @@ async function fundWorkers(api, alice, keyring, count, amount, chunkSize, chain)
   }
 }
 
-async function setupChain(chain, cfg, keyring, alice, options) {
+async function setupChain(chain, cfg, profile, keyring, alice, options) {
   log(`${chain}: connect ${cfg.ws}`);
   const api = await ApiPromise.create({ provider: new WsProvider(cfg.ws) });
   const [chainName, header] = await Promise.all([
@@ -134,7 +164,6 @@ async function setupChain(chain, cfg, keyring, alice, options) {
   ]);
   log(`${chain}: chain=${chainName.toString()} block=${header.number.toString()}`);
 
-  const profile = CHAIN_PROFILES[chain];
   if (!profile) {
     await api.disconnect();
     throw new Error(`missing chain profile: ${chain}`);
@@ -157,7 +186,9 @@ async function setupChain(chain, cfg, keyring, alice, options) {
   );
   log(`${chain}: synced task ${cfg.taskId}`);
 
-  const workerCount = options.maxWorkers > 0 ? Math.min(cfg.workers, options.maxWorkers) : cfg.workers;
+  const workerCount = options.workerCount > 0
+    ? options.workerCount
+    : (options.maxWorkers > 0 ? Math.min(cfg.workers, options.maxWorkers) : cfg.workers);
   await fundWorkers(api, alice, keyring, workerCount, options.workerUnit, options.chunk, chain);
 
   const [task, worker0, epoch, subs] = await Promise.all([
@@ -172,10 +203,12 @@ async function setupChain(chain, cfg, keyring, alice, options) {
 
 async function main() {
   const options = parseArgs();
+  const chainProfiles = loadProfiles(options.profileFile);
   const keyring = new Keyring({ type: "sr25519" });
   const alice = keyring.addFromUri("//Alice");
   for (const chain of options.chains) {
-    await setupChain(chain, CHAINS[chain], keyring, alice, options);
+    const profile = chainProfiles[chain];
+    await setupChain(chain, cfgForProfile(chain, CHAINS[chain], profile), profile, keyring, alice, options);
   }
   log("done");
 }

@@ -1,0 +1,56 @@
+{
+  "child1": {
+    "chainId": 0,
+    "scene": "Crowdsource",
+    "settlement": "FmcTaskBill",
+    "progressiveStage": "baseline-tuned",
+    "runtimeBinary": "fishbone-node-crowdsource-2s",
+    "defaultWs": "ws://10.2.2.11:9945",
+    "taskId": 0
+  },
+  "child2": {
+    "chainId": 1,
+    "scene": "Crowdsource",
+    "settlement": "FmcTaskBill",
+    "progressiveStage": "baseline-tuned",
+    "runtimeBinary": "fishbone-node-crowdsource-2s",
+    "defaultWs": "ws://10.2.2.14:9946",
+    "taskId": 1
+  },
+  "child3": {
+    "chainId": 2,
+    "scene": "Crowdsource",
+    "settlement": "FmcTaskBill",
+    "progressiveStage": "baseline-tuned",
+    "runtimeBinary": "fishbone-node-crowdsource-2s",
+    "defaultWs": "ws://10.2.2.17:9947",
+    "taskId": 2
+  },
+  "child4": {
+    "chainId": 3,
+    "scene": "Crowdsource",
+    "settlement": "FmcTaskBill",
+    "progressiveStage": "runtime-v1",
+    "runtimeBinary": "fishbone-node-crowdsource-v1",
+    "defaultWs": "ws://10.2.2.11:9948",
+    "taskId": 3
+  },
+  "child5": {
+    "chainId": 4,
+    "scene": "Crowdsource",
+    "settlement": "FmcTaskBill",
+    "progressiveStage": "runtime-v2",
+    "runtimeBinary": "fishbone-node-crowdsource-v2",
+    "defaultWs": "ws://10.2.2.20:9949",
+    "taskId": 4
+  },
+  "child6": {
+    "chainId": 5,
+    "scene": "Crowdsource",
+    "settlement": "FmcTaskBill",
+    "progressiveStage": "runtime-v3",
+    "runtimeBinary": "fishbone-node-crowdsource-v3",
+    "defaultWs": "ws://10.2.2.11:9950",
+    "taskId": 5
+  }
+}

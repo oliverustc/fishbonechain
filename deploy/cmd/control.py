@@ -17,6 +17,26 @@ app     = typer.Typer()
 console = Console()
 
 
+def child_service_sweep_script(disable: bool = False) -> str:
+    """Return a shell script that stops every installed fishbone child service."""
+    script = r"""
+set -eu
+services="$(
+  {
+    systemctl list-unit-files 'fishbone-child*.service' --no-legend --no-pager 2>/dev/null || true
+    systemctl list-units 'fishbone-child*.service' --all --no-legend --no-pager 2>/dev/null || true
+  } | awk '{print $1}' | sort -u
+)"
+if [ -z "$services" ]; then
+  exit 0
+fi
+systemctl stop $services
+"""
+    if disable:
+        script += "systemctl disable $services >/dev/null 2>&1 || true\n"
+    return script
+
+
 def _filtered_cfg_nodes_chains(config: Path, node_filter: str, chain_filter: str):
     cfg = load(config)
     chain_ids = csv_set(chain_filter)
@@ -78,6 +98,11 @@ find "$base" -mindepth 1 -maxdepth 1 ! -name node-key -exec rm -rf -- {{}} +
     await remote.sudo(f"sh -lc {shlex.quote(script)}")
 
 
+async def stop_all_child_services(remote, disable: bool = False):
+    """Stop all fishbone-child*.service units on a node, including config leftovers."""
+    await remote.sudo(f"sh -lc {shlex.quote(child_service_sweep_script(disable))}", check=False)
+
+
 async def _stop_clean(node_filter: str, chain_filter: str, clean_logs: bool, config: Path):
     cfg, nodes, chains = _filtered_cfg_nodes_chains(config, node_filter, chain_filter)
 
@@ -112,6 +137,24 @@ async def _stop_clean(node_filter: str, chain_filter: str, clean_logs: bool, con
             ok = not isinstance(res, Exception)
             mark = "✓" if ok else "✗"
             console.print(f"  [{nid}] {mark} fishbone-{chain} clean-data")
+
+
+async def _stop_all_children(node_filter: str, disable: bool, config: Path):
+    cfg, nodes, _ = _filtered_cfg_nodes_chains(config, node_filter, "")
+
+    async with connect_all(nodes, cfg.sudo_pass) as remotes:
+        tasks = []
+        for n in nodes:
+            if n.id not in remotes:
+                continue
+            tasks.append((n.id, stop_all_child_services(remotes[n.id], disable=disable)))
+
+        results = await asyncio.gather(*[t[1] for t in tasks], return_exceptions=True)
+        for (nid, _), res in zip(tasks, results):
+            ok = not isinstance(res, Exception) and (not hasattr(res, "returncode") or res.returncode == 0)
+            mark = "✓" if ok else "✗"
+            action = "stop-disable" if disable else "stop"
+            console.print(f"  [{nid}] {mark} fishbone-child*.service {action}")
 
 
 @app.command()
@@ -153,6 +196,16 @@ def stop_clean(
 ):
     """停止服务并清空链数据目录；保留 node-key，下一次 deploy 会重新注入 validator keys。"""
     asyncio.run(_stop_clean(nodes, chains, logs, config))
+
+
+@app.command("stop-all-children")
+def stop_all_children(
+    nodes:  str  = typer.Option("", help="节点列表，逗号分隔（默认全部）"),
+    disable: bool = typer.Option(False, help="停止后同时禁用所有 fishbone-child*.service"),
+    config: Path = typer.Option(Path(__file__).parent.parent / "config.toml"),
+):
+    """停止每台目标节点上的所有子链服务，包括当前 config 未声明的残留服务。"""
+    asyncio.run(_stop_all_children(nodes, disable, config))
 
 
 if __name__ == "__main__":

@@ -147,6 +147,117 @@ fn submit_data_accumulates_spent_budget() {
 }
 
 #[test]
+fn submit_data_tracks_accepted_submission_count() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Crowdsource::sync_task(
+			RuntimeOrigin::signed(1),
+			0,
+			1,
+			10_000,
+			BoundedVec::default()
+		));
+		assert_ok!(Crowdsource::submit_data(
+			RuntimeOrigin::signed(2),
+			0,
+			b"d1".to_vec().try_into().unwrap(),
+			3_000
+		));
+		assert_ok!(Crowdsource::submit_data(
+			RuntimeOrigin::signed(3),
+			0,
+			b"d2".to_vec().try_into().unwrap(),
+			4_000
+		));
+
+		assert_eq!(crate::AcceptedSubmissionCount::<Test>::get(), 2);
+	});
+}
+
+#[test]
+fn indexed_storage_records_digest_and_keeps_epoch_vec_empty() {
+	new_indexed_test_ext().execute_with(|| {
+		assert_ok!(IndexedCrowdsource::sync_task(
+			IndexedRuntimeOrigin::signed(1),
+			0,
+			1,
+			10_000,
+			BoundedVec::default()
+		));
+		assert_ok!(IndexedCrowdsource::submit_data(
+			IndexedRuntimeOrigin::signed(2),
+			0,
+			b"d1".to_vec().try_into().unwrap(),
+			3_000
+		));
+		assert_ok!(IndexedCrowdsource::submit_data(
+			IndexedRuntimeOrigin::signed(3),
+			0,
+			b"d2".to_vec().try_into().unwrap(),
+			4_000
+		));
+
+		assert_eq!(crate::AcceptedSubmissionCount::<IndexedTest>::get(), 2);
+		assert_eq!(crate::SubmissionCountByTaskEpoch::<IndexedTest>::get(0, 0), 2);
+		assert!(crate::SubmissionDigestByTaskEpochIndex::<IndexedTest>::contains_key((0, 0), 0));
+		assert!(crate::SubmissionDigestByTaskEpochIndex::<IndexedTest>::contains_key((0, 0), 1));
+		assert_eq!(crate::EpochSubmissions::<IndexedTest>::get().len(), 0);
+	});
+}
+
+#[test]
+fn submit_data_batch_counts_each_business_submission() {
+	new_indexed_test_ext().execute_with(|| {
+		assert_ok!(IndexedCrowdsource::sync_task(
+			IndexedRuntimeOrigin::signed(1),
+			0,
+			1,
+			10_000,
+			BoundedVec::default()
+		));
+
+		assert_ok!(IndexedCrowdsource::submit_data_batch(
+			IndexedRuntimeOrigin::signed(2),
+			0,
+			vec![
+				b"d1".to_vec().try_into().unwrap(),
+				b"d2".to_vec().try_into().unwrap(),
+				b"d3".to_vec().try_into().unwrap(),
+			]
+			.try_into()
+			.unwrap(),
+			10
+		));
+
+		assert_eq!(crate::AcceptedSubmissionCount::<IndexedTest>::get(), 3);
+		assert_eq!(crate::SubmissionCountByTaskEpoch::<IndexedTest>::get(0, 0), 3);
+		assert_eq!(crate::SpentBudget::<IndexedTest>::get(0), 30);
+	});
+}
+
+#[test]
+fn submit_data_emits_full_event_by_default() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Crowdsource::sync_task(
+			RuntimeOrigin::signed(1),
+			0,
+			1,
+			10_000,
+			BoundedVec::default()
+		));
+		assert_ok!(Crowdsource::submit_data(
+			RuntimeOrigin::signed(2),
+			0,
+			b"d1".to_vec().try_into().unwrap(),
+			3_000
+		));
+
+		System::assert_has_event(
+			Event::DataSubmitted { task_id: 0, worker: 2, reward: 3_000 }.into(),
+		);
+	});
+}
+
+#[test]
 fn submit_data_exceeds_budget_fails() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Crowdsource::sync_task(

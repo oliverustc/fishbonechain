@@ -56,6 +56,7 @@ pub mod pallet {
 	pub trait WeightInfo {
 		fn sync_task() -> Weight;
 		fn submit_data() -> Weight;
+		fn submit_data_batch(items: u32) -> Weight;
 		fn finalize_epoch() -> Weight;
 	}
 
@@ -65,6 +66,9 @@ pub mod pallet {
 		}
 		fn submit_data() -> Weight {
 			Weight::from_parts(15_000, 0)
+		}
+		fn submit_data_batch(items: u32) -> Weight {
+			Weight::from_parts(15_000, 0).saturating_mul(items.into())
 		}
 		fn finalize_epoch() -> Weight {
 			Weight::from_parts(50_000, 0)
@@ -98,6 +102,16 @@ pub mod pallet {
 		/// 数据验证器（可替换）
 		type DataValidator: ValidateSubmission<Self::AccountId>;
 
+		/// 是否在高频提交事件中携带完整 worker 字段。
+		type FullSubmissionEvents: Get<bool>;
+
+		/// 是否使用索引/聚合存储替代完整提交 Vec 的热路径 append。
+		type IndexedSubmissionStorage: Get<bool>;
+
+		/// 单个批量业务提交 extrinsic 允许携带的最大业务提交数。
+		#[pallet::constant]
+		type MaxBatchSize: Get<u32>;
+
 		type WeightInfo: WeightInfo;
 	}
 
@@ -115,6 +129,32 @@ pub mod pallet {
 		BoundedVec<Submission<T::AccountId, BalanceOf<T>>, T::MaxSubmissionsPerEpoch>,
 		ValueQuery,
 	>;
+
+	/// 当前 epoch 已接受的业务提交数量。压测监控优先读取该计数。
+	#[pallet::storage]
+	pub type AcceptedSubmissionCount<T: Config> = StorageValue<_, u32, ValueQuery>;
+
+	/// v2/v3 profile: 每个 task/epoch 的业务提交数量。
+	#[pallet::storage]
+	pub type SubmissionCountByTaskEpoch<T: Config> =
+		StorageDoubleMap<_, Blake2_128Concat, TaskId, Blake2_128Concat, EpochId, u32, ValueQuery>;
+
+	/// v2/v3 profile: 每个 task/epoch/index 的提交摘要。
+	#[pallet::storage]
+	pub type SubmissionDigestByTaskEpochIndex<T: Config> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		(TaskId, EpochId),
+		Blake2_128Concat,
+		u32,
+		T::Hash,
+		OptionQuery,
+	>;
+
+	/// v2/v3 profile: 当前 epoch 的 worker 账单聚合。
+	#[pallet::storage]
+	pub type EpochBills<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, BalanceOf<T>, ValueQuery>;
 
 	/// 各任务本 epoch 已消耗的预算
 	#[pallet::storage]
@@ -138,6 +178,15 @@ pub mod pallet {
 		TaskSynced { task_id: TaskId },
 		/// 工作者提交数据
 		DataSubmitted { task_id: TaskId, worker: T::AccountId, reward: BalanceOf<T> },
+		/// 工作者提交数据的轻量事件，用于高压吞吐实验 runtime profile。
+		DataSubmittedCompact { task_id: TaskId, reward: BalanceOf<T> },
+		/// 批量业务提交完成。accepted 表示该 extrinsic 内被接受的业务提交条数。
+		DataBatchSubmitted {
+			task_id: TaskId,
+			worker: T::AccountId,
+			accepted: u32,
+			reward_each: BalanceOf<T>,
+		},
 		/// 进入同步时隙（S_s）
 		SyncingSlotStarted { epoch: EpochId, block: u32 },
 		/// Epoch 结算完成
@@ -162,6 +211,8 @@ pub mod pallet {
 		InvalidData,
 		SubmissionLimitReached,
 		Overflow,
+		EmptyBatch,
+		BatchTooLarge,
 	}
 
 	// ── Pallet ───────────────────────────────────────────────────────────────
@@ -233,38 +284,39 @@ pub mod pallet {
 			reward: BalanceOf<T>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			Self::accept_submission(&who, task_id, data, reward)?;
 
-			ensure!(
-				CurrentEpoch::<T>::get().phase == EpochPhase::Collecting,
-				Error::<T>::NotInCollectingSlot
-			);
+			if T::FullSubmissionEvents::get() {
+				Self::deposit_event(Event::DataSubmitted { task_id, worker: who, reward });
+			} else {
+				Self::deposit_event(Event::DataSubmittedCompact { task_id, reward });
+			}
+			Ok(())
+		}
 
-			let task = ActiveTasks::<T>::get(task_id).ok_or(Error::<T>::TaskNotFound)?;
-			ensure!(task.status == TaskStatus::Active, Error::<T>::BudgetExhausted);
-			ensure!(T::DataValidator::validate(task_id, &who, &data), Error::<T>::InvalidData);
+		/// 工作者批量提交众包数据。TPS 图按业务提交数计数，而不是 raw extrinsic 数。
+		#[pallet::call_index(3)]
+		#[pallet::weight(T::WeightInfo::submit_data_batch(data.len() as u32))]
+		pub fn submit_data_batch(
+			origin: OriginFor<T>,
+			task_id: TaskId,
+			data: BoundedVec<BoundedVec<u8, ConstU32<1024>>, T::MaxBatchSize>,
+			reward_each: BalanceOf<T>,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			ensure!(!data.is_empty(), Error::<T>::EmptyBatch);
+			ensure!(data.len() <= T::MaxBatchSize::get() as usize, Error::<T>::BatchTooLarge);
 
-			// 预算检查
-			let spent = SpentBudget::<T>::get(task_id);
-			let new_spent = spent.checked_add(&reward).ok_or(Error::<T>::Overflow)?;
-			ensure!(new_spent <= task.budget_per_epoch, Error::<T>::ExceedsBudget);
-
-			EpochSubmissions::<T>::try_mutate(|subs| -> DispatchResult {
-				subs.try_push(Submission { task_id, worker: who.clone(), reward, data })
-					.map_err(|_| Error::<T>::SubmissionLimitReached)?;
-				Ok(())
-			})?;
-			SpentBudget::<T>::insert(task_id, new_spent);
-
-			// 预算耗尽时标记任务，拒绝后续提交
-			if new_spent >= task.budget_per_epoch {
-				ActiveTasks::<T>::mutate(task_id, |t| {
-					if let Some(t) = t {
-						t.status = TaskStatus::Exhausted;
-					}
-				});
+			for item in data.iter() {
+				Self::accept_submission(&who, task_id, item.clone(), reward_each)?;
 			}
 
-			Self::deposit_event(Event::DataSubmitted { task_id, worker: who, reward });
+			Self::deposit_event(Event::DataBatchSubmitted {
+				task_id,
+				worker: who,
+				accepted: data.len() as u32,
+				reward_each,
+			});
 			Ok(())
 		}
 
@@ -285,6 +337,62 @@ pub mod pallet {
 	// ── 内部方法 ─────────────────────────────────────────────────────────────
 
 	impl<T: Config> Pallet<T> {
+		fn accept_submission(
+			who: &T::AccountId,
+			task_id: TaskId,
+			data: BoundedVec<u8, ConstU32<1024>>,
+			reward: BalanceOf<T>,
+		) -> DispatchResult {
+			ensure!(
+				CurrentEpoch::<T>::get().phase == EpochPhase::Collecting,
+				Error::<T>::NotInCollectingSlot
+			);
+
+			let task = ActiveTasks::<T>::get(task_id).ok_or(Error::<T>::TaskNotFound)?;
+			ensure!(task.status == TaskStatus::Active, Error::<T>::BudgetExhausted);
+			ensure!(T::DataValidator::validate(task_id, who, &data), Error::<T>::InvalidData);
+
+			let spent = SpentBudget::<T>::get(task_id);
+			let new_spent = spent.checked_add(&reward).ok_or(Error::<T>::Overflow)?;
+			ensure!(new_spent <= task.budget_per_epoch, Error::<T>::ExceedsBudget);
+
+			let epoch_id = CurrentEpoch::<T>::get().epoch_id;
+			let submission = Submission { task_id, worker: who.clone(), reward, data };
+
+			if T::IndexedSubmissionStorage::get() {
+				let index = SubmissionCountByTaskEpoch::<T>::get(task_id, epoch_id);
+				let next_index = index.checked_add(1).ok_or(Error::<T>::Overflow)?;
+				SubmissionDigestByTaskEpochIndex::<T>::insert(
+					(task_id, epoch_id),
+					index,
+					<T::Hashing as HashT>::hash(&submission.encode()),
+				);
+				SubmissionCountByTaskEpoch::<T>::insert(task_id, epoch_id, next_index);
+			} else {
+				EpochSubmissions::<T>::try_mutate(|subs| -> DispatchResult {
+					subs.try_push(submission).map_err(|_| Error::<T>::SubmissionLimitReached)?;
+					Ok(())
+				})?;
+			}
+
+			AcceptedSubmissionCount::<T>::try_mutate(|count| -> DispatchResult {
+				*count = count.checked_add(1).ok_or(Error::<T>::Overflow)?;
+				Ok(())
+			})?;
+			EpochBills::<T>::mutate(who, |amount| *amount = amount.saturating_add(reward));
+			SpentBudget::<T>::insert(task_id, new_spent);
+
+			if new_spent >= task.budget_per_epoch {
+				ActiveTasks::<T>::mutate(task_id, |t| {
+					if let Some(t) = t {
+						t.status = TaskStatus::Exhausted;
+					}
+				});
+			}
+
+			Ok(())
+		}
+
 		/// 执行 Epoch 结算：计算 Merkle Root、聚合账单、重置状态、发出事件
 		fn do_finalize_epoch() {
 			let epoch_info = CurrentEpoch::<T>::get();
@@ -292,7 +400,17 @@ pub mod pallet {
 			let submissions = EpochSubmissions::<T>::get();
 
 			// 1. Merkle Root：以每条提交记录的 SCALE 哈希作为叶节点
-			let root: T::Hash = if submissions.is_empty() {
+			let root: T::Hash = if T::IndexedSubmissionStorage::get()
+				&& AcceptedSubmissionCount::<T>::get() > 0
+			{
+				let leaves: Vec<T::Hash> = SubmissionDigestByTaskEpochIndex::<T>::iter()
+					.filter_map(|((_, stored_epoch), _, digest)| {
+						(stored_epoch == epoch_id).then_some(digest)
+					})
+					.collect();
+				let root_bytes = merkle_root::<T::Hashing, _>(leaves.iter().map(|h| h.as_ref()));
+				T::Hash::decode(&mut root_bytes.as_ref()).unwrap_or_default()
+			} else if submissions.is_empty() {
 				T::Hash::default()
 			} else {
 				let leaves: Vec<T::Hash> =
@@ -303,11 +421,18 @@ pub mod pallet {
 			};
 
 			// 2. 账单聚合：同一 worker 的多次提交奖励合并
-			let mut reward_map: BTreeMap<T::AccountId, BalanceOf<T>> = BTreeMap::new();
-			for s in submissions.iter() {
-				let entry = reward_map.entry(s.worker.clone()).or_insert(BalanceOf::<T>::default());
-				*entry = entry.saturating_add(s.reward);
-			}
+			let reward_map: BTreeMap<T::AccountId, BalanceOf<T>> =
+				if T::IndexedSubmissionStorage::get() {
+					EpochBills::<T>::iter().collect()
+				} else {
+					let mut rewards = BTreeMap::new();
+					for s in submissions.iter() {
+						let entry =
+							rewards.entry(s.worker.clone()).or_insert(BalanceOf::<T>::default());
+						*entry = entry.saturating_add(s.reward);
+					}
+					rewards
+				};
 			let bill_vec: Vec<(T::AccountId, BalanceOf<T>)> = reward_map.into_iter().collect();
 			let bill_amounts: BoundedVec<_, T::MaxSubmissionsPerEpoch> =
 				bill_vec.try_into().unwrap_or_default();
@@ -325,6 +450,8 @@ pub mod pallet {
 
 			// 5. 清理本 epoch 数据
 			EpochSubmissions::<T>::kill();
+			AcceptedSubmissionCount::<T>::kill();
+			let _ = EpochBills::<T>::clear(1000, None);
 			// 清理各任务的 SpentBudget 并重置 Exhausted 任务
 			ActiveTasks::<T>::translate(|_id, mut task: TaskDetail<T::AccountId, BalanceOf<T>>| {
 				task.status = TaskStatus::Active;

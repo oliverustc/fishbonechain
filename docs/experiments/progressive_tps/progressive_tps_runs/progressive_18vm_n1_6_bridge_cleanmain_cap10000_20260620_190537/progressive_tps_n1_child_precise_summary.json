@@ -1,0 +1,25 @@
+{
+  "start_ms": 1781953721229,
+  "finished_at_ms": 1781953785652,
+  "cap": 10000,
+  "baseline": {
+    "ws://10.2.2.11:9945": {
+      "block": 68,
+      "epoch": 1,
+      "phase": "Collecting",
+      "subs": 0
+    }
+  },
+  "hit_summary": {
+    "ws://10.2.2.11:9945": {
+      "hit_at_ms": 1781953785640,
+      "elapsed_s": 64.411,
+      "initial_subs": 0,
+      "cap_subs": 10000,
+      "accepted_delta": 10000,
+      "cumulative_accepted": 10000,
+      "block_number": 100,
+      "epoch_id": 1
+    }
+  }
+}

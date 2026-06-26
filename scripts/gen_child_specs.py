@@ -212,12 +212,42 @@ def chain_configs() -> list[dict]:
     ]
 
 
+def apply_profile_overrides(chains: list[dict], profile_file: Path | None) -> list[dict]:
+    if profile_file is None:
+        return chains
+    raw = json.loads(profile_file.read_text())
+    profiles = raw.get("chains", raw)
+    updated = []
+    for cfg in chains:
+        cfg = dict(cfg)
+        profile = profiles.get(cfg["name"])
+        if profile:
+            runtime_binary = profile.get("runtimeBinary")
+            if runtime_binary:
+                cfg["binary"] = BIN_DIR / runtime_binary
+            if profile.get("validators"):
+                cfg["validators"] = profile["validators"]
+            cfg["profile"] = {
+                "chainId": profile["chainId"],
+                "scene": profile["scene"],
+                "settlement": profile["settlement"],
+                "paramsHash": profile.get("paramsHash", zero_hash()),
+            }
+        updated.append(cfg)
+    return updated
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--only",
         default="",
         help="逗号分隔链列表，例如 main,child1,child6；默认生成全部链",
+    )
+    parser.add_argument(
+        "--profile-file",
+        type=Path,
+        help="实验 profile JSON，用于覆盖子链 runtime binary 和 genesis chain profile",
     )
     return parser.parse_args()
 
@@ -227,7 +257,7 @@ def main():
     SPECS.mkdir(parents=True, exist_ok=True)
 
     # ── 主链 + 各子链配置 ─────────────────────────────────────────────────────
-    chains = chain_configs()
+    chains = apply_profile_overrides(chain_configs(), args.profile_file)
     if args.only:
         wanted = {name.strip() for name in args.only.split(",") if name.strip()}
         known = {cfg["name"] for cfg in chains}

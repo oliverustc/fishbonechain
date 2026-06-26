@@ -17,6 +17,7 @@ from cmd import control as control_cmd  # noqa: E402
 from cmd import logs as logs_cmd  # noqa: E402
 from cmd import status as status_cmd  # noqa: E402
 from fishbone.config import filter_config_to_chains  # noqa: E402
+from fishbone import remote as remote_mod  # noqa: E402
 
 
 class FakeRemote:
@@ -153,6 +154,22 @@ class RemoteSystemSshCallerTests(IsolatedAsyncioTestCase):
         self.assertIn("! -name node-key", joined)
         self.assertIn("rm -rf", joined)
         self.assertIn("/remote/fishbone/logs/child6.log", joined)
+
+    async def test_stop_all_child_services_scans_units_instead_of_config_roles(self):
+        remote = FakeRemote()
+
+        await control_cmd.stop_all_child_services(remote)
+
+        joined = "\n".join(remote.commands)
+        self.assertIn("fishbone-child*.service", joined)
+        self.assertIn("systemctl stop", joined)
+        self.assertNotIn("fishbone-main", joined)
+
+    def test_remote_ssh_args_use_user_config_to_avoid_system_config_breakage(self):
+        args = remote_mod.ssh_base_args()
+
+        self.assertIn("-F", args)
+        self.assertIn(str(Path.home() / ".ssh" / "config"), args)
 
     async def test_stream_log_uses_remote_stream_lines_without_asyncssh_connection(self):
         remote = FakeRemote()

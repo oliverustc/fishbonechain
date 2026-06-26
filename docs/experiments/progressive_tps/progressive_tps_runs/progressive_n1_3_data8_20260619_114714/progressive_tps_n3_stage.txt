@@ -1,0 +1,8 @@
+n=3
+stage_key=baseline-tuned
+active=child1 child2 child3
+workers=200
+parallel_per_worker=4
+duration=180
+failed=0
+finished_at=2026-06-19T11:54:11+08:00

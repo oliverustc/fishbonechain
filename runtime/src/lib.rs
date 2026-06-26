@@ -90,8 +90,13 @@ mod block_times {
 	/// produced at a minimum duration defined by `SLOT_DURATION`. `SLOT_DURATION` is picked up by
 	/// `pallet_timestamp` which is in turn picked up by `pallet_aura` to implement `fn
 	/// slot_duration()`.
-	///
-	/// Change this to adjust the block time.
+	#[cfg(feature = "block-1s")]
+	pub const MILLI_SECS_PER_BLOCK: u64 = 1000;
+
+	#[cfg(all(not(feature = "block-1s"), feature = "block-2s"))]
+	pub const MILLI_SECS_PER_BLOCK: u64 = 2000;
+
+	#[cfg(all(not(feature = "block-1s"), not(feature = "block-2s")))]
 	pub const MILLI_SECS_PER_BLOCK: u64 = 6000;
 
 	// NOTE: Currently it is not possible to change the slot duration after the chain has started.

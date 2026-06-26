@@ -1,0 +1,5 @@
+trial,workers,parallel_per_worker,data_size,capacity_cap,accepted_submissions,elapsed_s,aggregate_child_tps,worker_fail,conclusion
+reset_each_n1_baseline_64b,200,4,64,10000,10000,86.768,115.2499,2,64B payload shows storage write amplification as EpochSubmissions grows
+tune_child1_w400_p8_cap10000,400,8,64,10000,10000,91.147,109.7129,14468,higher pressure does not improve chain-side TPS and increases failures
+tune_child1_w200_p4_cap5000,200,4,64,5000,5020,29.604,169.5717,0,first half of epoch is fast; slowdown appears as submission vector grows
+tune_child1_w200_p4_cap10000_data8,200,4,8,10000,10000,65.737,152.1213,2,compact payload reaches the target single-chain TPS without lowering cap

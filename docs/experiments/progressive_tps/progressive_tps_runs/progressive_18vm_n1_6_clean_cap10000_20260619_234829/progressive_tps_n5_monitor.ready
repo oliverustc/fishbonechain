@@ -1,0 +1,36 @@
+{
+  "ready_at_ms": 1781884983292,
+  "cap": 10000,
+  "baseline": {
+    "ws://10.2.2.11:9945": {
+      "block": 57,
+      "epoch": 0,
+      "phase": "Collecting",
+      "subs": 0
+    },
+    "ws://10.2.2.14:9946": {
+      "block": 56,
+      "epoch": 0,
+      "phase": "Collecting",
+      "subs": 0
+    },
+    "ws://10.2.2.17:9947": {
+      "block": 56,
+      "epoch": 0,
+      "phase": "Collecting",
+      "subs": 0
+    },
+    "ws://10.2.2.20:9948": {
+      "block": 56,
+      "epoch": 0,
+      "phase": "Collecting",
+      "subs": 0
+    },
+    "ws://10.2.3.11:9949": {
+      "block": 53,
+      "epoch": 0,
+      "phase": "Collecting",
+      "subs": 0
+    }
+  }
+}

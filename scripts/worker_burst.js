@@ -10,9 +10,11 @@
  *     --ws ws://10.2.2.11:9948 \
  *     --task-id 3 \
  *     --workers 1000 \
+ *     --worker-offset 0 \
  *     --parallel-per-worker 1 \
  *     --reward 0 \
  *     --data-size 64 \
+ *     --batch-size 1 \
  *     --duration 120 \
  *     --submit-mode pool
  */
@@ -30,9 +32,11 @@ function parseArgs() {
     ws: get("--ws", "ws://127.0.0.1:9945"),
     taskId: Number(get("--task-id", "0")),
     workers: Number(get("--workers", "1000")),
+    workerOffset: Number(get("--worker-offset", "0")),
     parallelPerWorker: Number(get("--parallel-per-worker", "1")),
     reward: BigInt(get("--reward", "0")),
     dataSize: Number(get("--data-size", "64")),
+    batchSize: Number(get("--batch-size", "1")),
     duration: Number(get("--duration", "120")),
     reportInterval: Number(get("--report-interval", "5")),
     txTimeout: Number(get("--tx-timeout", "45")),
@@ -110,8 +114,13 @@ function classifyDispatchError(api, dispatchError) {
 }
 
 async function sendOne(api, signer, nonce, cfg, stats) {
-  const data = Array.from(randomBytes(cfg.dataSize));
-  const tx = api.tx.crowdsource.submitData(cfg.taskId, data, cfg.reward);
+  const tx = cfg.batchSize > 1
+    ? api.tx.crowdsource.submitDataBatch(
+        cfg.taskId,
+        Array.from({ length: cfg.batchSize }, () => Array.from(randomBytes(cfg.dataSize))),
+        cfg.reward,
+      )
+    : api.tx.crowdsource.submitData(cfg.taskId, Array.from(randomBytes(cfg.dataSize)), cfg.reward);
 
   stats.markSent();
 
@@ -121,11 +130,11 @@ async function sendOne(api, signer, nonce, cfg, stats) {
       stats.finish("ok");
       return "ok";
     } catch (e) {
-      if (String(e?.message ?? e).includes("Priority is too low")) {
-        stats.finish("ok");
-        return "ok";
-      }
+      const message = String(e?.message ?? e);
       stats.finish("fail");
+      if (message.includes("Immediately Dropped") || message.includes("couldn't enter the pool because of the limit")) {
+        return "retry";
+      }
       return "fail";
     }
   }
@@ -166,18 +175,38 @@ async function sendOne(api, signer, nonce, cfg, stats) {
 async function main() {
   const cfg = parseArgs();
   console.log(`[worker_burst] ws=${cfg.ws}`);
-  console.log(`[worker_burst] task_id=${cfg.taskId} workers=${cfg.workers} parallel_per_worker=${cfg.parallelPerWorker}`);
-  console.log(`[worker_burst] reward=${cfg.reward} data_size=${cfg.dataSize} duration=${cfg.duration}s`);
+  console.log(`[worker_burst] task_id=${cfg.taskId} workers=${cfg.workers} worker_offset=${cfg.workerOffset} parallel_per_worker=${cfg.parallelPerWorker}`);
+  console.log(`[worker_burst] reward=${cfg.reward} data_size=${cfg.dataSize} batch_size=${cfg.batchSize} duration=${cfg.duration}s`);
   console.log(`[worker_burst] submit_mode=${cfg.submitMode}`);
 
   const api = await ApiPromise.create({ provider: new WsProvider(cfg.ws) });
   const keyring = new Keyring({ type: "sr25519" });
-  const signers = Array.from({ length: cfg.workers }, (_, i) => keyring.addFromUri(`//Worker${i}`));
+  const signers = Array.from({ length: cfg.workers }, (_, i) => keyring.addFromUri(`//Worker${cfg.workerOffset + i}`));
   const stats = new Stats();
 
   const nextNonce = await Promise.all(signers.map(s => api.rpc.system.accountNextIndex(s.address)));
   const nonceNums = nextNonce.map(n => n.toNumber());
+  const retryNonceQueues = Array.from({ length: cfg.workers }, () => []);
+  const retryNonceSets = Array.from({ length: cfg.workers }, () => new Set());
   console.log(`[worker_burst] nonce range loaded for ${nonceNums.length} workers`);
+
+  const takeNonce = workerIndex => {
+    if (retryNonceQueues[workerIndex].length > 0) {
+      const nonce = retryNonceQueues[workerIndex].shift();
+      retryNonceSets[workerIndex].delete(nonce);
+      return nonce;
+    }
+    const nonce = nonceNums[workerIndex];
+    nonceNums[workerIndex]++;
+    return nonce;
+  };
+
+  const retryNonce = (workerIndex, nonce) => {
+    if (retryNonceSets[workerIndex].has(nonce)) return;
+    retryNonceSets[workerIndex].add(nonce);
+    retryNonceQueues[workerIndex].push(nonce);
+    retryNonceQueues[workerIndex].sort((a, b) => a - b);
+  };
 
   let running = true;
   const stopTimer = setTimeout(() => { running = false; }, cfg.duration * 1000);
@@ -194,11 +223,12 @@ async function main() {
     for (let lane = 0; lane < cfg.parallelPerWorker; lane++) {
       loops.push((async () => {
         while (running) {
-          const nonce = nonceNums[i];
+          const nonce = takeNonce(i);
           const kind = await sendOne(api, signers[i], nonce, cfg, stats);
-          if (cfg.submitMode !== "pool" || kind !== "fail") {
-            nonceNums[i]++;
-          } else {
+          if (cfg.submitMode === "pool" && kind === "retry") {
+            retryNonce(i, nonce);
+            await new Promise(r => setTimeout(r, 50));
+          } else if (cfg.submitMode === "pool" && kind === "fail") {
             await new Promise(r => setTimeout(r, 50));
           }
         }

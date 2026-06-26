@@ -1,0 +1,14 @@
+n=5
+stage_key=runtime-v2
+active=child1 child2 child3 child4 child5
+workers=320
+parallel_per_worker=6
+duration=240
+batch_default=1
+batch_size_child1=1
+batch_size_child2=1
+batch_size_child3=1
+batch_size_child4=1
+batch_size_child5=1
+failed=0
+finished_at=2026-06-20T00:04:30+08:00

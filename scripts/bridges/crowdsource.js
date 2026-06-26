@@ -12,7 +12,11 @@ const CHILD_WS = process.env.CHILD_WS || "ws://127.0.0.1:9945";
 const MAIN_WS = process.env.MAIN_WS || "ws://127.0.0.1:9944";
 const TASK_ID = parseInt(process.env.TASK_ID ?? "0", 10);
 const CHAIN_ID = parseInt(process.env.CHAIN_ID ?? "0", 10);
-const ONCE = process.argv.includes("--once");
+const EXIT_AFTER_EVENTS = (() => {
+  const i = process.argv.indexOf("--exit-after-events");
+  return i === -1 ? 0 : Number(process.argv[i + 1] || "0");
+})();
+const ONCE = process.argv.includes("--once") || EXIT_AFTER_EVENTS === 1;
 
 const REQUESTER = process.env.REQUESTER || "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY";
 
@@ -138,6 +142,13 @@ async function main() {
         log(`  [OK] Epoch ${epoch} 处理完毕（累计 ${processedCount}）`);
       } catch (e) {
         log(`[错误] ${e.message}`);
+      }
+
+      if (EXIT_AFTER_EVENTS > 0 && processedCount >= EXIT_AFTER_EVENTS) {
+        log(`\n--exit-after-events=${EXIT_AFTER_EVENTS}: 已处理 ${processedCount} 个 Epoch，退出`);
+        unsub();
+        await Promise.all([childApi.disconnect(), mainApi.disconnect()]);
+        process.exit(0);
       }
 
       if (ONCE) {

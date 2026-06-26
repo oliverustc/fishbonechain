@@ -2,7 +2,7 @@
 # 待升级到修复版 SDK 后可移除
 WASM_FLAGS := -C link-arg=--import-undefined
 
-.PHONY: build build-release build-node build-runtime build-main build-crowdsource-child build-data-trade-child build-2s build-1s build-10mb build-babe check test clean
+.PHONY: build build-release build-node build-runtime build-main build-crowdsource-child build-data-trade-child build-2s build-crowdsource-v1 build-crowdsource-v2 build-crowdsource-v3 build-crowdsource-bridge build-1s build-10mb build-babe check test clean
 
 build:
 	WASM_BUILD_RUSTFLAGS="$(WASM_FLAGS)" cargo build -p fishbone-node
@@ -38,6 +38,33 @@ build-2s:
 	mkdir -p deploy/bin
 	WASM_BUILD_RUSTFLAGS="$(WASM_FLAGS)" cargo build --release -p fishbone-node --features fishbone-runtime/scene-crowdsource,fishbone-runtime/block-2s
 	cp target/release/fishbone-node deploy/bin/fishbone-node-2s
+	cp target/release/fishbone-node deploy/bin/fishbone-node-crowdsource-2s
+
+build-crowdsource-v1:
+	mkdir -p deploy/bin
+	WASM_BUILD_RUSTFLAGS="$(WASM_FLAGS)" cargo build --release -p fishbone-node --features fishbone-runtime/scene-crowdsource,fishbone-runtime/block-2s,fishbone-runtime/crowdsource-compact-events
+	cp target/release/fishbone-node deploy/bin/fishbone-node-crowdsource-v1
+
+build-crowdsource-v2:
+	mkdir -p deploy/bin
+	WASM_BUILD_RUSTFLAGS="$(WASM_FLAGS)" cargo build --release -p fishbone-node --features fishbone-runtime/scene-crowdsource,fishbone-runtime/block-2s,fishbone-runtime/crowdsource-compact-events,fishbone-runtime/crowdsource-indexed-submissions
+	cp target/release/fishbone-node deploy/bin/fishbone-node-crowdsource-v2
+
+build-crowdsource-v3:
+	mkdir -p deploy/bin
+	WASM_BUILD_RUSTFLAGS="$(WASM_FLAGS)" cargo build --release -p fishbone-node --features fishbone-runtime/scene-crowdsource,fishbone-runtime/block-2s,fishbone-runtime/crowdsource-batch-submissions
+	cp target/release/fishbone-node deploy/bin/fishbone-node-crowdsource-v3
+
+build-crowdsource-bridge:
+	mkdir -p deploy/bin
+	WASM_BUILD_RUSTFLAGS="$(WASM_FLAGS)" cargo build --release -p fishbone-node --features fishbone-runtime/scene-crowdsource,fishbone-runtime/block-2s,fishbone-runtime/crowdsource-short-epoch
+	cp target/release/fishbone-node deploy/bin/fishbone-node-crowdsource-2s-bridge
+	WASM_BUILD_RUSTFLAGS="$(WASM_FLAGS)" cargo build --release -p fishbone-node --features fishbone-runtime/scene-crowdsource,fishbone-runtime/block-2s,fishbone-runtime/crowdsource-compact-events,fishbone-runtime/crowdsource-short-epoch
+	cp target/release/fishbone-node deploy/bin/fishbone-node-crowdsource-v1-bridge
+	WASM_BUILD_RUSTFLAGS="$(WASM_FLAGS)" cargo build --release -p fishbone-node --features fishbone-runtime/scene-crowdsource,fishbone-runtime/block-2s,fishbone-runtime/crowdsource-compact-events,fishbone-runtime/crowdsource-indexed-submissions,fishbone-runtime/crowdsource-short-epoch
+	cp target/release/fishbone-node deploy/bin/fishbone-node-crowdsource-v2-bridge
+	WASM_BUILD_RUSTFLAGS="$(WASM_FLAGS)" cargo build --release -p fishbone-node --features fishbone-runtime/scene-crowdsource,fishbone-runtime/block-2s,fishbone-runtime/crowdsource-batch-submissions,fishbone-runtime/crowdsource-short-epoch
+	cp target/release/fishbone-node deploy/bin/fishbone-node-crowdsource-v3-bridge
 
 build-1s:
 	mkdir -p deploy/bin

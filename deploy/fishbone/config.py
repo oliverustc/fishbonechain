@@ -1,6 +1,7 @@
 """读取 config.toml，提供类型化的配置对象。"""
 from __future__ import annotations
 import copy
+import json
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -91,6 +92,25 @@ def filter_config_to_chains(cfg, selected_chains: set[str]):
         ]
         filtered.nodes.append(filtered_node)
     return filtered
+
+
+def apply_chain_profile_overrides(cfg: ClusterConfig, profile_path: str | Path) -> ClusterConfig:
+    """Return a config copy with per-chain runtime binaries overridden by a profile JSON."""
+    path = Path(profile_path)
+    raw = json.loads(path.read_text())
+    profiles = raw.get("chains", raw)
+    bin_dir = Path(cfg.binary).parent
+
+    updated = copy.copy(cfg)
+    updated.chains = dict(cfg.chains)
+    for chain, profile in profiles.items():
+        runtime_binary = profile.get("runtimeBinary")
+        if chain not in updated.chains or not runtime_binary:
+            continue
+        chain_cfg = copy.copy(updated.chains[chain])
+        chain_cfg.binary = str(bin_dir / runtime_binary)
+        updated.chains[chain] = chain_cfg
+    return updated
 
 
 def load(config_path: str | Path = "config.toml") -> ClusterConfig:

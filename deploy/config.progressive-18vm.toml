@@ -1,0 +1,173 @@
+# FishboneChain progressive TPS deployment profile.
+# This profile isolates each child chain on three VMs while keeping every
+# child validator inside the 18-validator mainchain set.
+
+[cluster]
+name       = "fishbone-progressive-18vm"
+binary     = "/home/debian/fishbone/bin/fishbone-node"
+base_dir   = "/home/debian/fishbone"
+log_dir    = "/home/debian/fishbone/logs"
+sudo_pass  = "debian"
+
+[chains.main]
+id       = "fishbone_main"
+spec     = "specs/main-custom-raw.json"
+p2p_port = 30333
+rpc_port = 9944
+prom_port = 9615
+
+[chains.child1]
+id       = "fishbone_child_1"
+spec     = "specs/child1-custom-raw.json"
+binary   = "/home/debian/fishbone/bin/fishbone-node-crowdsource-2s"
+p2p_port = 30334
+rpc_port = 9945
+prom_port = 9616
+
+[chains.child2]
+id       = "fishbone_child_2"
+spec     = "specs/child2-custom-raw.json"
+binary   = "/home/debian/fishbone/bin/fishbone-node-crowdsource-2s"
+p2p_port = 30335
+rpc_port = 9946
+prom_port = 9617
+
+[chains.child3]
+id       = "fishbone_child_3"
+spec     = "specs/child3-custom-raw.json"
+binary   = "/home/debian/fishbone/bin/fishbone-node-crowdsource-2s"
+p2p_port = 30336
+rpc_port = 9947
+prom_port = 9618
+
+[chains.child4]
+id       = "fishbone_child_4"
+spec     = "specs/child4-custom-raw.json"
+binary   = "/home/debian/fishbone/bin/fishbone-node-crowdsource-v1"
+p2p_port = 30337
+rpc_port = 9948
+prom_port = 9619
+
+[chains.child5]
+id       = "fishbone_child_5"
+spec     = "specs/child5-custom-raw.json"
+binary   = "/home/debian/fishbone/bin/fishbone-node-crowdsource-v2"
+p2p_port = 30338
+rpc_port = 9949
+prom_port = 9620
+
+[chains.child6]
+id       = "fishbone_child_6"
+spec     = "specs/child6-custom-raw.json"
+binary   = "/home/debian/fishbone/bin/fishbone-node-crowdsource-v3"
+p2p_port = 30339
+rpc_port = 9950
+prom_port = 9621
+
+[[nodes]]
+id = "f1"
+ip = "10.2.2.11"
+ssh = "f1"
+roles = ["main", "child1"]
+
+[[nodes]]
+id = "f2"
+ip = "10.2.2.12"
+ssh = "f2"
+roles = ["main", "child1"]
+
+[[nodes]]
+id = "f3"
+ip = "10.2.2.13"
+ssh = "f3"
+roles = ["main", "child1"]
+
+[[nodes]]
+id = "f4"
+ip = "10.2.2.14"
+ssh = "f4"
+roles = ["main", "child2"]
+
+[[nodes]]
+id = "f5"
+ip = "10.2.2.15"
+ssh = "f5"
+roles = ["main", "child2"]
+
+[[nodes]]
+id = "f6"
+ip = "10.2.2.16"
+ssh = "f6"
+roles = ["main", "child2"]
+
+[[nodes]]
+id = "f7"
+ip = "10.2.2.17"
+ssh = "f7"
+roles = ["main", "child3"]
+
+[[nodes]]
+id = "f8"
+ip = "10.2.2.18"
+ssh = "f8"
+roles = ["main", "child3"]
+
+[[nodes]]
+id = "f9"
+ip = "10.2.2.19"
+ssh = "f9"
+roles = ["main", "child3"]
+
+[[nodes]]
+id = "f10"
+ip = "10.2.2.20"
+ssh = "f10"
+roles = ["main", "child4"]
+
+[[nodes]]
+id = "f11"
+ip = "10.2.2.21"
+ssh = "f11"
+roles = ["main", "child4"]
+
+[[nodes]]
+id = "f12"
+ip = "10.2.2.22"
+ssh = "f12"
+roles = ["main", "child4"]
+
+[[nodes]]
+id = "f13"
+ip = "10.2.3.11"
+ssh = "f13"
+roles = ["main", "child5"]
+
+[[nodes]]
+id = "f14"
+ip = "10.2.3.12"
+ssh = "f14"
+roles = ["main", "child5"]
+
+[[nodes]]
+id = "f15"
+ip = "10.2.3.13"
+ssh = "f15"
+roles = ["main", "child5"]
+
+[[nodes]]
+id = "f16"
+ip = "10.2.3.14"
+ssh = "f16"
+roles = ["main", "child6"]
+
+[[nodes]]
+id = "f17"
+ip = "10.2.3.15"
+ssh = "f17"
+roles = ["main", "child6"]
+
+[[nodes]]
+id = "f18"
+ip = "10.2.3.16"
+ssh = "f18"
+roles = ["main", "child6"]

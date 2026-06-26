@@ -1,0 +1,19 @@
+{
+  "ws": "ws://10.2.2.11:9944",
+  "senders": 113,
+  "senderOffset": 0,
+  "parallelPerSender": 4,
+  "amount": "1",
+  "fundAmount": "1000000000000",
+  "fundBatchSize": 50,
+  "receiverMode": "alice",
+  "duration": 120,
+  "submitMode": "watch",
+  "sent": 9341,
+  "ok": 9341,
+  "reject": 0,
+  "fail": 0,
+  "elapsedSeconds": 123.454,
+  "mainchainMaxTps": 75.66381000210605,
+  "finishedAt": "2026-06-20T12:39:06.716Z"
+}

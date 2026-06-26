@@ -1,0 +1,7 @@
+run_root=docs/experiments/progressive_tps/progressive_tps_runs/tune_child3_watch_p2_20260619_121201
+workers=200
+parallel_per_worker=2
+data_size=8
+submit_mode=watch
+cap=10000
+monitor_exit=0
