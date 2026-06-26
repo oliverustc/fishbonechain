@@ -333,3 +333,30 @@ JS syntax checks from Task 1 should also be rerun if any scripts change.
 - Formal docs updated:
   - `docs/implementation/data-trade-implementation.md`
   - `docs/README.md`
+
+### 2026-06-26 Stage 5C Hardening Decision
+
+Candidate scoring uses 1-5 where 5 is strongest/best. For engineering risk and time cost, 5 means lower risk/lower cost.
+
+| Candidate | Paper relevance | Security improvement | Engineering risk | Demonstrability | Time cost | Summary |
+|-----------|----------------:|---------------------:|-----------------:|----------------:|----------:|---------|
+| Verifier quorum / threshold attestation | 3 | 4 | 4 | 4 | 4 | Good pragmatic trust improvement, but it does not address the CDT core gap that data must be proven to come from an endorsed IMT. |
+| Full IMT membership + business witness coupling | 5 | 4 | 3 | 5 | 3 | Best match for the paper's technical core: customized constraint proof plus data integrity from committed dataset roots. |
+| Trustless bridge settlement with CCMC/Merkle proof | 4 | 5 | 2 | 4 | 2 | Strong FishboneChain architecture contribution, but broader than the CDT proof path and likely touches runtime, bridge, and settlement semantics. |
+| On-chain Groth16 verifier or verifier pallet | 5 | 5 | 1 | 3 | 1 | Strongest trustless proof claim, but high integration/performance risk in Substrate and not needed before fixing IMT integrity semantics. |
+| FmcAssisted / Hybrid settlement | 2 | 2 | 3 | 3 | 3 | Useful platform integration, but less central to the current CDT paper implementation gap. |
+
+Recommendation:
+
+- Stage 6 should target **Full IMT membership + business witness coupling for the range path**.
+- Rationale: Current Stage 2.2 proves the range business witness, but full CDT verifiability also requires proving that the committed/masked value is derived from an endorsed data item under the published dataset root. Without that, the implementation can honestly claim range proof binding, but only partially supports the paper's "constraint validity and data integrity" goal.
+- Scope boundary for Stage 6:
+  - Implement a minimal canonical IMT fixture/schema for the range case.
+  - Couple the business witness commitment to RO/IMT membership.
+  - Keep `AlwaysPassVerifier + VerifierAuthority attestation` unchanged.
+  - Do not implement subset/substr, on-chain Groth16, trustless bridge, or verifier quorum in Stage 6.
+- Expected outcome: The paper wording can upgrade from "range business witness is proven" to "range business witness is proven and linked to an endorsed committed data root in the prototype fixture path", while still keeping on-chain verifier and trustless bridge as future work.
+
+Next action:
+
+- If the owner approves, create a separate Stage 6 plan for IMT membership and business witness coupling. Do not implement Stage 6 inside this Stage 5 plan.
