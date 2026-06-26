@@ -71,14 +71,17 @@ bash scripts/check-blocks.sh
 ## 文档阅读顺序
 
 1. [docs/README.md](docs/README.md)：文档索引
-2. [docs/development/developer-guide.md](docs/development/developer-guide.md)：代码结构和核心 pallet 说明
-3. [docs/implementation/implementation-record.md](docs/implementation/implementation-record.md)：阶段实现记录
-4. [docs/experiments/experiment-report.md](docs/experiments/experiment-report.md)：吞吐量实验结果
-5. [docs/experiments/liquidity-experiment.md](docs/experiments/liquidity-experiment.md)：资金实验记录
+2. [docs/internal/agent-collaboration.md](docs/internal/agent-collaboration.md)：Codex、CodeWhale 和其他 agent 的协作规范
+3. [docs/development/developer-guide.md](docs/development/developer-guide.md)：代码结构和核心 pallet 说明
+4. [docs/implementation/implementation-record.md](docs/implementation/implementation-record.md)：阶段实现记录
+5. [docs/experiments/experiment-report.md](docs/experiments/experiment-report.md)：吞吐量实验结果
+6. [docs/experiments/liquidity-experiment.md](docs/experiments/liquidity-experiment.md)：资金实验记录
 
 ## 文档生命周期
 
 - `docs/internal/agent-plans/` 只保存仍需版本化的 agent 实施计划和过程记录，不作为当前事实来源。
+- `docs/internal/agent-collaboration.md` 是多 agent 分工、计划、执行记录、review 和提交追踪的规范入口；新 agent 会话必须先读。
+- `docs/internal/agent-reviews/` 保存 plan review 和 code review 记录；commit message 只引用 review 文档，不承载完整 review 过程。
 - 每个 plan 执行完成后，必须把结论、代码行为、实验结果、运行方式或踩坑记录沉淀到 `docs/` 下的正式文档，例如 `docs/development/developer-guide.md`、`docs/experiments/experiment-report.md`、`docs/implementation/implementation-plan.md` 或专题文档。
 - 正式文档应写当前事实和可复现信息；历史计划、废弃方案和中间判断可以留在 `docs/internal/agent-plans/`，不要让它们继续承担项目说明职责。
 - 如果计划执行改变了命令、部署方式、实验口径或已知限制，完成前必须同步更新对应正式文档和 [docs/README.md](docs/README.md) 的索引说明。

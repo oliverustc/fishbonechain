@@ -52,7 +52,7 @@
 - `scripts/zk_attested_data_trade_flow.js` 已通过 VM E2E。
 - `scripts/zk_real_data_trade_flow.js` 已通过 VM E2E，链下生成/验证 gnark proof，链上提交 proof digest 与 Charlie attestation，主链 `settleByPreimage` 成功。
 - `scripts/run_data_trade_vm_regression.sh` 已提供一键 VM 回归：clean redeploy main+child6，等待 RPC readiness，运行 base/dev-zk/real-zk，并输出 JSON/Markdown summary。
-- 当前 gnark 电路仍是 Stage 1 fixture，witness 使用随机/固定样例，不是论文真实业务数据驱动。
+- **Stage 2.2 已完成**：`BusinessRangeProof` gnark 电路证明 `raw_value ∈ [min, max]` + `masked_value` + `masked_value_hash`。Range 业务 witness 已进入电路约束。完整 IMT membership、subset/substr 约束种类和链上 Groth16 verifier 仍是后续工作。
 - 当前链上仍是 attestation 模式，`DataTradeProofVerifier = AlwaysPassVerifier`，主链/子链 settlement bridge 仍为链下协调，不是 trustless cross-chain proof。
 
 ## 执行规则
@@ -68,9 +68,9 @@
 - [x] Stage 1: VM E2E Regression
 - [x] Stage 2: Paper Business Witness (complete)
 - [x] Stage 3: Multi Trade Subchain Profiles (complete)
-- [ ] Stage 4: Security Model and Paper Alignment
+- [x] Stage 4: Security Model and Paper Alignment
 
-## 推荐执行顺序
+## 历史执行顺序（所有阶段已完成）
 
 - 近期第一步：执行 Stage 2 Task 1-3，先锁定论文业务 witness 的最小数据模型。
 - Stage 2 最小业务 proof 跑通后：执行 Stage 3，抽象多子链 profile。
