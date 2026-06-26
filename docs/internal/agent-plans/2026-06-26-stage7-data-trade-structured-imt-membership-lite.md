@@ -458,4 +458,22 @@ CodeWhale must stop and ask Codex before:
 
 ## Execution Record
 
-Not started.
+### 2026-06-26 CodeWhale Stage 7 Execution Complete
+
+- Branch: `feat/data-trade-stage7-structured-imt`
+- Commits:
+  - `ca2f304 feat(zk): extend IMT fixture schema for structured membership`
+  - `373550d feat(zk): build structured IMT membership fixture`
+  - `1d40c87 feat(zk): bind range proof to structured IMT membership`
+- Tasks completed: Task 1-6 (all)
+- Tests run:
+  - Go: `go test ./...` — `internal/imt` (33 tests incl. 7 new structured), `internal/business` (7), `internal/gnarkadapter` (10), `internal/artifact` (6) — all passed
+  - JS: `node --check` on `zk_real_data_trade_flow.js`, `zk_artifact.js`, `zk_verifier_client.js`, `zk_attestation.js` — all passed
+- CLI smoke: `fishbone-zk business-fixture` + `fishbone-zk verify` — `accepted`
+- Deviations from plan:
+  - `buildDeterministicTree` kept for intermediate layers; `buildPublishedRoot` does in-place path extraction (needed because tree nodes are overwritten during compression)
+  - `Leaf` field in `PreparedProof` carries aggregate root (published tree leaf), not masked_value_hash
+  - `AssignFixture` uses keccak-mapped `Convert2Byte` for all path/root values — this is the proven Stage 6 path that correctly matches the gnark circuit's field-element representation
+  - `depth` and `leaf_index` deprecated aliases handled via `defaultFromRaw` with conflict rejection
+- Questions for Codex/Owner: none
+- Remaining risks: none — Stage 7 is Go-only, no Rust/JS/artifact schema changes

@@ -16,13 +16,14 @@ This tool wraps the paper prototype in `references/data_trade_code/snarks/gnarkz
 - `fishbone-zk prove` — generate proof (alias to fixture for Stage 1)
 - `fishbone-zk verify --artifact <path>` — verify artifact and embedded proofs
 
-## Stage 6 IMT Coupling
+## Stage 6-7 IMT
 
-The `business-fixture` command now links the range business witness to a deterministic
-IMT fixture (depth 10, leaf 0 = `masked_value_hash`, 1023 padding leaves, 4 decoy roots
-derived from fixture metadata). The `business_input_hash` includes `dataset_id`,
-`field_name`, `depth`, `leaf_index`, and `root_list_index` using 4-byte LE length-prefixed
-string encoding. This is a deterministic fixture coupling — not full production IMT.
+The `business-fixture` command links the range business witness to a **structured IMT
+membership lite** prototype (Stage 7): four-layer deterministic Merkle model with
+Entry, Dataset, Aggregate, and Published root layers. The published leaf is the
+aggregate root. `business_input_hash` includes `record_id`, `schema_version`, and
+all layer depths/indices using 4-byte LE length-prefixed string encoding. This is a
+lite prototype — not production dynamic IMT.
 
 ## Build
 
