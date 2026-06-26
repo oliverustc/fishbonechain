@@ -26,8 +26,8 @@ func TestStructuredProofSameInputProducesSameOutput(t *testing.T) {
 
 func TestStructuredProofChangingMaskedValueHashChangesDownstreamRoots(t *testing.T) {
 	f := DefaultFixture()
-	mvh1 := bytes.Repeat([]byte{0xab}, 32)
-	mvh2 := bytes.Repeat([]byte{0xcd}, 32)
+	mvh1 := bytes.Repeat([]byte{0x01}, 32)
+	mvh2 := bytes.Repeat([]byte{0x02}, 32)
 	pp1, _ := PrepareStructuredProof(testCurve, mvh1, f)
 	pp2, _ := PrepareStructuredProof(testCurve, mvh2, f)
 	if bytes.Equal(pp1.EntryRoot, pp2.EntryRoot) {
@@ -95,6 +95,29 @@ func TestStructuredProofChangingFieldNameChangesRoots(t *testing.T) {
 	}
 	if bytes.Equal(pp1.Root0, pp2.Root0) {
 		t.Fatal("changing field_name did not change Root0")
+	}
+}
+
+func TestStructuredProofPathVerifiesAgainstRoot(t *testing.T) {
+	f := DefaultFixture()
+	mvh := dummyHash()
+	pp, err := PrepareStructuredProof(testCurve, mvh, f)
+	if err != nil {
+		t.Fatalf("PrepareStructuredProof: %v", err)
+	}
+	// Verify the Merkle path: applying H(node, brother) level by level
+	// should arrive at Root0. The leaf is the aggregate root (what the
+	// RO circuit opens against the published tree).
+	node := pp.AggregateRoot
+	for _, brother := range pp.Path {
+		parent, err := deterministicMiMCPair(testCurve, node, brother)
+		if err != nil {
+			t.Fatalf("path verification: %v", err)
+		}
+		node = parent
+	}
+	if !bytes.Equal(node, pp.Root0) {
+		t.Fatal("Merkle path verification failed: final node != Root0")
 	}
 }
 

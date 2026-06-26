@@ -8,8 +8,9 @@ import (
 const testCurve = "BN254"
 
 func dummyHash() []byte {
-	// 32-byte deterministic hash for testing.
-	return bytes.Repeat([]byte{0xab}, 32)
+	// 32-byte deterministic hash for testing. Must be a valid BN254 field element
+	// (less than the scalar field order ≈ 2^254) to avoid truncation in MiMC.
+	return bytes.Repeat([]byte{0x01}, 32)
 }
 
 func TestPrepareProofSameInputProducesSameOutput(t *testing.T) {

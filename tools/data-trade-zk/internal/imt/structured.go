@@ -191,7 +191,9 @@ func buildAggregateRoot(curveName string, f Fixture, datasetRoot []byte) (root [
 }
 
 // buildPublishedRoot builds the published Merkle tree from the aggregate root
-// and returns the final PreparedProof for RO proof assignment.
+// and returns the final PreparedProof for RO proof assignment. It extracts
+// the Merkle proof path during tree construction because the tree nodes are
+// overwritten in-place by the compression pass.
 func buildPublishedRoot(curveName string, f Fixture, aggregateRoot []byte) (root []byte, path [][]byte, err error) {
 	leafCount := 1 << f.PublishedDepth
 	leaves := make([][]byte, leafCount)
@@ -208,20 +210,24 @@ func buildPublishedRoot(curveName string, f Fixture, aggregateRoot []byte) (root
 		leaves[i] = pad
 	}
 
-	nodes, err := buildDeterministicTree(curveName, leaves, f.PublishedDepth)
-	if err != nil {
-		return nil, nil, fmt.Errorf("published tree: %w", err)
-	}
-
+	nodes := make([][]byte, leafCount)
+	copy(nodes, leaves)
 	path = make([][]byte, f.PublishedDepth)
-	idx := f.PublishedLeafIndex
 	for level := 0; level < f.PublishedDepth; level++ {
 		step := 1 << level
-		siblingIdx := idx ^ step
-		sibling := nodes[siblingIdx]
+		for i := 0; i < leafCount; i += 2 * step {
+			left := nodes[i]
+			right := nodes[i+step]
+			parent, e := deterministicMiMCPair(curveName, left, right)
+			if e != nil {
+				return nil, nil, fmt.Errorf("published tree level %d: %w", level, e)
+			}
+			nodes[i] = parent
+		}
+		// Sibling for leaf at published_leaf_index.
+		sibling := nodes[f.PublishedLeafIndex^step]
 		path[level] = make([]byte, len(sibling))
 		copy(path[level], sibling)
-		idx &= ^step
 	}
 
 	return nodes[0], path, nil
@@ -273,7 +279,7 @@ func PrepareStructuredProof(curveName string, maskedValueHash []byte, f Fixture)
 	}
 
 	return PreparedProof{
-		Leaf:          maskedValueHash,
+		Leaf:          aggregateRoot,
 		Path:          path,
 		Root0:         publishedRoot,
 		Root1:         decoyRoots[0],
