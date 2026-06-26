@@ -152,6 +152,8 @@ Where `imt.PreparedProof` can contain:
 - `Index0`
 - `Index1`
 
+`PreparedProof` must be defined in `internal/imt`, not in `internal/gnarkadapter`. Keep it independent of gnark frontend types where practical, so `internal/imt` remains self-contained and unit-testable.
+
 Keep the old random `Assign(...)` for legacy Stage 1 fixture compatibility.
 
 `GenerateBusinessRangeFixture` must use deterministic `AssignFixture`, not random `Assign`.
@@ -176,6 +178,12 @@ Use explicit byte encoding:
 
 - strings: raw UTF-8 bytes prefixed by a 4-byte little-endian length
 - integers: fixed-width little-endian
+
+Add a unit-level test for the string encoding convention. At minimum, assert that encoding `"demo"` produces:
+
+```text
+04 00 00 00 64 65 6d 6f
+```
 
 Do not change Rust/JS proof digest encoding. Only the value of `business_input_hash` changes.
 
@@ -278,6 +286,7 @@ git commit -m "feat(zk): derive deterministic IMT range proof inputs"
   - generated artifact verifies.
   - repeated generation with the same witness produces the same `business_input_hash`; if full proof bytes are not deterministic due to setup randomness, do not assert identical `proof_digest`.
   - changing `imt.dataset_id` changes `business_input_hash`.
+  - string encoding is byte-exact; `"demo"` must encode as `04 00 00 00 64 65 6d 6f`.
   - changing `masked_value_hash` or a tampered fixture still rejects.
 
 Validation:
