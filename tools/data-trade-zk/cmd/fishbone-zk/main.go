@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -8,6 +9,7 @@ import (
 
 	"fishbone-data-trade-zk/internal/artifact"
 	"fishbone-data-trade-zk/internal/business"
+	"fishbone-data-trade-zk/internal/dynamic"
 	"fishbone-data-trade-zk/internal/gnarkadapter"
 )
 
@@ -23,6 +25,8 @@ func main() {
 		fixtureCmd(os.Args[2:])
 	case "business-fixture":
 		businessFixtureCmd(os.Args[2:])
+	case "make-witness":
+		makeWitnessCmd(os.Args[2:])
 	case "setup", "prove":
 		fmt.Fprintf(os.Stderr, "%s: not yet implemented (use fixture for Stage 1)\n", os.Args[1])
 		os.Exit(2)
@@ -125,4 +129,48 @@ func businessFixtureCmd(args []string) {
 	}
 	fmt.Printf("proof_digest=%s\n", out.Artifact.ProofDigest)
 	fmt.Printf("business_input_hash=%s\n", out.Artifact.BusinessInputHash)
+}
+
+func makeWitnessCmd(args []string) {
+	fs := flag.NewFlagSet("make-witness", flag.ExitOnError)
+	datasetPath := fs.String("dataset", "", "dataset JSON")
+	requestPath := fs.String("request", "", "request JSON")
+	outPath := fs.String("out", "", "output witness JSON")
+	sessionID := fs.Uint("session-id", 0, "session ID")
+	roundIndex := fs.Uint("round-index", 0, "round index")
+	_ = fs.Parse(args)
+	if *datasetPath == "" || *requestPath == "" || *outPath == "" {
+		fmt.Fprintln(os.Stderr, "--dataset, --request, and --out are required")
+		os.Exit(2)
+	}
+
+	ds, err := dynamic.ReadDataset(*datasetPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "read dataset: %v\n", err)
+		os.Exit(1)
+	}
+	req, err := dynamic.ReadRequest(*requestPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "read request: %v\n", err)
+		os.Exit(1)
+	}
+
+	w, err := dynamic.BuildRangeWitness(ds, req, uint32(*sessionID), uint32(*roundIndex))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "build witness: %v\n", err)
+		os.Exit(1)
+	}
+	b, err := json.MarshalIndent(w, "", "  ")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "marshal witness: %v\n", err)
+		os.Exit(1)
+	}
+	if err := os.WriteFile(*outPath, append(b, '\n'), 0o644); err != nil {
+		fmt.Fprintf(os.Stderr, "write witness: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("witness=%s\n", *outPath)
+	fmt.Printf("dataset_id=%s\n", ds.DatasetID)
+	fmt.Printf("record_id=%s\n", req.RecordID)
+	fmt.Printf("field_name=%s\n", req.FieldName)
 }
