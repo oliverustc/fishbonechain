@@ -187,6 +187,196 @@ if (DRY_RUN_DYNAMIC) {
   evidence.mode = "dynamic-dry-run";
 }
 
+// ── Shared helpers ─────────────────────────────────────────────────
+
+async function setupTrade({ mainApi, childApi, alice, bob, sample, requestHash, maxRounds, pricePerRound, depositHint, hashChainAnchor }) {
+  const publishResult = await submitTx(bob, childApi.tx.dataRegistry.publishData(
+    sample.imtRoot, sample.description, pricePerRound, maxRounds, depositHint,
+    requestHash, sample.proofParamsHash,
+  ), "publishData");
+  const listingId = eventDataNumber(findEvent(publishResult, "dataRegistry", "DataPublished"), "listingId");
+  log(`listing_id=${listingId}`);
+
+  const escrowResult = await submitTx(alice, mainApi.tx.mainEscrow.openEscrow(
+    bob.address, maxRounds, pricePerRound, depositHint, hashChainAnchor,
+  ), "openEscrow");
+  const escrowId = eventDataNumber(findEvent(escrowResult, "mainEscrow", "EscrowOpened"), "escrowId");
+  log(`escrow_id=${escrowId}`);
+
+  await submitTx(alice, mainApi.tx.mainEscrow.lockFunds(escrowId), "lockFunds");
+  await submitTx(bob, mainApi.tx.mainEscrow.lockDeposit(escrowId), "lockDeposit");
+
+  await assertEscrowMatchesTradeTerms(mainApi, escrowId, {
+    requester: alice.address, dataOwner: bob.address,
+    maxRounds, pricePerRound, deposit: depositHint, hashChainAnchor,
+  });
+
+  const sessionResult = await submitTx(alice, childApi.tx.tradeSession.createSession(
+    listingId, escrowId, bob.address, requestHash,
+    pricePerRound, maxRounds, hashChainAnchor, "MainEscrow",
+  ), "createSession");
+  const sessionId = eventDataNumber(findEvent(sessionResult, "tradeSession", "SessionCreated"), "sessionId");
+  log(`session_id=${sessionId}`);
+
+  await assertSessionMatchesListingAndEscrow(childApi, sessionId, {
+    listingId, escrowId,
+    requester: alice.address, dataOwner: bob.address,
+    maxRounds, pricePerRound, hashChainAnchor,
+  });
+
+  await submitTx(bob, childApi.tx.tradeSession.acceptSession(sessionId), "acceptSession");
+  return { listingId, escrowId, sessionId };
+}
+
+function makeRoundEvidence(round, multiRange) {
+  return {
+    round_index: round,
+    constraint_kind: multiRange ? "multi_range" : "range",
+    chain_binding_mode: multiRange ? "first_constraint_digest" : "single_constraint_digest",
+    constraints: [],
+  };
+}
+
+function generateAndVerifyRoundArtifacts({ outDir, sessionId, round, requestHash }) {
+  const multiRange = isMultiRange();
+  const roundEvidence = makeRoundEvidence(round, multiRange);
+  const witnessBundle = DYNAMIC_MODE
+    ? generateDynamicWitnessBundle({ outDir, sessionId, roundIndex: round })
+    : [{ index: 0, fieldName: "legacy", witnessPath: WITNESS_PATH }];
+  for (const w of witnessBundle) {
+    const constraintDir = `${outDir}/constraint-${w.index}`;
+    mkdirSync(constraintDir, { recursive: true });
+    const fixResult = spawnSync(ZK_CMD, [
+      "business-fixture", "--witness", w.witnessPath, "--out", constraintDir,
+      "--request-hash", requestHash,
+      "--session-id", String(sessionId), "--round-index", String(round),
+    ], { stdio: "inherit" });
+    if (fixResult.status !== 0) throw new Error(`fishbone-zk fixture failed for ${w.fieldName}: ${fixResult.status}`);
+    const artifactPath = `${constraintDir}/artifact.json`;
+    const artifact = assertValidZkArtifact(readZkArtifact(artifactPath));
+    const verifyResult = spawnSync(ZK_CMD, ["verify", "--artifact", artifactPath], { encoding: "utf8" });
+    if (verifyResult.status !== 0 || !verifierAccepted(verifyResult.stdout)) {
+      throw new Error(`fishbone-zk verify rejected for ${w.fieldName}: ${verifyResult.stderr || verifyResult.stdout}`);
+    }
+    roundEvidence.constraints.push({
+      index: w.index, field_name: w.fieldName,
+      witness_path: w.witnessPath, artifact_path: artifactPath,
+      proof_digest: artifact.proof_digest,
+      business_input_hash: artifact.business_input_hash,
+      public_input_hash: artifact.public_input_hash,
+      on_chain_bound: w.index === 0,
+    });
+  }
+  const chainArtifactPath = roundEvidence.constraints[0].artifact_path;
+  const chainArt = assertValidZkArtifact(readZkArtifact(chainArtifactPath));
+  return { roundEvidence, chainArt };
+}
+
+async function submitRoundProofAccepted({ childApi, alice, bob, charlie, sessionId, round, chainArt }) {
+  const ch = hashNTimes(`round-${round}`, 1);
+  await submitTx(alice, childApi.tx.tradeSession.openRound(sessionId, round, ch), `openRound(${round})`);
+  await submitTx(alice, childApi.tx.tradeSession.submitPaymentProof(sessionId, round, ch), `submitPaymentProof(${round})`);
+  await submitTx(bob, childApi.tx.tradeSession.submitDataProof(
+    sessionId, round, "GnarkGroth16Bn254", "Range", 10,
+    chainArt.ch_proof_hash, chainArt.ro_proof_hash,
+    chainArt.public_input_hash, chainArt.vk_hash,
+    chainArt.business_input_hash, chainArt.proof_digest,
+  ), `submitDataProof(${round})`);
+  const attDigest = computeZkAttestationDigest({
+    sessionId, roundIndex: round, proofDigest: chainArt.proof_digest,
+    accepted: true, verifierAccount: charlie.addressRaw,
+  });
+  await submitTx(charlie, childApi.tx.tradeSession.attestDataProof(sessionId, round, chainArt.proof_digest, true, attDigest), `attestDataProof(${round})`);
+  return ch;
+}
+
+async function completeDeliveryAndPayment({ childApi, alice, bob, sessionId, round, ch }) {
+  await submitTx(alice, childApi.tx.tradeSession.submitProofSignature(sessionId, round, ch), `submitProofSignature(${round})`);
+  await submitTx(bob, childApi.tx.tradeSession.submitDataDeliveryHash(sessionId, round, ch), `submitDataDeliveryHash(${round})`);
+  await submitTx(alice, childApi.tx.tradeSession.submitPaymentPreimage(sessionId, round, ch), `submitPaymentPreimage(${round})`);
+}
+
+// ── Scenario runners ────────────────────────────────────────────────
+
+async function runHappyScenario({ mainApi, childApi, alice, bob, charlie, sample, requestHash, maxRounds, pricePerRound, depositHint, hashChainAnchor, seed }) {
+  const { listingId, escrowId, sessionId } = await setupTrade({ mainApi, childApi, alice, bob, sample, requestHash, maxRounds, pricePerRound, depositHint, hashChainAnchor });
+  for (let round = 0; round < 2; round++) {
+    log(`Round ${round} delivery...`);
+    const outDir = `target/data-trade-zk/session-${sessionId}-round-${round}`;
+    mkdirSync(outDir, { recursive: true });
+    const { roundEvidence, chainArt } = generateAndVerifyRoundArtifacts({ outDir, sessionId, round, requestHash });
+    const ch = await submitRoundProofAccepted({ childApi, alice, bob, charlie, sessionId, round, chainArt });
+    await completeDeliveryAndPayment({ childApi, alice, bob, sessionId, round, ch });
+    evidence.rounds.push(roundEvidence);
+  }
+  return { listingId, escrowId, sessionId };
+}
+
+async function runInvalidProofDispute({ mainApi, childApi, alice, bob, charlie, sample, requestHash, maxRounds, pricePerRound, depositHint, hashChainAnchor }) {
+  const { listingId, escrowId, sessionId } = await setupTrade({ mainApi, childApi, alice, bob, sample, requestHash, maxRounds, pricePerRound, depositHint, hashChainAnchor });
+  const round = 0;
+  const outDir = `target/data-trade-zk/session-${sessionId}-round-${round}`;
+  mkdirSync(outDir, { recursive: true });
+  const { roundEvidence, chainArt } = generateAndVerifyRoundArtifacts({ outDir, sessionId, round, requestHash });
+  const badDigest = makeBadDigest(chainArt.proof_digest);
+  if (badDigest === chainArt.proof_digest) throw new Error("bad proof digest must differ from valid artifact digest");
+
+  const ch = hashNTimes(`round-${round}`, 1);
+  await submitTx(alice, childApi.tx.tradeSession.openRound(sessionId, round, ch), `openRound(${round})`);
+  await submitTx(alice, childApi.tx.tradeSession.submitPaymentProof(sessionId, round, ch), `submitPaymentProof(${round})`);
+  // Submit intentionally wrong proof digest
+  await submitTx(bob, childApi.tx.tradeSession.submitDataProof(
+    sessionId, round, "GnarkGroth16Bn254", "Range", 10,
+    chainArt.ch_proof_hash, chainArt.ro_proof_hash,
+    chainArt.public_input_hash, chainArt.vk_hash,
+    chainArt.business_input_hash, badDigest,
+  ), `submitDataProof(${round}) with bad digest`);
+
+  await submitTx(alice, childApi.tx.tradeSession.disputeInvalidProof(sessionId, round, badDigest), `disputeInvalidProof(${round})`);
+  await submitTx(alice, mainApi.tx.mainEscrow.punishDataOwner(escrowId), "punishDataOwner");
+  evidence.scenario_outcome = { type: "invalid-proof", child_event: "tradeSession.SessionPunished", main_event: "mainEscrow.EscrowPunished" };
+  evidence.rounds.push(roundEvidence);
+  evidence.result = "expected-dispute-accepted";
+  return { listingId, escrowId, sessionId };
+}
+
+async function runInvalidPlaintextDispute({ mainApi, childApi, alice, bob, charlie, sample, requestHash, maxRounds, pricePerRound, depositHint, hashChainAnchor }) {
+  const { listingId, escrowId, sessionId } = await setupTrade({ mainApi, childApi, alice, bob, sample, requestHash, maxRounds, pricePerRound, depositHint, hashChainAnchor });
+  const round = 0;
+  const outDir = `target/data-trade-zk/session-${sessionId}-round-${round}`;
+  mkdirSync(outDir, { recursive: true });
+  const { roundEvidence, chainArt } = generateAndVerifyRoundArtifacts({ outDir, sessionId, round, requestHash });
+  const ch = await submitRoundProofAccepted({ childApi, alice, bob, charlie, sessionId, round, chainArt });
+  await submitTx(alice, childApi.tx.tradeSession.submitProofSignature(sessionId, round, ch), `submitProofSignature(${round})`);
+  const deliveredHash = hashNTimes("delivered-bad", 1);
+  const expectedHash = hashNTimes("expected-good", 1);
+  await submitTx(bob, childApi.tx.tradeSession.submitDataDeliveryHash(sessionId, round, deliveredHash), `submitDataDeliveryHash(${round})`);
+  await submitTx(alice, childApi.tx.tradeSession.disputeInvalidPlaintext(sessionId, round, deliveredHash, expectedHash), `disputeInvalidPlaintext(${round})`);
+  await submitTx(alice, mainApi.tx.mainEscrow.punishDataOwner(escrowId), "punishDataOwner");
+  evidence.scenario_outcome = { type: "invalid-plaintext", child_event: "tradeSession.SessionPunished", main_event: "mainEscrow.EscrowPunished" };
+  evidence.rounds.push(roundEvidence);
+  evidence.result = "expected-plaintext-dispute-accepted";
+  return { listingId, escrowId, sessionId };
+}
+
+async function runRequesterRefusesPayment({ mainApi, childApi, alice, bob, charlie, sample, requestHash, maxRounds, pricePerRound, depositHint, hashChainAnchor }) {
+  const { listingId, escrowId, sessionId } = await setupTrade({ mainApi, childApi, alice, bob, sample, requestHash, maxRounds, pricePerRound, depositHint, hashChainAnchor });
+  const round = 0;
+  const outDir = `target/data-trade-zk/session-${sessionId}-round-${round}`;
+  mkdirSync(outDir, { recursive: true });
+  const { roundEvidence, chainArt } = generateAndVerifyRoundArtifacts({ outDir, sessionId, round, requestHash });
+  const ch = await submitRoundProofAccepted({ childApi, alice, bob, charlie, sessionId, round, chainArt });
+  await submitTx(alice, childApi.tx.tradeSession.submitProofSignature(sessionId, round, ch), `submitProofSignature(${round})`);
+  await submitTx(bob, childApi.tx.tradeSession.submitDataDeliveryHash(sessionId, round, ch), `submitDataDeliveryHash(${round})`);
+  // DR refuses to pay — DO claims last payment
+  await submitTx(bob, childApi.tx.tradeSession.claimLastPayment(sessionId, round), `claimLastPayment(${round})`);
+  await submitTx(bob, mainApi.tx.mainEscrow.claimLastPayment(escrowId, round), "claimLastPayment(main)");
+  evidence.scenario_outcome = { type: "requester-refuses-payment", child_event: "tradeSession.LastPaymentClaimed", main_event: "mainEscrow.EscrowSettled" };
+  evidence.rounds.push(roundEvidence);
+  evidence.result = "expected-last-payment-claimed";
+  return { listingId, escrowId, sessionId };
+}
+
 async function main() {
   log(`连接主链: ${MAIN_WS}  子链: ${CHILD_WS}`);
   log(`ZK CLI: ${ZK_CMD}`);
@@ -238,143 +428,42 @@ async function main() {
   }
 
   try {
-    // ── Setup: publish, escrow, lock, session ──
-    const publishResult = await submitTx(bob, childApi.tx.dataRegistry.publishData(
-      sample.imtRoot, sample.description, pricePerRound, maxRounds, depositHint,
-      requestHash, sample.proofParamsHash,
-    ), "publishData");
-    const listingId = eventDataNumber(findEvent(publishResult, "dataRegistry", "DataPublished"), "listingId");
-    log(`listing_id=${listingId}`);
+    const ctx = { mainApi, childApi, alice, bob, charlie, sample, requestHash, maxRounds, pricePerRound, depositHint, hashChainAnchor, seed };
+    let ids;
 
-    const escrowResult = await submitTx(alice, mainApi.tx.mainEscrow.openEscrow(
-      bob.address, maxRounds, pricePerRound, depositHint, hashChainAnchor,
-    ), "openEscrow");
-    const escrowId = eventDataNumber(findEvent(escrowResult, "mainEscrow", "EscrowOpened"), "escrowId");
-    log(`escrow_id=${escrowId}`);
-
-    await submitTx(alice, mainApi.tx.mainEscrow.lockFunds(escrowId), "lockFunds");
-    await submitTx(bob, mainApi.tx.mainEscrow.lockDeposit(escrowId), "lockDeposit");
-
-    await assertEscrowMatchesTradeTerms(mainApi, escrowId, {
-      requester: alice.address, dataOwner: bob.address,
-      maxRounds, pricePerRound, deposit: depositHint, hashChainAnchor,
-    });
-
-    const sessionResult = await submitTx(alice, childApi.tx.tradeSession.createSession(
-      listingId, escrowId, bob.address, requestHash,
-      pricePerRound, maxRounds, hashChainAnchor, "MainEscrow",
-    ), "createSession");
-    const sessionId = eventDataNumber(findEvent(sessionResult, "tradeSession", "SessionCreated"), "sessionId");
-    log(`session_id=${sessionId}`);
-
-    await assertSessionMatchesListingAndEscrow(childApi, sessionId, {
-      listingId, escrowId,
-      requester: alice.address, dataOwner: bob.address,
-      maxRounds, pricePerRound, hashChainAnchor,
-    });
-
-    await submitTx(bob, childApi.tx.tradeSession.acceptSession(sessionId), "acceptSession");
-
-    // ── Round delivery with real gnark ZK proof ──
-    const multiRange = isMultiRange();
-    for (let round = 0; round < 2; round++) {
-      log(`Round ${round} delivery (real gnark ZK)...`);
-
-      const outDir = `target/data-trade-zk/session-${sessionId}-round-${round}`;
-      mkdirSync(outDir, { recursive: true });
-
-      const roundEvidence = {
-        round_index: round,
-        constraint_kind: multiRange ? "multi_range" : "range",
-        chain_binding_mode: multiRange ? "first_constraint_digest" : "single_constraint_digest",
-        constraints: [],
-      };
-
-      // 0. Generate witness(es)
-      const witnessBundle = DYNAMIC_MODE
-        ? generateDynamicWitnessBundle({ outDir, sessionId: sessionId, roundIndex: round })
-        : [{ index: 0, fieldName: "legacy", witnessPath: WITNESS_PATH }];
-
-      // 1. For each constraint: fixture + verify
-      for (const w of witnessBundle) {
-        const constraintDir = `${outDir}/constraint-${w.index}`;
-        mkdirSync(constraintDir, { recursive: true });
-
-        const fixResult = spawnSync(ZK_CMD, [
-          "business-fixture", "--witness", w.witnessPath, "--out", constraintDir,
-          "--request-hash", requestHash,
-          "--session-id", String(sessionId), "--round-index", String(round),
-        ], { stdio: "inherit" });
-        if (fixResult.status !== 0) throw new Error(`fishbone-zk fixture failed for ${w.fieldName}: ${fixResult.status}`);
-
-        const artifactPath = `${constraintDir}/artifact.json`;
-        const artifact = assertValidZkArtifact(readZkArtifact(artifactPath));
-
-        const verifyResult = spawnSync(ZK_CMD, ["verify", "--artifact", artifactPath], { encoding: "utf8" });
-        if (verifyResult.status !== 0 || !verifierAccepted(verifyResult.stdout)) {
-          throw new Error(`fishbone-zk verify rejected for ${w.fieldName}: ${verifyResult.stderr || verifyResult.stdout}`);
-        }
-
-        roundEvidence.constraints.push({
-          index: w.index, field_name: w.fieldName,
-          witness_path: w.witnessPath, artifact_path: artifactPath,
-          proof_digest: artifact.proof_digest,
-          business_input_hash: artifact.business_input_hash,
-          public_input_hash: artifact.public_input_hash,
-          on_chain_bound: w.index === 0,
-        });
-      }
-
-      // 2. Submit round on-chain (first constraint only)
-      const chainArtifact = roundEvidence.constraints[0];
-      const chainArt = assertValidZkArtifact(readZkArtifact(chainArtifact.artifact_path));
-      const ch = hashNTimes(`round-${round}`, 1);
-      await submitTx(alice, childApi.tx.tradeSession.openRound(sessionId, round, ch), `openRound(${round})`);
-      await submitTx(alice, childApi.tx.tradeSession.submitPaymentProof(sessionId, round, ch), `submitPaymentProof(${round})`);
-
-      await submitTx(bob, childApi.tx.tradeSession.submitDataProof(
-        sessionId, round, "GnarkGroth16Bn254", "Range", 10,
-        chainArt.ch_proof_hash, chainArt.ro_proof_hash,
-        chainArt.public_input_hash, chainArt.vk_hash,
-        chainArt.business_input_hash, chainArt.proof_digest,
-      ), `submitDataProof(${round})`);
-
-      const attDigest = computeZkAttestationDigest({
-        sessionId, roundIndex: round, proofDigest: chainArt.proof_digest,
-        accepted: true, verifierAccount: charlie.addressRaw,
-      });
-      await submitTx(charlie, childApi.tx.tradeSession.attestDataProof(sessionId, round, chainArt.proof_digest, true, attDigest), `attestDataProof(${round})`);
-
-      await submitTx(alice, childApi.tx.tradeSession.submitProofSignature(sessionId, round, ch), `submitProofSignature(${round})`);
-      await submitTx(bob, childApi.tx.tradeSession.submitDataDeliveryHash(sessionId, round, ch), `submitDataDeliveryHash(${round})`);
-      await submitTx(alice, childApi.tx.tradeSession.submitPaymentPreimage(sessionId, round, ch), `submitPaymentPreimage(${round})`);
-
-      evidence.rounds.push(roundEvidence);
+    switch (SCENARIO) {
+      case "invalid-proof-dispute":
+        ids = await runInvalidProofDispute(ctx);
+        break;
+      case "invalid-plaintext-dispute":
+        ids = await runInvalidPlaintextDispute(ctx);
+        break;
+      case "requester-refuses-payment":
+        ids = await runRequesterRefusesPayment(ctx);
+        break;
+      default:
+        ids = await runHappyScenario(ctx);
+        // ── Settlement (happy path only) ──
+        evidence.settlement = { completed_rounds: 2, remaining_rounds: 1 };
+        const remainingRounds = 1;
+        const preimage = paymentPreimageForRemaining(seed, remainingRounds);
+        log(`claimSettlement (2/3 rounds)...`);
+        await submitTx(bob, childApi.tx.tradeSession.claimSettlement(ids.sessionId, preimage, remainingRounds), "claimSettlement");
+        log("settleByPreimage on main...");
+        await submitTx(bob, mainApi.tx.mainEscrow.settleByPreimage(ids.escrowId, preimage, remainingRounds), "settleByPreimage");
+        const bobBal = await mainApi.query.system.account(bob.address);
+        const aliceBal = await mainApi.query.system.account(alice.address);
+        log(`Bob free = ${bobBal.data.free}, reserved = ${bobBal.data.reserved}`);
+        log(`Alice free = ${aliceBal.data.free}, reserved = ${aliceBal.data.reserved}`);
+        log("✅ Real ZK-attested path 完成！");
+        log("verifier=gnark-groth16-bn254 (off-chain proof, on-chain attestation)");
+        evidence.result = "accepted";
     }
 
-    // ── Settlement ──
     evidence.request_hash = requestHash;
-    evidence.listing_id = listingId;
-    evidence.escrow_id = escrowId;
-    evidence.session_id = sessionId;
-
-    const remainingRounds = 1;
-    const preimage = paymentPreimageForRemaining(seed, remainingRounds);
-    log(`claimSettlement (${maxRounds - remainingRounds}/${maxRounds} rounds)...`);
-    await submitTx(bob, childApi.tx.tradeSession.claimSettlement(sessionId, preimage, remainingRounds), "claimSettlement");
-
-    log("settleByPreimage on main...");
-    await submitTx(bob, mainApi.tx.mainEscrow.settleByPreimage(escrowId, preimage, remainingRounds), "settleByPreimage");
-
-    const bobBal = await mainApi.query.system.account(bob.address);
-    const aliceBal = await mainApi.query.system.account(alice.address);
-    log(`Bob free = ${bobBal.data.free}, reserved = ${bobBal.data.reserved}`);
-    log(`Alice free = ${aliceBal.data.free}, reserved = ${aliceBal.data.reserved}`);
-    log("✅ Real ZK-attested path 完成！");
-    log("verifier=gnark-groth16-bn254 (off-chain proof, on-chain attestation)");
-
-    evidence.settlement = { completed_rounds: maxRounds - remainingRounds, remaining_rounds: remainingRounds };
-    evidence.result = "accepted";
+    evidence.listing_id = ids.listingId;
+    evidence.escrow_id = ids.escrowId;
+    evidence.session_id = ids.sessionId;
     writeEvidence();
   } finally {
     if (evidence.result === null) evidence.result = "failed";
