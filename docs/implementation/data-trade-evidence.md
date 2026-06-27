@@ -221,3 +221,8 @@ Stage 11 通过 `--scenario` 支持以下失败/争议路径：
 - `requester-refuses-payment`：DR 拒付 → `LastPaymentClaimed` + `EscrowSettled`
 
 Evidence 包含 `scenario`、`scenario_outcome`（含 `events` 数组）、`result` 字段。场景通过 `findEvent()` 断言预期链上事件。Live chain 场景验证未运行（RPC 不可用）。
+
+各场景的 `result` 值：
+- `invalid-proof-dispute` → `"expected-dispute-accepted"`
+- `invalid-plaintext-dispute` → `"expected-plaintext-dispute-accepted"`
+- `requester-refuses-payment` → `"expected-last-payment-claimed"`
