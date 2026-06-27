@@ -39,13 +39,19 @@ type Request struct {
 	RequestHash    string `json:"request_hash"`
 	DatasetID      string `json:"dataset_id"`
 	RecordID       string `json:"record_id"`
-	FieldName      string `json:"field_name"`
-	Range          RangeConstraint `json:"range"`
+	FieldName      string                `json:"field_name"`
+	Range          RangeConstraint       `json:"range"`
+	Constraints    []RangeFieldConstraint `json:"constraints,omitempty"`
 }
 
 type RangeConstraint struct {
 	MinValue uint64 `json:"min_value"`
 	MaxValue uint64 `json:"max_value"`
+}
+
+type RangeFieldConstraint struct {
+	FieldName string          `json:"field_name"`
+	Range     RangeConstraint `json:"range"`
 }
 
 // ── Validation ───────────────────────────────────────────────────────
@@ -123,8 +129,8 @@ func ValidateRequest(r Request) error {
 	if r.Version != 1 {
 		return fmt.Errorf("request version must be 1, got %d", r.Version)
 	}
-	if r.ConstraintKind != "range" {
-		return fmt.Errorf("constraint_kind must be range in Stage 8, got %q", r.ConstraintKind)
+	if r.ConstraintKind != "range" && r.ConstraintKind != "multi_range" {
+		return fmt.Errorf("constraint_kind must be range or multi_range, got %q", r.ConstraintKind)
 	}
 	if !validHex32(r.RequestHash) {
 		return fmt.Errorf("request_hash must be 32-byte hex")
@@ -141,14 +147,51 @@ func ValidateRequest(r Request) error {
 	if !isASCII(r.RecordID) {
 		return fmt.Errorf("record_id must be ASCII")
 	}
-	if strings.TrimSpace(r.FieldName) == "" {
-		return fmt.Errorf("field_name must not be empty")
+
+	if r.ConstraintKind == "range" {
+		if len(r.Constraints) > 0 {
+			return fmt.Errorf("constraints must be empty for single range request")
+		}
+		if strings.TrimSpace(r.FieldName) == "" {
+			return fmt.Errorf("field_name must not be empty")
+		}
+		if !isASCII(r.FieldName) {
+			return fmt.Errorf("field_name must be ASCII")
+		}
+		if r.Range.MinValue > r.Range.MaxValue {
+			return fmt.Errorf("min_value must be <= max_value")
+		}
+		return nil
 	}
-	if !isASCII(r.FieldName) {
-		return fmt.Errorf("field_name must be ASCII")
+
+	// multi_range
+	if r.FieldName != "" {
+		return fmt.Errorf("field_name must be empty for multi_range request")
 	}
-	if r.Range.MinValue > r.Range.MaxValue {
-		return fmt.Errorf("min_value must be <= max_value")
+	if r.Range.MinValue != 0 || r.Range.MaxValue != 0 {
+		return fmt.Errorf("top-level range must be omitted for multi_range request")
+	}
+	if len(r.Constraints) < 2 {
+		return fmt.Errorf("multi_range requires at least 2 constraints, got %d", len(r.Constraints))
+	}
+	if len(r.Constraints) > 4 {
+		return fmt.Errorf("multi_range supports at most 4 constraints, got %d", len(r.Constraints))
+	}
+	seenFields := map[string]bool{}
+	for _, c := range r.Constraints {
+		if strings.TrimSpace(c.FieldName) == "" {
+			return fmt.Errorf("constraint field_name must not be empty")
+		}
+		if !isASCII(c.FieldName) {
+			return fmt.Errorf("constraint field_name must be ASCII: %q", c.FieldName)
+		}
+		if c.Range.MinValue > c.Range.MaxValue {
+			return fmt.Errorf("constraint %q: min_value must be <= max_value", c.FieldName)
+		}
+		if seenFields[c.FieldName] {
+			return fmt.Errorf("duplicate field_name in constraints: %q", c.FieldName)
+		}
+		seenFields[c.FieldName] = true
 	}
 	return nil
 }

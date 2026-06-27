@@ -163,6 +163,88 @@ func TestReadDatasetUsesUint64Guard(t *testing.T) {
 	}
 }
 
+func TestValidateMultiRangeAccepts(t *testing.T) {
+	r := Request{
+		Version:        1,
+		ConstraintKind: "multi_range",
+		RequestHash:    "0x1111111111111111111111111111111111111111111111111111111111111111",
+		DatasetID:      "test",
+		RecordID:       "r1",
+		Constraints: []RangeFieldConstraint{
+			{FieldName: "temp", Range: RangeConstraint{MinValue: 10, MaxValue: 50}},
+			{FieldName: "pressure", Range: RangeConstraint{MinValue: 900, MaxValue: 1100}},
+		},
+	}
+	if err := ValidateRequest(r); err != nil {
+		t.Fatalf("valid multi_range rejected: %v", err)
+	}
+}
+
+func TestValidateMultiRangeRejectsOneConstraint(t *testing.T) {
+	r := Request{
+		Version:        1,
+		ConstraintKind: "multi_range",
+		RequestHash:    "0x1111111111111111111111111111111111111111111111111111111111111111",
+		DatasetID:      "test",
+		RecordID:       "r1",
+		Constraints: []RangeFieldConstraint{
+			{FieldName: "temp", Range: RangeConstraint{MinValue: 10, MaxValue: 50}},
+		},
+	}
+	if err := ValidateRequest(r); err == nil {
+		t.Fatal("one constraint should reject in multi_range")
+	}
+}
+
+func TestValidateMultiRangeRejectsDuplicateFields(t *testing.T) {
+	r := Request{
+		Version:        1,
+		ConstraintKind: "multi_range",
+		RequestHash:    "0x1111111111111111111111111111111111111111111111111111111111111111",
+		DatasetID:      "test",
+		RecordID:       "r1",
+		Constraints: []RangeFieldConstraint{
+			{FieldName: "temp", Range: RangeConstraint{MinValue: 10, MaxValue: 50}},
+			{FieldName: "temp", Range: RangeConstraint{MinValue: 60, MaxValue: 80}},
+		},
+	}
+	if err := ValidateRequest(r); err == nil {
+		t.Fatal("duplicate fields should reject")
+	}
+}
+
+func TestValidateMultiRangeRejectsMinGtMax(t *testing.T) {
+	r := Request{
+		Version:        1,
+		ConstraintKind: "multi_range",
+		RequestHash:    "0x1111111111111111111111111111111111111111111111111111111111111111",
+		DatasetID:      "test",
+		RecordID:       "r1",
+		Constraints: []RangeFieldConstraint{
+			{FieldName: "a", Range: RangeConstraint{MinValue: 10, MaxValue: 50}},
+			{FieldName: "b", Range: RangeConstraint{MinValue: 100, MaxValue: 10}},
+		},
+	}
+	if err := ValidateRequest(r); err == nil {
+		t.Fatal("min > max should reject in multi_range")
+	}
+}
+
+func TestValidateRequestRejectsSubset(t *testing.T) {
+	r := Request{
+		Version:        1,
+		ConstraintKind: "subset",
+		RequestHash:    "0x1111111111111111111111111111111111111111111111111111111111111111",
+		DatasetID:      "test",
+		RecordID:       "r1",
+		FieldName:      "f",
+		Range:          RangeConstraint{MinValue: 0, MaxValue: 10},
+	}
+	if err := ValidateRequest(r); err == nil {
+		t.Fatal("subset should still reject")
+	}
+}
+
 func formatUint(v uint64) string {
 	var buf [20]byte
 	i := len(buf)
