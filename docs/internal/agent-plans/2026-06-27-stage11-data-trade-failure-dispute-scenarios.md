@@ -597,3 +597,12 @@ CodeWhale reviewed the initial Stage 11 plan and approved it with two medium imp
 
 - 2026-06-27: Initial Codex plan committed.
 - 2026-06-27: CodeWhale plan review completed. Plan updated to tighten refactor scope, guard bad digest derivation, and standardize `scenario_outcome`.
+
+### 2026-06-27 CodeWhale Stage 11 Execution Complete
+
+- Branch: `feat/data-trade-stage11-failure-scenarios`
+- Commits: `c18a573`, `52200f4`, `0e52b52`
+- Tasks completed: Task 1-6 (all)
+- Tests: JS syntax OK, Go tests OK, dry-run happy+multi_range OK
+- Live chain scenario validation: not run (RPC unavailable)
+- Code review fix: `invalid-proof-dispute` now submits valid digest then disputes with badDigest (High finding)

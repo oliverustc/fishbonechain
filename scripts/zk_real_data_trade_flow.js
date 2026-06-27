@@ -321,20 +321,17 @@ async function runInvalidProofDispute({ mainApi, childApi, alice, bob, charlie, 
   const badDigest = makeBadDigest(chainArt.proof_digest);
   if (badDigest === chainArt.proof_digest) throw new Error("bad proof digest must differ from valid artifact digest");
 
-  const ch = hashNTimes(`round-${round}`, 1);
-  await submitTx(alice, childApi.tx.tradeSession.openRound(sessionId, round, ch), `openRound(${round})`);
-  await submitTx(alice, childApi.tx.tradeSession.submitPaymentProof(sessionId, round, ch), `submitPaymentProof(${round})`);
-  // Submit intentionally wrong proof digest
-  await submitTx(bob, childApi.tx.tradeSession.submitDataProof(
-    sessionId, round, "GnarkGroth16Bn254", "Range", 10,
-    chainArt.ch_proof_hash, chainArt.ro_proof_hash,
-    chainArt.public_input_hash, chainArt.vk_hash,
-    chainArt.business_input_hash, badDigest,
-  ), `submitDataProof(${round}) with bad digest`);
-
+  // Submit the valid proof first so submitDataProof's internal digest check passes.
+  const ch = await submitRoundProofAccepted({ childApi, alice, bob, charlie, sessionId, round, chainArt });
+  // Then dispute with the badDigest — different from the accepted proof digest.
   await submitTx(alice, childApi.tx.tradeSession.disputeInvalidProof(sessionId, round, badDigest), `disputeInvalidProof(${round})`);
   await submitTx(alice, mainApi.tx.mainEscrow.punishDataOwner(escrowId), "punishDataOwner");
-  evidence.scenario_outcome = { type: "invalid-proof", child_event: "tradeSession.SessionPunished", main_event: "mainEscrow.EscrowPunished" };
+  evidence.scenario_outcome = {
+    type: "invalid-proof", child_event: "tradeSession.SessionPunished", main_event: "mainEscrow.EscrowPunished",
+    submitted_digest: chainArt.proof_digest,
+    evidence_bad_digest: badDigest,
+    bad_digest_differs_from_submitted: true,
+  };
   evidence.rounds.push(roundEvidence);
   evidence.result = "expected-dispute-accepted";
   return { listingId, escrowId, sessionId };
