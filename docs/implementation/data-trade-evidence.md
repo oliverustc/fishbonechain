@@ -201,3 +201,14 @@ ZK_VERIFIER_CMD=target/tools/fishbone-zk node scripts/zk_real_data_trade_flow.js
 ```
 
 Dry-run 证据格式示例见 `target/data-trade-zk/session-0-evidence.json`。注意：dry-run 证据不涉及链上交互，`listing_id`、`escrow_id` 和 `settlement` 字段为 `null`。历史 VM/live-chain 证据（Stage 5）不受影响。
+## Stage 10 多约束 Evidence
+
+Stage 10 引入 `multi_range` 请求，支持同 record 多 field range AND。Evidence 归一化为 `rounds[].constraints[]` 数组格式。
+
+Multi-range dry-run:
+```bash
+ZK_VERIFIER_CMD=target/tools/fishbone-zk node scripts/zk_real_data_trade_flow.js \
+  --dataset scripts/fixtures/data_trade_datasets/factory_sensors.json \
+  --request scripts/fixtures/data_trade_requests/factory_multi_range.json \
+  --evidence-out /tmp/evidence.json --dry-run-dynamic
+```

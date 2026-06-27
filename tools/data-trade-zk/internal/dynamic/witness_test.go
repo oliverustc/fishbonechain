@@ -104,6 +104,68 @@ func TestBuildRangeWitnessMissingRecordRejects(t *testing.T) {
 	}
 }
 
+func TestBuildRangeWitnessesMultiRangeProducesCorrectWitnesses(t *testing.T) {
+	ds := validDataset()
+	req := Request{
+		Version:        1,
+		ConstraintKind: "multi_range",
+		RequestHash:    "0x1111111111111111111111111111111111111111111111111111111111111111",
+		DatasetID:      "factory-sensors",
+		RecordID:       "sensor-a",
+		Constraints: []RangeFieldConstraint{
+			{FieldName: "temperature", Range: RangeConstraint{MinValue: 18, MaxValue: 65}},
+			{FieldName: "humidity", Range: RangeConstraint{MinValue: 0, MaxValue: 100}},
+		},
+	}
+	witnesses, err := BuildRangeWitnesses(ds, req, 0, 0)
+	if err != nil {
+		t.Fatalf("BuildRangeWitnesses: %v", err)
+	}
+	if len(witnesses) != 2 {
+		t.Fatalf("expected 2 witnesses, got %d", len(witnesses))
+	}
+	if witnesses[0].RawValue != 42 { t.Fatalf("expected temp=42, got %d", witnesses[0].RawValue) }
+	if witnesses[1].RawValue != 58 { t.Fatalf("expected humidity=58, got %d", witnesses[1].RawValue) }
+	if witnesses[0].IMT.FieldName != "temperature" { t.Fatalf("expected imt field_name temperature") }
+	if witnesses[1].IMT.FieldName != "humidity" { t.Fatalf("expected imt field_name humidity") }
+}
+
+func TestBuildRangeWitnessesMultiRangeRejectsMissingSecondField(t *testing.T) {
+	ds := validDataset()
+	req := Request{
+		Version: 1, ConstraintKind: "multi_range",
+		RequestHash: "0x1111111111111111111111111111111111111111111111111111111111111111",
+		DatasetID: "factory-sensors", RecordID: "sensor-a",
+		Constraints: []RangeFieldConstraint{
+			{FieldName: "temperature", Range: RangeConstraint{MinValue: 18, MaxValue: 65}},
+			{FieldName: "nonexistent", Range: RangeConstraint{MinValue: 0, MaxValue: 100}},
+		},
+	}
+	_, err := BuildRangeWitnesses(ds, req, 0, 0)
+	if err == nil { t.Fatal("missing second field should reject") }
+}
+
+func TestBuildRangeWitnessesMultiRangeRejectsOutOfRangeSecond(t *testing.T) {
+	ds := validDataset()
+	req := Request{
+		Version: 1, ConstraintKind: "multi_range",
+		RequestHash: "0x1111111111111111111111111111111111111111111111111111111111111111",
+		DatasetID: "factory-sensors", RecordID: "sensor-a",
+		Constraints: []RangeFieldConstraint{
+			{FieldName: "temperature", Range: RangeConstraint{MinValue: 18, MaxValue: 65}},
+			{FieldName: "humidity", Range: RangeConstraint{MinValue: 100, MaxValue: 200}},
+		},
+	}
+	_, err := BuildRangeWitnesses(ds, req, 0, 0)
+	if err == nil { t.Fatal("out-of-range second field should reject") }
+}
+
+func TestBuildRangeWitnessesSingleRangeReturnsOne(t *testing.T) {
+	witnesses, err := BuildRangeWitnesses(validDataset(), validRequest(), 0, 0)
+	if err != nil { t.Fatalf("BuildRangeWitnesses: %v", err) }
+	if len(witnesses) != 1 { t.Fatalf("expected 1 witness, got %d", len(witnesses)) }
+}
+
 func TestBuildRangeWitnessMissingFieldRejects(t *testing.T) {
 	req := validRequest()
 	req.FieldName = "nonexistent"

@@ -7,14 +7,13 @@ import (
 	"fishbone-data-trade-zk/internal/imt"
 )
 
-// BuildRangeWitness converts a validated dataset/request pair into a
-// business.RangeWitness for fishbone-zk business-fixture.
-func BuildRangeWitness(ds Dataset, req Request, sessionID, roundIndex uint32) (business.RangeWitness, error) {
-	// Cross-document consistency checks.
+// BuildRangeWitnesses converts a validated dataset/request pair into a slice
+// of business.RangeWitness. Single range returns one element; multi_range
+// returns one per constraint.
+func BuildRangeWitnesses(ds Dataset, req Request, sessionID, roundIndex uint32) ([]business.RangeWitness, error) {
 	if ds.DatasetID != req.DatasetID {
-		return business.RangeWitness{}, fmt.Errorf("dataset_id mismatch: dataset=%q request=%q", ds.DatasetID, req.DatasetID)
+		return nil, fmt.Errorf("dataset_id mismatch: dataset=%q request=%q", ds.DatasetID, req.DatasetID)
 	}
-
 	var foundRecord *Record
 	for i := range ds.Records {
 		if ds.Records[i].RecordID == req.RecordID {
@@ -23,37 +22,70 @@ func BuildRangeWitness(ds Dataset, req Request, sessionID, roundIndex uint32) (b
 		}
 	}
 	if foundRecord == nil {
-		return business.RangeWitness{}, fmt.Errorf("record_id %q not found in dataset", req.RecordID)
+		return nil, fmt.Errorf("record_id %q not found in dataset", req.RecordID)
 	}
 
-	field, ok := foundRecord.Fields[req.FieldName]
+	switch req.ConstraintKind {
+	case "range":
+		w, err := buildOne(foundRecord, req.FieldName, req.Range, ds, req, sessionID, roundIndex)
+		if err != nil {
+			return nil, err
+		}
+		return []business.RangeWitness{w}, nil
+	case "multi_range":
+		var out []business.RangeWitness
+		for _, c := range req.Constraints {
+			w, err := buildOne(foundRecord, c.FieldName, c.Range, ds, req, sessionID, roundIndex)
+			if err != nil {
+				return nil, fmt.Errorf("constraint %q: %w", c.FieldName, err)
+			}
+			out = append(out, w)
+		}
+		return out, nil
+	default:
+		return nil, fmt.Errorf("unsupported constraint_kind: %q", req.ConstraintKind)
+	}
+}
+
+func buildOne(record *Record, fieldName string, rng RangeConstraint, ds Dataset, req Request, sessionID, roundIndex uint32) (business.RangeWitness, error) {
+	field, ok := record.Fields[fieldName]
 	if !ok {
-		return business.RangeWitness{}, fmt.Errorf("field %q not found in record %q", req.FieldName, req.RecordID)
+		return business.RangeWitness{}, fmt.Errorf("field %q not found in record %q", fieldName, req.RecordID)
 	}
 	if field.Type != "uint64" {
-		return business.RangeWitness{}, fmt.Errorf("field %q type is %q, expected uint64", req.FieldName, field.Type)
+		return business.RangeWitness{}, fmt.Errorf("field %q type is %q, expected uint64", fieldName, field.Type)
 	}
-	if field.Value < req.Range.MinValue || field.Value > req.Range.MaxValue {
-		return business.RangeWitness{}, fmt.Errorf("field value %d outside request range [%d, %d]", field.Value, req.Range.MinValue, req.Range.MaxValue)
+	if field.Value < rng.MinValue || field.Value > rng.MaxValue {
+		return business.RangeWitness{}, fmt.Errorf("field value %d outside request range [%d, %d]", field.Value, rng.MinValue, rng.MaxValue)
 	}
-
-	// Build Stage 7 IMT fixture metadata from dataset/request.
 	fixture := imt.DefaultFixture()
 	fixture.DatasetID = ds.DatasetID
-	fixture.FieldName = req.FieldName
+	fixture.FieldName = fieldName
 	fixture.RecordID = req.RecordID
 	fixture.SchemaVersion = ds.SchemaVersion
-
 	return business.RangeWitness{
 		RequestHash:     req.RequestHash,
 		SessionID:       sessionID,
 		RoundIndex:      roundIndex,
 		RawValue:        field.Value,
-		MinValue:        req.Range.MinValue,
-		MaxValue:        req.Range.MaxValue,
+		MinValue:        rng.MinValue,
+		MaxValue:        rng.MaxValue,
 		MaskDelta:       field.MaskDelta,
 		SaltHex:         field.SaltHex,
-		MaskedValueHash: "", // business-fixture computes this
+		MaskedValueHash: "",
 		IMT:             fixture,
 	}, nil
+}
+
+// BuildRangeWitness converts a validated dataset/request pair into a
+// business.RangeWitness for fishbone-zk business-fixture.
+func BuildRangeWitness(ds Dataset, req Request, sessionID, roundIndex uint32) (business.RangeWitness, error) {
+	witnesses, err := BuildRangeWitnesses(ds, req, sessionID, roundIndex)
+	if err != nil {
+		return business.RangeWitness{}, err
+	}
+	if len(witnesses) != 1 {
+		return business.RangeWitness{}, fmt.Errorf("BuildRangeWitness expects exactly 1 witness, got %d", len(witnesses))
+	}
+	return witnesses[0], nil
 }

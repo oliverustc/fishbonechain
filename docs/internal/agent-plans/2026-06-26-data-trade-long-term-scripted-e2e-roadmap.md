@@ -188,6 +188,10 @@
 - 脚本 E2E 能选择 range 或新 constraint。
 - gap matrix 更新。
 
+### 进度（2026-06-27）
+
+- ✅ **Stage 10 完成**：实现 `multi_range` 多约束 range AND（同 record 多 field 各带独立 range）。`BuildRangeWitnesses` + `--out-dir` CLI + 归一化 `constraints[]` evidence。电路仍是 `BusinessRangeProof`，不涉及 subset/substr 或新电路。
+
 ### 不应实现
 
 - 一次性实现所有论文约束。

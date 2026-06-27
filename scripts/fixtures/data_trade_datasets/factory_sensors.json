@@ -18,6 +18,12 @@
           "value": 58,
           "salt_hex": "0x3333333333333333333333333333333333333333333333333333333333333333",
           "mask_delta": 2000
+        },
+        "pressure": {
+          "type": "uint64",
+          "value": 1013,
+          "salt_hex": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "mask_delta": 5000
         }
       }
     },

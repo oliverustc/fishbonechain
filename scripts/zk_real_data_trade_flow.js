@@ -87,6 +87,38 @@ function verifierAccepted(output) {
   return output.split(/\r?\n/).some((line) => line.trim() === "accepted");
 }
 
+function isMultiRange() {
+  return DYNAMIC_MODE && DYNAMIC_REQUEST && DYNAMIC_REQUEST.constraint_kind === "multi_range";
+}
+
+// Returns [{ index, fieldName, witnessPath }] for one round.
+function generateDynamicWitnessBundle({ outDir, sessionId, roundIndex }) {
+  if (isMultiRange()) {
+    const witnessDir = `${outDir}/witnesses`;
+    const mwResult = spawnSync(ZK_CMD, [
+      "make-witness", "--dataset", DATASET, "--request", REQUEST,
+      "--out-dir", witnessDir,
+      "--session-id", String(sessionId), "--round-index", String(roundIndex),
+    ], { stdio: "inherit" });
+    if (mwResult.status !== 0) throw new Error(`fishbone-zk make-witness failed: ${mwResult.status}`);
+    const manifest = JSON.parse(readFileSync(`${witnessDir}/manifest.json`, "utf8"));
+    return manifest.witnesses.map((w) => ({
+      index: w.index,
+      fieldName: w.field_name,
+      witnessPath: `${witnessDir}/${w.witness_path}`,
+    }));
+  } else {
+    const witnessPath = `${outDir}/witness.json`;
+    const mwResult = spawnSync(ZK_CMD, [
+      "make-witness", "--dataset", DATASET, "--request", REQUEST,
+      "--out", witnessPath,
+      "--session-id", String(sessionId), "--round-index", String(roundIndex),
+    ], { stdio: "inherit" });
+    if (mwResult.status !== 0) throw new Error(`fishbone-zk make-witness failed: ${mwResult.status}`);
+    return [{ index: 0, fieldName: DYNAMIC_REQUEST?.field_name || "unknown", witnessPath }];
+  }
+}
+
 async function submitTx(signer, tx, label) {
   return new Promise((resolve, reject) => {
     tx.signAndSend(signer, ({ status, dispatchError, events }) => {
@@ -143,16 +175,9 @@ async function main() {
     log("preflight: validating dynamic dataset/request before chain connection...");
     const preflightDir = `target/data-trade-zk/preflight-${Date.now()}`;
     mkdirSync(preflightDir, { recursive: true });
-    const preflightWitness = `${preflightDir}/witness.json`;
-    const mwResult = spawnSync(ZK_CMD, [
-      "make-witness", "--dataset", DATASET, "--request", REQUEST,
-      "--out", preflightWitness,
-      "--session-id", "0", "--round-index", "0",
-    ], { stdio: "inherit" });
-    if (mwResult.status !== 0) {
-      console.error("dynamic request validation failed before chain connection");
-      process.exit(1);
-    }
+    // Reuse the same output-mode logic as the real round path so multi_range
+    // uses --out-dir and single range uses --out.
+    generateDynamicWitnessBundle({ outDir: preflightDir, sessionId: 0, roundIndex: 0 });
     log("preflight passed");
   }
 
@@ -224,80 +249,80 @@ async function main() {
     await submitTx(bob, childApi.tx.tradeSession.acceptSession(sessionId), "acceptSession");
 
     // ── Round delivery with real gnark ZK proof ──
+    const multiRange = isMultiRange();
     for (let round = 0; round < 2; round++) {
       log(`Round ${round} delivery (real gnark ZK)...`);
 
       const outDir = `target/data-trade-zk/session-${sessionId}-round-${round}`;
       mkdirSync(outDir, { recursive: true });
 
-      // 0. In dynamic mode, generate witness before fixture
-      if (DYNAMIC_MODE) {
-        const witnessPath = `${outDir}/witness.json`;
-        const mwResult = spawnSync(ZK_CMD, [
-          "make-witness", "--dataset", DATASET, "--request", REQUEST,
-          "--out", witnessPath,
+      const roundEvidence = {
+        round_index: round,
+        constraint_kind: multiRange ? "multi_range" : "range",
+        chain_binding_mode: multiRange ? "first_constraint_digest" : "single_constraint_digest",
+        constraints: [],
+      };
+
+      // 0. Generate witness(es)
+      const witnessBundle = DYNAMIC_MODE
+        ? generateDynamicWitnessBundle({ outDir, sessionId: sessionId, roundIndex: round })
+        : [{ index: 0, fieldName: "legacy", witnessPath: WITNESS_PATH }];
+
+      // 1. For each constraint: fixture + verify
+      for (const w of witnessBundle) {
+        const constraintDir = `${outDir}/constraint-${w.index}`;
+        mkdirSync(constraintDir, { recursive: true });
+
+        const fixResult = spawnSync(ZK_CMD, [
+          "business-fixture", "--witness", w.witnessPath, "--out", constraintDir,
+          "--request-hash", requestHash,
           "--session-id", String(sessionId), "--round-index", String(round),
         ], { stdio: "inherit" });
-        if (mwResult.status !== 0) throw new Error(`fishbone-zk make-witness failed: ${mwResult.status}`);
-        if (VERBOSE) log(`  witness=${witnessPath}`);
-      }
-      const roundWitnessPath = DYNAMIC_MODE ? `${outDir}/witness.json` : WITNESS_PATH;
+        if (fixResult.status !== 0) throw new Error(`fishbone-zk fixture failed for ${w.fieldName}: ${fixResult.status}`);
 
-      // 1. Generate fixture via fishbone-zk CLI
-      const fixResult = spawnSync(ZK_CMD, [
-        "business-fixture", "--witness", roundWitnessPath, "--out", outDir,
-        "--request-hash", requestHash,
-        "--session-id", String(sessionId),
-        "--round-index", String(round),
-      ], { stdio: "inherit" });
-      if (fixResult.status !== 0) throw new Error(`fishbone-zk fixture failed: ${fixResult.status}`);
+        const artifactPath = `${constraintDir}/artifact.json`;
+        const artifact = assertValidZkArtifact(readZkArtifact(artifactPath));
 
-      // 2. Read and validate artifact
-      const artifactPath = `${outDir}/artifact.json`;
-      const artifact = assertValidZkArtifact(readZkArtifact(artifactPath));
+        const verifyResult = spawnSync(ZK_CMD, ["verify", "--artifact", artifactPath], { encoding: "utf8" });
+        if (verifyResult.status !== 0 || !verifierAccepted(verifyResult.stdout)) {
+          throw new Error(`fishbone-zk verify rejected for ${w.fieldName}: ${verifyResult.stderr || verifyResult.stdout}`);
+        }
 
-      // 3. Verify artifact via CLI
-      const verifyResult = spawnSync(ZK_CMD, ["verify", "--artifact", artifactPath], {
-        encoding: "utf8",
-      });
-      if (verifyResult.status !== 0 || !verifierAccepted(verifyResult.stdout)) {
-        throw new Error(`fishbone-zk verify rejected: ${verifyResult.stderr || verifyResult.stdout}`);
+        roundEvidence.constraints.push({
+          index: w.index, field_name: w.fieldName,
+          witness_path: w.witnessPath, artifact_path: artifactPath,
+          proof_digest: artifact.proof_digest,
+          business_input_hash: artifact.business_input_hash,
+          public_input_hash: artifact.public_input_hash,
+          on_chain_bound: w.index === 0,
+        });
       }
 
-      // 4. Submit round
+      // 2. Submit round on-chain (first constraint only)
+      const chainArtifact = roundEvidence.constraints[0];
+      const chainArt = assertValidZkArtifact(readZkArtifact(chainArtifact.artifact_path));
       const ch = hashNTimes(`round-${round}`, 1);
       await submitTx(alice, childApi.tx.tradeSession.openRound(sessionId, round, ch), `openRound(${round})`);
       await submitTx(alice, childApi.tx.tradeSession.submitPaymentProof(sessionId, round, ch), `submitPaymentProof(${round})`);
 
-      // 5. Submit ZK proof metadata on-chain
       await submitTx(bob, childApi.tx.tradeSession.submitDataProof(
-        sessionId, round,
-        "GnarkGroth16Bn254", "Range", 10,
-        artifact.ch_proof_hash, artifact.ro_proof_hash,
-        artifact.public_input_hash, artifact.vk_hash,
-        artifact.business_input_hash, artifact.proof_digest,
+        sessionId, round, "GnarkGroth16Bn254", "Range", 10,
+        chainArt.ch_proof_hash, chainArt.ro_proof_hash,
+        chainArt.public_input_hash, chainArt.vk_hash,
+        chainArt.business_input_hash, chainArt.proof_digest,
       ), `submitDataProof(${round})`);
 
-      // 6. Verifier attestation (Charlie)
       const attDigest = computeZkAttestationDigest({
-        sessionId, roundIndex: round, proofDigest: artifact.proof_digest,
+        sessionId, roundIndex: round, proofDigest: chainArt.proof_digest,
         accepted: true, verifierAccount: charlie.addressRaw,
       });
-      await submitTx(charlie, childApi.tx.tradeSession.attestDataProof(sessionId, round, artifact.proof_digest, true, attDigest), `attestDataProof(${round})`);
+      await submitTx(charlie, childApi.tx.tradeSession.attestDataProof(sessionId, round, chainArt.proof_digest, true, attDigest), `attestDataProof(${round})`);
 
       await submitTx(alice, childApi.tx.tradeSession.submitProofSignature(sessionId, round, ch), `submitProofSignature(${round})`);
       await submitTx(bob, childApi.tx.tradeSession.submitDataDeliveryHash(sessionId, round, ch), `submitDataDeliveryHash(${round})`);
       await submitTx(alice, childApi.tx.tradeSession.submitPaymentPreimage(sessionId, round, ch), `submitPaymentPreimage(${round})`);
 
-      // Record round evidence
-      evidence.rounds.push({
-        round_index: round,
-        witness_path: roundWitnessPath,
-        artifact_path: artifactPath,
-        proof_digest: artifact.proof_digest,
-        business_input_hash: artifact.business_input_hash,
-        public_input_hash: artifact.public_input_hash,
-      });
+      evidence.rounds.push(roundEvidence);
     }
 
     // ── Settlement ──
@@ -343,46 +368,57 @@ async function dryRunDynamic() {
   mkdirSync(outDir, { recursive: true });
 
   log(`dry-run: make-witness...`);
-  const witnessPath = `${outDir}/witness.json`;
-  const mwResult = spawnSync(ZK_CMD, [
-    "make-witness", "--dataset", DATASET, "--request", REQUEST,
-    "--out", witnessPath,
-    "--session-id", String(sessionId), "--round-index", String(round),
-  ], { stdio: "inherit" });
-  if (mwResult.status !== 0) throw new Error(`make-witness failed: ${mwResult.status}`);
+  const witnessBundle = generateDynamicWitnessBundle({ outDir, sessionId: sessionId, roundIndex: round });
 
-  log(`dry-run: business-fixture...`);
-  const fixResult = spawnSync(ZK_CMD, [
-    "business-fixture", "--witness", witnessPath, "--out", outDir,
-    "--request-hash", requestHash,
-    "--session-id", String(sessionId), "--round-index", String(round),
-  ], { stdio: "inherit" });
-  if (fixResult.status !== 0) throw new Error(`business-fixture failed: ${fixResult.status}`);
+  const dryRoundEvidence = {
+    round_index: round,
+    constraint_kind: isMultiRange() ? "multi_range" : "range",
+    chain_binding_mode: isMultiRange() ? "first_constraint_digest" : "single_constraint_digest",
+    constraints: [],
+  };
 
-  const artifactPath = `${outDir}/artifact.json`;
-  const artifact = assertValidZkArtifact(readZkArtifact(artifactPath));
+  let firstDigest = null;
+  for (const w of witnessBundle) {
+    const constraintDir = `${outDir}/constraint-${w.index}`;
+    mkdirSync(constraintDir, { recursive: true });
 
-  log(`dry-run: verify...`);
-  const verifyResult = spawnSync(ZK_CMD, ["verify", "--artifact", artifactPath], { encoding: "utf8" });
-  if (verifyResult.status !== 0 || !verifierAccepted(verifyResult.stdout)) {
-    throw new Error(`verify rejected: ${verifyResult.stderr || verifyResult.stdout}`);
+    log(`dry-run: business-fixture for ${w.fieldName}...`);
+    const fixResult = spawnSync(ZK_CMD, [
+      "business-fixture", "--witness", w.witnessPath, "--out", constraintDir,
+      "--request-hash", requestHash,
+      "--session-id", String(sessionId), "--round-index", String(round),
+    ], { stdio: "inherit" });
+    if (fixResult.status !== 0) throw new Error(`business-fixture failed for ${w.fieldName}: ${fixResult.status}`);
+
+    const artifactPath = `${constraintDir}/artifact.json`;
+    const artifact = assertValidZkArtifact(readZkArtifact(artifactPath));
+
+    log(`dry-run: verify ${w.fieldName}...`);
+    const verifyResult = spawnSync(ZK_CMD, ["verify", "--artifact", artifactPath], { encoding: "utf8" });
+    if (verifyResult.status !== 0 || !verifierAccepted(verifyResult.stdout)) {
+      throw new Error(`verify rejected for ${w.fieldName}: ${verifyResult.stderr || verifyResult.stdout}`);
+    }
+
+    if (firstDigest === null) firstDigest = artifact.proof_digest;
+
+    dryRoundEvidence.constraints.push({
+      index: w.index, field_name: w.fieldName,
+      witness_path: w.witnessPath, artifact_path: artifactPath,
+      proof_digest: artifact.proof_digest,
+      business_input_hash: artifact.business_input_hash,
+      public_input_hash: artifact.public_input_hash,
+      on_chain_bound: w.index === 0,
+    });
   }
 
   evidence.request_hash = requestHash;
   evidence.session_id = sessionId;
-  evidence.rounds.push({
-    round_index: round,
-    witness_path: witnessPath,
-    artifact_path: artifactPath,
-    proof_digest: artifact.proof_digest,
-    business_input_hash: artifact.business_input_hash,
-    public_input_hash: artifact.public_input_hash,
-  });
+  evidence.rounds.push(dryRoundEvidence);
   evidence.result = "dry-run-accepted";
   writeEvidence();
 
-  log(`proof_digest=${artifact.proof_digest}`);
-  log(`business_input_hash=${artifact.business_input_hash}`);
+  log(`proof_digest=${firstDigest}`);
+  log(`business_input_hash=${dryRoundEvidence.constraints[0].business_input_hash}`);
   log("✅ dynamic dry-run 完成！");
 }
 
