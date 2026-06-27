@@ -138,6 +138,24 @@ async function main() {
     return;
   }
 
+  // ── Dynamic live-mode preflight ──
+  if (DYNAMIC_MODE) {
+    log("preflight: validating dynamic dataset/request before chain connection...");
+    const preflightDir = `target/data-trade-zk/preflight-${Date.now()}`;
+    mkdirSync(preflightDir, { recursive: true });
+    const preflightWitness = `${preflightDir}/witness.json`;
+    const mwResult = spawnSync(ZK_CMD, [
+      "make-witness", "--dataset", DATASET, "--request", REQUEST,
+      "--out", preflightWitness,
+      "--session-id", "0", "--round-index", "0",
+    ], { stdio: "inherit" });
+    if (mwResult.status !== 0) {
+      console.error("dynamic request validation failed before chain connection");
+      process.exit(1);
+    }
+    log("preflight passed");
+  }
+
   const [mainApi, childApi] = await Promise.all([
     ApiPromise.create({ provider: new WsProvider(MAIN_WS) }),
     ApiPromise.create({ provider: new WsProvider(CHILD_WS) }),
