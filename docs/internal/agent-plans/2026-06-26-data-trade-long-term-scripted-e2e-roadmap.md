@@ -233,6 +233,10 @@
 - 每个路径输出链上事件和最终状态。
 - evidence 文档记录 expected result。
 
+### 进度（2026-06-27）
+
+- ✅ **Stage 11 完成**：`zk_real_data_trade_flow.js --scenario` 支持 `invalid-proof-dispute`、`invalid-plaintext-dispute`、`requester-refuses-payment`。场景使用 `findEvent()` 断言预期链上事件。共享 setup/round helpers 避免重复代码。live chain 未运行（RPC 不可用）。
+
 ## Stage 12：论文实验封版
 
 ### 目标
