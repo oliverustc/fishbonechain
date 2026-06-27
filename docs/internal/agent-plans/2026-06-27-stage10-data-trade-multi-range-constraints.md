@@ -285,13 +285,13 @@ fishbone-zk make-witness \
 
 #### Multi-Range
 
-When request is `multi_range`, `--out` must be treated as an output directory, not a file:
+When request is `multi_range`, use a new `--out-dir` flag for the output directory:
 
 ```bash
 fishbone-zk make-witness \
   --dataset <dataset.json> \
   --request <multi-range-request.json> \
-  --out <out-dir>
+  --out-dir <out-dir>
 ```
 
 Expected output:
@@ -329,7 +329,11 @@ Suggested `manifest.json`:
 Compatibility rules:
 
 - Single range must still write exactly the JSON witness to `--out`.
-- Do not silently overwrite an existing regular file when multi-range expects a directory. If `--out` exists and is a file, exit with a clear error.
+- Multi-range must use `--out-dir`, not `--out`.
+- Reject `--out-dir` for single-range requests.
+- Reject `--out` for multi-range requests.
+- Reject calls that provide both `--out` and `--out-dir`.
+- Do not silently overwrite an existing regular file when multi-range expects a directory. If `--out-dir` exists and is a file, exit with a clear error.
 - Create output directory when needed.
 - Print readable output lines, for example:
 
@@ -353,7 +357,7 @@ rm -rf /tmp/fishbone-stage10-mw
 target/tools/fishbone-zk make-witness \
   --dataset scripts/fixtures/data_trade_datasets/factory_sensors.json \
   --request scripts/fixtures/data_trade_requests/factory_multi_range.json \
-  --out /tmp/fishbone-stage10-mw \
+  --out-dir /tmp/fishbone-stage10-mw \
   --session-id 0 \
   --round-index 0
 test -f /tmp/fishbone-stage10-mw/manifest.json
@@ -427,7 +431,7 @@ Implementation guidance:
 ```js
 function generateDynamicWitnessBundle({ outDir, sessionId, roundIndex }) {
   // range: writes outDir/witness.json and returns [{ index: 0, fieldName, witnessPath }]
-  // multi_range: runs make-witness with --out outDir/witnesses,
+  // multi_range: runs make-witness with --out-dir outDir/witnesses,
   //              reads manifest.json,
   //              returns manifest witnesses resolved to absolute/relative paths
 }
@@ -498,10 +502,35 @@ Suggested evidence shape for a round:
 }
 ```
 
+Single-range dynamic evidence must use the same round shape with a one-element `constraints` array:
+
+```json
+{
+  "round_index": 0,
+  "constraint_kind": "range",
+  "chain_binding_mode": "single_constraint_digest",
+  "constraints": [
+    {
+      "index": 0,
+      "field_name": "temperature",
+      "witness_path": ".../witness.json",
+      "artifact_path": ".../constraint-0/artifact.json",
+      "proof_digest": "0x...",
+      "business_input_hash": "0x...",
+      "public_input_hash": "0x...",
+      "on_chain_bound": true
+    }
+  ]
+}
+```
+
+Do not write separate top-level `witness_path`, `artifact_path`, `proof_digest`, `business_input_hash`, or `public_input_hash` fields for dynamic-mode rounds. Put these fields only inside `rounds[].constraints[]`. Legacy `--business-witness` mode may keep its existing evidence shape if changing it would expand scope.
+
 Backward compatibility:
 
 - Existing single range dry-run must keep working.
-- Existing single range evidence may either keep the old flat fields or include `constraints` as a normalized one-element list. If changing evidence shape, update docs and keep old key fields if practical to avoid breaking readers.
+- Existing single range dynamic evidence must be normalized to the same `constraints` array shape as multi-range evidence.
+- Documentation must call out this Stage 10 evidence shape change from Stage 9 flat dynamic round fields.
 - Existing legacy `--business-witness` path must keep working.
 
 Commit:
@@ -527,6 +556,7 @@ Required wording:
 - Stage 10 supports `multi_range` request fixtures as an off-chain/scripted conjunction of multiple range proofs.
 - The real circuit is still `BusinessRangeProof`; Stage 10 does not implement subset/substr.
 - In live chain mode, current runtime binds one proof digest per round. Stage 10 records the full multi-range proof set in evidence and binds the first verified constraint artifact on-chain for compatibility.
+- Dynamic evidence now uses a normalized `rounds[].constraints[]` shape for both single range and multi-range requests.
 - This is a prototype representation of flexible request constraints, not a production aggregate proof.
 - Do not claim on-chain verification, trustless bridge settlement, subset/substr, verifier quorum, or frontend support.
 
@@ -620,24 +650,32 @@ CodeWhale must stop and ask Codex before:
 
 - Existing single range request fixtures still pass.
 - `fishbone-zk make-witness` supports both:
-  - single range file output;
-  - multi-range directory output with `manifest.json` and per-constraint witnesses.
+  - single range file output via `--out <witness.json>`;
+  - multi-range directory output via `--out-dir <dir>` with `manifest.json` and per-constraint witnesses.
+- `make-witness` rejects ambiguous output flags:
+  - `--out-dir` with single range;
+  - `--out` with multi-range;
+  - both `--out` and `--out-dir` together.
 - Multi-range request can generate and verify at least two range artifacts in one dynamic dry-run.
 - Multi-range out-of-range fixture fails.
-- `zk_real_data_trade_flow.js --dry-run-dynamic` writes evidence listing every constraint artifact.
+- `zk_real_data_trade_flow.js --dry-run-dynamic` writes normalized `rounds[].constraints[]` evidence listing every constraint artifact for both single and multi-range dynamic requests.
 - Live chain path, if run, honestly records that only the first constraint digest is bound on-chain.
 - No runtime, artifact schema, JS digest, or attestation encoding changes.
 - Documentation accurately describes Stage 10 as a scripted/off-chain multi-range conjunction prototype.
 
-## Plan Review Checklist For Codex
+## Plan Review Resolution
 
-When reviewing CodeWhale's plan review comments, pay special attention to:
+CodeWhale reviewed the initial Stage 10 plan and raised two medium findings. Both are resolved in this plan revision:
 
-- Whether the `--out` file-vs-directory behavior for `make-witness` is too ambiguous. If reviewers object, prefer adding `--out-dir` for multi-range instead of weakening compatibility.
-- Whether evidence shape remains backward-compatible enough for Stage 9 readers.
-- Whether the live-chain "first constraint digest" compatibility mode is clearly documented and not overstated.
-- Whether multi-range request hash should be fixture-fixed or derived. Stage 10 may keep fixed hashes, but later stages may add deterministic request hashing.
+- `make-witness` now uses `--out <file>` only for single range and `--out-dir <dir>` only for multi-range.
+- Dynamic evidence now uses one normalized `rounds[].constraints[]` shape for both single range and multi-range.
+
+Remaining accepted design decisions:
+
+- The live-chain "first constraint digest" compatibility mode is intentionally documented and must not be overstated.
+- Multi-range `request_hash` may remain fixture-fixed in Stage 10. Later stages may add deterministic request hashing.
 
 ## Execution Record
 
-Not started.
+- 2026-06-27: Initial Codex plan committed.
+- 2026-06-27: CodeWhale plan review completed. Plan updated to resolve `--out`/`--out-dir` ambiguity and require normalized dynamic evidence shape.
