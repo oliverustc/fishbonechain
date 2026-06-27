@@ -46,6 +46,23 @@ const EVIDENCE_OUT = parseArg("--evidence-out");
 const VERBOSE = hasArg("--verbose");
 const DRY_RUN_DYNAMIC = hasArg("--dry-run-dynamic");
 
+// ── Scenario selection ──
+const ALLOWED_SCENARIOS = new Set([
+  "happy",
+  "invalid-proof-dispute",
+  "invalid-plaintext-dispute",
+  "requester-refuses-payment",
+]);
+const SCENARIO = parseArg("--scenario") || "happy";
+if (!ALLOWED_SCENARIOS.has(SCENARIO)) {
+  console.error(`unknown scenario: ${SCENARIO} (allowed: ${[...ALLOWED_SCENARIOS].join(", ")})`);
+  process.exit(2);
+}
+if (DRY_RUN_DYNAMIC && SCENARIO !== "happy") {
+  console.error("--dry-run-dynamic only supports proof-pipeline validation; omit --scenario or use --scenario happy");
+  process.exit(2);
+}
+
 // ── Mode selection ──
 const HAS_DYNAMIC = DATASET !== null && REQUEST !== null;
 const HAS_PARTIAL = (DATASET !== null) !== (REQUEST !== null);
@@ -89,6 +106,15 @@ function verifierAccepted(output) {
 
 function isMultiRange() {
   return DYNAMIC_MODE && DYNAMIC_REQUEST && DYNAMIC_REQUEST.constraint_kind === "multi_range";
+}
+
+// Returns a 32-byte hex string guaranteed to differ from validDigest.
+function makeBadDigest(validDigest) {
+  const hex = validDigest.startsWith("0x") ? validDigest.slice(2) : validDigest;
+  // Flip the first hex nibble: 0->1, a->b, f->e, etc.
+  const nibble = hex[0];
+  const flipped = nibble === "f" ? "e" : nibble === "0" ? "1" : String.fromCharCode(nibble.charCodeAt(0) + 1);
+  return "0x" + flipped + hex.slice(1);
 }
 
 // Returns [{ index, fieldName, witnessPath }] for one round.
@@ -142,6 +168,7 @@ async function submitTx(signer, tx, label) {
 // ── Evidence accumulator ──
 const evidence = {
   version: 1,
+  scenario: SCENARIO,
   mode: DYNAMIC_MODE ? "dynamic" : "legacy-witness",
   profile: PROFILE || null,
   main_ws: MAIN_WS,
