@@ -324,13 +324,16 @@ async function runInvalidProofDispute({ mainApi, childApi, alice, bob, charlie, 
   // Submit the valid proof first so submitDataProof's internal digest check passes.
   const ch = await submitRoundProofAccepted({ childApi, alice, bob, charlie, sessionId, round, chainArt });
   // Then dispute with the badDigest — different from the accepted proof digest.
-  await submitTx(alice, childApi.tx.tradeSession.disputeInvalidProof(sessionId, round, badDigest), `disputeInvalidProof(${round})`);
-  await submitTx(alice, mainApi.tx.mainEscrow.punishDataOwner(escrowId), "punishDataOwner");
+  const dispResult = await submitTx(alice, childApi.tx.tradeSession.disputeInvalidProof(sessionId, round, badDigest), `disputeInvalidProof(${round})`);
+  findEvent(dispResult, "tradeSession", "SessionPunished");
+  const punishResult = await submitTx(alice, mainApi.tx.mainEscrow.punishDataOwner(escrowId), "punishDataOwner");
+  findEvent(punishResult, "mainEscrow", "EscrowPunished");
   evidence.scenario_outcome = {
     type: "invalid-proof", child_event: "tradeSession.SessionPunished", main_event: "mainEscrow.EscrowPunished",
     submitted_digest: chainArt.proof_digest,
     evidence_bad_digest: badDigest,
     bad_digest_differs_from_submitted: true,
+    events: ["tradeSession.SessionPunished", "mainEscrow.EscrowPunished"],
   };
   evidence.rounds.push(roundEvidence);
   evidence.result = "expected-dispute-accepted";
@@ -348,9 +351,14 @@ async function runInvalidPlaintextDispute({ mainApi, childApi, alice, bob, charl
   const deliveredHash = hashNTimes("delivered-bad", 1);
   const expectedHash = hashNTimes("expected-good", 1);
   await submitTx(bob, childApi.tx.tradeSession.submitDataDeliveryHash(sessionId, round, deliveredHash), `submitDataDeliveryHash(${round})`);
-  await submitTx(alice, childApi.tx.tradeSession.disputeInvalidPlaintext(sessionId, round, deliveredHash, expectedHash), `disputeInvalidPlaintext(${round})`);
-  await submitTx(alice, mainApi.tx.mainEscrow.punishDataOwner(escrowId), "punishDataOwner");
-  evidence.scenario_outcome = { type: "invalid-plaintext", child_event: "tradeSession.SessionPunished", main_event: "mainEscrow.EscrowPunished" };
+  const dispResult = await submitTx(alice, childApi.tx.tradeSession.disputeInvalidPlaintext(sessionId, round, deliveredHash, expectedHash), `disputeInvalidPlaintext(${round})`);
+  findEvent(dispResult, "tradeSession", "SessionPunished");
+  const punishResult = await submitTx(alice, mainApi.tx.mainEscrow.punishDataOwner(escrowId), "punishDataOwner");
+  findEvent(punishResult, "mainEscrow", "EscrowPunished");
+  evidence.scenario_outcome = {
+    type: "invalid-plaintext", child_event: "tradeSession.SessionPunished", main_event: "mainEscrow.EscrowPunished",
+    events: ["tradeSession.SessionPunished", "mainEscrow.EscrowPunished"],
+  };
   evidence.rounds.push(roundEvidence);
   evidence.result = "expected-plaintext-dispute-accepted";
   return { listingId, escrowId, sessionId };
@@ -366,9 +374,14 @@ async function runRequesterRefusesPayment({ mainApi, childApi, alice, bob, charl
   await submitTx(alice, childApi.tx.tradeSession.submitProofSignature(sessionId, round, ch), `submitProofSignature(${round})`);
   await submitTx(bob, childApi.tx.tradeSession.submitDataDeliveryHash(sessionId, round, ch), `submitDataDeliveryHash(${round})`);
   // DR refuses to pay — DO claims last payment
-  await submitTx(bob, childApi.tx.tradeSession.claimLastPayment(sessionId, round), `claimLastPayment(${round})`);
-  await submitTx(bob, mainApi.tx.mainEscrow.claimLastPayment(escrowId, round), "claimLastPayment(main)");
-  evidence.scenario_outcome = { type: "requester-refuses-payment", child_event: "tradeSession.LastPaymentClaimed", main_event: "mainEscrow.EscrowSettled" };
+  const childResult = await submitTx(bob, childApi.tx.tradeSession.claimLastPayment(sessionId, round), `claimLastPayment(${round})`);
+  findEvent(childResult, "tradeSession", "LastPaymentClaimed");
+  const mainResult = await submitTx(bob, mainApi.tx.mainEscrow.claimLastPayment(escrowId, round), "claimLastPayment(main)");
+  findEvent(mainResult, "mainEscrow", "EscrowSettled");
+  evidence.scenario_outcome = {
+    type: "requester-refuses-payment", child_event: "tradeSession.LastPaymentClaimed", main_event: "mainEscrow.EscrowSettled",
+    events: ["tradeSession.LastPaymentClaimed", "mainEscrow.EscrowSettled"],
+  };
   evidence.rounds.push(roundEvidence);
   evidence.result = "expected-last-payment-claimed";
   return { listingId, escrowId, sessionId };
