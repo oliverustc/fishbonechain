@@ -7,15 +7,15 @@
 
 ## 结论
 
-结论等级：`yellow`
+结论等级：`green`
 
-本地代码质量、ZK 工具链、pallet 单元测试、Stage 12 dry-run demo matrix 和负向验证均通过。live-chain 部分未运行，原因是 read-only RPC 探测中 main 链可用但 child6 RPC (`ws://10.2.2.11:9950`) 未在超时窗口内 ready。
+本地代码质量、ZK 工具链、pallet 单元测试、Stage 12 dry-run demo matrix、负向验证和恢复 child6 后的 live-chain 验证均通过。
 
 因此：
 
 - 当前可以作为论文 dry-run / proof pipeline 证据使用。
-- 当前不能新增 Stage 13 live-chain 证据声明。
-- 当前不需要继续实现更多核心脚本功能才能证明无链 proof pipeline；但若论文需要最新 live-chain 证据，需要先恢复或准备 child6 可用环境。
+- 当前可以作为 Stage 13 live-chain 脚本化数据交易证据使用。
+- 当前不需要继续实现更多核心脚本功能才能证明脚本级链上/链下数据交易闭环。
 
 ## 初始状态
 
@@ -293,7 +293,7 @@ fishbone-zk make-witness failed: 1
 
 结论：两个负向验证都在 `make-witness` 阶段失败，未进入链上交互。
 
-## RPC / live-chain 探测
+## RPC / live-chain 初次探测
 
 执行：
 
@@ -320,9 +320,247 @@ child ws://10.2.2.11:9950 did not become ready before deadline: timed out after 
 
 - main RPC 可用并推进了 1 个块。
 - child6 RPC 不可用或未在超时窗口内 ready。
-- 未运行 live-chain happy path。
-- 未运行 Stage 11 live-chain failure/dispute 场景。
+- 初次执行时未运行 live-chain happy path。
+- 初次执行时未运行 Stage 11 live-chain failure/dispute 场景。
 - 未执行 clean redeploy 或任何 destructive 操作。
+
+## Child6 恢复后 live-chain 补跑
+
+child6 后续已恢复。恢复过程记录见：
+
+```text
+docs/internal/agent-reviews/2026-06-27-data-trade-stage13-child6-recovery.md
+```
+
+恢复后重新执行 readiness 检查：
+
+```bash
+node scripts/lib/wait_for_ws_chain.js \
+  --main ws://10.2.2.11:9944 \
+  --child ws://10.2.2.11:9950 \
+  --min-blocks 2 \
+  --timeout-ms 120000
+```
+
+结果：passed。
+
+```text
+main Fishbone Main #102875 -> #102877
+child Fishbone Child-6 (Data Trade, AURA-5) #94 -> #96
+```
+
+### live-chain happy path
+
+命令：
+
+```bash
+ZK_VERIFIER_CMD=target/tools/fishbone-zk node scripts/zk_real_data_trade_flow.js \
+  --profile child6-data-trade \
+  --dataset scripts/fixtures/data_trade_datasets/factory_sensors.json \
+  --request scripts/fixtures/data_trade_requests/factory_multi_range.json \
+  --evidence-out /tmp/fishbone-stage13-quality/live-happy-multi-range/evidence.json
+```
+
+结果：passed。
+
+Evidence：
+
+```json
+{
+  "scenario": "happy",
+  "mode": "dynamic",
+  "result": "accepted",
+  "listing_id": 0,
+  "escrow_id": 0,
+  "session_id": 0,
+  "settlement": {
+    "completed_rounds": 2,
+    "remaining_rounds": 1
+  },
+  "rounds": [
+    {
+      "round_index": 0,
+      "constraint_kind": "multi_range",
+      "constraints": [
+        {
+          "field_name": "temperature",
+          "proof_digest": "0xda4d477ab28f94b266425991ec84bd9a02056f1a08be1fce06c0337c31e4143c",
+          "business_input_hash": "0x6583996ba8deadd960ffd5369b0f9cd907a5191ede6334be83ffb25854cd9c29",
+          "on_chain_bound": true
+        },
+        {
+          "field_name": "pressure",
+          "proof_digest": "0xe5bb83512965043d975bb9f0bd67a3d7cabf0a6dc52f6c7eb21111092a19584c",
+          "business_input_hash": "0x81ea05461b33946c4ec7a64312a3e929aae4d3c27d054f6dd873df33b72982ab",
+          "on_chain_bound": false
+        }
+      ]
+    },
+    {
+      "round_index": 1,
+      "constraint_kind": "multi_range",
+      "constraints": [
+        {
+          "field_name": "temperature",
+          "proof_digest": "0x2dbdc2c49bf10699e90b3bb647cf15dd902d22750085f94e875251ecb3d3c66f",
+          "business_input_hash": "0x6583996ba8deadd960ffd5369b0f9cd907a5191ede6334be83ffb25854cd9c29",
+          "on_chain_bound": true
+        },
+        {
+          "field_name": "pressure",
+          "proof_digest": "0xa6c55f9c1f61bf1b15871f34a0e8c9a6e9de004b4b58066f6771904ffc734bb6",
+          "business_input_hash": "0x81ea05461b33946c4ec7a64312a3e929aae4d3c27d054f6dd873df33b72982ab",
+          "on_chain_bound": false
+        }
+      ]
+    }
+  ]
+}
+```
+
+日志关键结果：
+
+```text
+claimSettlement (2/3 rounds)...
+settleByPreimage on main...
+Real ZK-attested path 完成
+verifier=gnark-groth16-bn254 (off-chain proof, on-chain attestation)
+```
+
+### live-chain failure/dispute scenarios
+
+#### invalid-proof-dispute
+
+命令：
+
+```bash
+ZK_VERIFIER_CMD=target/tools/fishbone-zk node scripts/zk_real_data_trade_flow.js \
+  --profile child6-data-trade \
+  --dataset scripts/fixtures/data_trade_datasets/factory_sensors.json \
+  --request scripts/fixtures/data_trade_requests/factory_multi_range.json \
+  --scenario invalid-proof-dispute \
+  --evidence-out /tmp/fishbone-stage13-quality/live-invalid-proof/evidence.json
+```
+
+结果：passed。
+
+Evidence summary：
+
+```json
+{
+  "scenario": "invalid-proof-dispute",
+  "mode": "dynamic",
+  "result": "expected-dispute-accepted",
+  "listing_id": 1,
+  "escrow_id": 1,
+  "session_id": 1,
+  "scenario_outcome": {
+    "type": "invalid-proof",
+    "child_event": "tradeSession.SessionPunished",
+    "main_event": "mainEscrow.EscrowPunished",
+    "submitted_digest": "0x7be0dde11dccf21554f47113d997ce23f180882655fb72ab79d551750f8a2bfe",
+    "evidence_bad_digest": "0x8be0dde11dccf21554f47113d997ce23f180882655fb72ab79d551750f8a2bfe",
+    "bad_digest_differs_from_submitted": true,
+    "events": [
+      "tradeSession.SessionPunished",
+      "mainEscrow.EscrowPunished"
+    ]
+  }
+}
+```
+
+#### invalid-plaintext-dispute
+
+命令：
+
+```bash
+ZK_VERIFIER_CMD=target/tools/fishbone-zk node scripts/zk_real_data_trade_flow.js \
+  --profile child6-data-trade \
+  --dataset scripts/fixtures/data_trade_datasets/factory_sensors.json \
+  --request scripts/fixtures/data_trade_requests/factory_multi_range.json \
+  --scenario invalid-plaintext-dispute \
+  --evidence-out /tmp/fishbone-stage13-quality/live-invalid-plaintext/evidence.json
+```
+
+结果：passed。
+
+Evidence summary：
+
+```json
+{
+  "scenario": "invalid-plaintext-dispute",
+  "mode": "dynamic",
+  "result": "expected-plaintext-dispute-accepted",
+  "listing_id": 2,
+  "escrow_id": 2,
+  "session_id": 2,
+  "scenario_outcome": {
+    "type": "invalid-plaintext",
+    "child_event": "tradeSession.SessionPunished",
+    "main_event": "mainEscrow.EscrowPunished",
+    "events": [
+      "tradeSession.SessionPunished",
+      "mainEscrow.EscrowPunished"
+    ]
+  }
+}
+```
+
+#### requester-refuses-payment
+
+命令：
+
+```bash
+ZK_VERIFIER_CMD=target/tools/fishbone-zk node scripts/zk_real_data_trade_flow.js \
+  --profile child6-data-trade \
+  --dataset scripts/fixtures/data_trade_datasets/factory_sensors.json \
+  --request scripts/fixtures/data_trade_requests/factory_multi_range.json \
+  --scenario requester-refuses-payment \
+  --evidence-out /tmp/fishbone-stage13-quality/live-requester-refuses-payment/evidence.json
+```
+
+结果：passed。
+
+Evidence summary：
+
+```json
+{
+  "scenario": "requester-refuses-payment",
+  "mode": "dynamic",
+  "result": "expected-last-payment-claimed",
+  "listing_id": 3,
+  "escrow_id": 3,
+  "session_id": 3,
+  "scenario_outcome": {
+    "type": "requester-refuses-payment",
+    "child_event": "tradeSession.LastPaymentClaimed",
+    "main_event": "mainEscrow.EscrowSettled",
+    "events": [
+      "tradeSession.LastPaymentClaimed",
+      "mainEscrow.EscrowSettled"
+    ]
+  }
+}
+```
+
+### live-chain 后置健康检查
+
+执行：
+
+```bash
+node scripts/lib/wait_for_ws_chain.js \
+  --main ws://10.2.2.11:9944 \
+  --child ws://10.2.2.11:9950 \
+  --min-blocks 1 \
+  --timeout-ms 60000
+```
+
+结果：passed。
+
+```text
+main Fishbone Main #102955 -> #102956
+child Fishbone Child-6 (Data Trade, AURA-5) #173 -> #174
+```
 
 ## Git / generated artifacts
 
@@ -349,6 +587,14 @@ child ws://10.2.2.11:9950 did not become ready before deadline: timed out after 
 /tmp/fishbone-stage13-quality/vehicle-speed-dry-run/evidence.json
 /tmp/fishbone-stage13-quality/factory-temperature-out-of-range.log
 /tmp/fishbone-stage13-quality/factory-multi-range-out-of-range.log
+/tmp/fishbone-stage13-quality/live-happy-multi-range/evidence.json
+/tmp/fishbone-stage13-quality/live-happy-multi-range/run.log
+/tmp/fishbone-stage13-quality/live-invalid-proof/evidence.json
+/tmp/fishbone-stage13-quality/live-invalid-proof/run.log
+/tmp/fishbone-stage13-quality/live-invalid-plaintext/evidence.json
+/tmp/fishbone-stage13-quality/live-invalid-plaintext/run.log
+/tmp/fishbone-stage13-quality/live-requester-refuses-payment/evidence.json
+/tmp/fishbone-stage13-quality/live-requester-refuses-payment/run.log
 ```
 
 未跟踪或提交 `target/data-trade-stage12/`、`target/data-trade-zk/`、`.deepseek/` 生成物。
@@ -366,25 +612,28 @@ child ws://10.2.2.11:9950 did not become ready before deadline: timed out after 
 
 这些证据说明当前脚本级无链 ZK pipeline 和数据/请求动态处理是可复现的。
 
-### 不能作为新增论文 live-chain 证据的部分
+### 可以作为论文 live-chain 证据的部分
 
-- Stage 13 没有产出 live-chain happy path evidence。
-- Stage 13 没有产出 live-chain failure/dispute scenario evidence。
+- Stage 13 产出了 live-chain happy path evidence。
+- Stage 13 产出了 `invalid-proof-dispute` evidence。
+- Stage 13 产出了 `invalid-plaintext-dispute` evidence。
+- Stage 13 产出了 `requester-refuses-payment` evidence。
 
-原因是 child6 RPC 不可用，不是当前验证中发现的脚本代码失败。
+这些证据说明在恢复后的 child6 环境中，脚本级链上注册、托管、会话、proof/attestation、结算、争议惩罚和 last-payment claim 路径可以复现。
 
 ## 下一步建议
 
-1. 如果论文当前只需要证明 ZK proof pipeline、动态 dataset/request、multi-range 和负向 witness validation，当前质量基线足够支撑继续整理实验材料。
-2. 如果论文需要最新 live-chain 截图或事件证据，应先恢复 child6 RPC 环境，再单独执行 live-chain validation。
-3. 不建议在 child6 不可用时继续实现新功能来“绕过”live-chain 验证；这会把环境问题误转化为功能开发。
-4. 如果要进入前端阶段，建议先准备一个稳定 live-chain demo 环境，否则前端只能演示 dry-run / mock-like evidence，不能完整展示链上 DO/DR 交互。
+1. 当前质量基线足够支撑继续整理论文实验材料。
+2. 如果要进入前端阶段，建议复用本次 live-chain 命令作为前端验收 oracle。
+3. 后续不要把 `/tmp/fishbone-stage13-quality/` 或 `target/data-trade-zk/` 作为 git 产物提交，只在报告中记录路径和摘要。
+4. 如果继续部署更多数据交易子链，应先按 `docs/operations/subchain-deployment-runbook.md` 做 spec/key/roles/出块验收。
 
 ## 最终结论
 
-Stage 13 当前结论为 `yellow`：
+Stage 13 当前结论为 `green`：
 
 - 本地代码质量基线通过。
 - 脚本级 dry-run 数据交易 proof pipeline 通过。
 - 负向验证通过。
-- live-chain 质量基线未完成，阻塞原因是 child6 RPC 不可用。
+- child6 恢复后 live-chain happy path 通过。
+- child6 恢复后三个 failure/dispute 场景通过。
