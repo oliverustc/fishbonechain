@@ -160,6 +160,10 @@
   - key extrinsic hashes/events
 - 脚本可换 dataset/request 参数重复运行。
 
+### 进度（2026-06-27）
+
+- ✅ **Stage 9 完成**：`zk_real_data_trade_flow.js` 扩展支持动态模式（`--dataset`/`--request`）。`make-witness` pipeline 整合进完整链上 E2E 流程。新增 `--dry-run-dynamic`（无链 ZK 验证）和 `--evidence-out`（per-run evidence JSON）参数。仍为 range-only。
+
 ## Stage 10：请求约束扩展
 
 ### 目标

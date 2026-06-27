@@ -25,6 +25,7 @@ This document describes the security model of FishboneChain data-trade scenarios
 - **Stage 6**: Deterministic IMT fixture coupling links the RO proof to a deterministic Merkle tree (depth 10). `business_input_hash` includes IMT fixture metadata. This is fixture-level coupling.
 - **Stage 7**: Structured IMT membership lite — four-layer deterministic Merkle model (Entry → Dataset → Aggregate → Published root). The published leaf for the RO proof is the aggregate root. `business_input_hash` includes structured metadata (`record_id`, `schema_version`, layer depths and indices). This is a lite prototype, not production dynamic IMT.
 - **Stage 8**: Dynamic dataset/request to witness generation — `fishbone-zk make-witness` converts multi-record/multi-field dataset + range request into `RangeWitness`. Cross-document consistency checks enforce dataset/request alignment. Still range-only; no subset/substr, frontend, or runtime changes.
+- **Stage 9**: Dynamic scripted E2E — the real ZK data-trade script (`zk_real_data_trade_flow.js`) composes dynamic `dataset + request → make-witness → business-fixture → verify` into the existing on-chain escrow/session/proof/attestation/settlement flow. Dynamic input validation runs as a preflight before chain interaction. This is still range-only, script-only, off-chain verifier plus on-chain attestation; not on-chain ZK verification, trustless bridge, subset/substr, verifier quorum, or frontend.
 
 ## Current Non-Guarantees
 
