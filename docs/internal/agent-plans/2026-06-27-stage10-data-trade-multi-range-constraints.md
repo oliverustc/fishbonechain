@@ -679,3 +679,20 @@ Remaining accepted design decisions:
 
 - 2026-06-27: Initial Codex plan committed.
 - 2026-06-27: CodeWhale plan review completed. Plan updated to resolve `--out`/`--out-dir` ambiguity and require normalized dynamic evidence shape.
+
+### 2026-06-27 CodeWhale Stage 10 Execution Complete
+
+- Branch: `feat/data-trade-stage10-multi-range`
+- Commits:
+  - `0b60a5c feat(dynamic): support multi range request schema`
+  - `78c54fa feat(dynamic): build witnesses for multi range requests`
+  - `35987b4 feat(cli): emit multi range witness bundles`
+  - `02b0676 test(fixtures): add multi range data trade requests`
+  - `a369125 feat(script): support multi range dynamic zk flow`
+- Tasks completed: Task 1-7 (all)
+- Tests: Go 25 tests passed, JS syntax OK
+- Smoke:
+  - Single range regression: ✅ accepted, evidence normalized (kind=range, n=1)
+  - Multi range: ✅ 2 constraints accepted, evidence (kind=multi_range, n=2)
+  - Out of range: ✅ correctly rejected before proof
+- No Rust/runtime/artifact schema changes
