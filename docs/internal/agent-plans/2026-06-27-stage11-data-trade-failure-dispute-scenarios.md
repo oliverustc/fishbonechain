@@ -122,7 +122,23 @@ stop
 
 Implementation guidance:
 
-- It is acceptable to generate a valid artifact first, then derive a bad digest by flipping one byte/hex nibble for the on-chain `submitDataProof` call.
+- Generate a valid artifact first, then derive a deterministic bad digest for the on-chain `submitDataProof` call.
+- Add a small helper instead of doing ad hoc inline string edits:
+
+```js
+function makeBadDigest(validDigest) {
+  // return a 32-byte hex string that is guaranteed to differ from validDigest
+}
+```
+
+- Before submitting, explicitly assert:
+
+```js
+if (badDigest === artifact.proof_digest) {
+  throw new Error("bad proof digest must differ from valid artifact digest");
+}
+```
+
 - Do **not** change artifact schema or verifier code.
 - Do **not** call verifier attestation for this scenario unless the current pallet flow requires it. Existing `dispute_invalid_proof` only requires session `InDelivery`, so the scenario can dispute after `submitDataProof`.
 - Evidence must record both:
@@ -306,6 +322,13 @@ File:
 
 Refactor carefully. Do not rewrite the whole script.
 
+Refactoring upper bound:
+
+- Extract at most the five helper blocks listed below.
+- If implementing a scenario appears to require extracting more than these five logical blocks, stop and ask Codex before continuing.
+- Do not move unrelated argument parsing, evidence writing, dry-run behavior, profile loading, or logging code except where strictly needed to call these helpers.
+- The `happy` path must remain functionally identical after refactoring.
+
 Suggested helpers:
 
 ```js
@@ -380,7 +403,7 @@ Top-level evidence should include:
   "escrow_id": 0,
   "session_id": 0,
   "rounds": [ ... ],
-  "dispute": {
+  "scenario_outcome": {
     "type": "invalid-proof",
     "child_event": "tradeSession.SessionPunished",
     "main_event": "mainEscrow.EscrowPunished"
@@ -391,14 +414,14 @@ Top-level evidence should include:
 For `requester-refuses-payment`, use:
 
 ```json
-"dispute": {
+"scenario_outcome": {
   "type": "requester-refuses-payment",
   "child_event": "tradeSession.LastPaymentClaimed",
   "main_event": "mainEscrow.EscrowSettled"
 }
 ```
 
-The exact field may be named `scenario_outcome` instead of `dispute` if that reads better, but keep it structured and documented.
+Use `scenario_outcome` for every non-happy scenario. Do not use a top-level `dispute` field; `requester-refuses-payment` is not strictly a dispute, and `scenario_outcome` is more general.
 
 Required event checks:
 
@@ -560,8 +583,17 @@ Before implementation, review this plan and specifically check:
 - Whether `invalid-proof-dispute` should dispute before or after verifier attestation. The plan recommends before attestation because current pallet allows it.
 - Whether `invalid-plaintext-dispute` should reuse the real artifact proof path or the existing hash values. The plan recommends real artifact path plus mismatched delivery/expected hashes.
 - Whether `verifier-rejection` should be included or deferred. It is optional and should be skipped if it complicates the helper flow.
-- Whether evidence shape needs a stable `scenario_outcome` object name instead of `dispute`.
+- Whether `scenario_outcome` has enough fields for every implemented scenario.
+
+## Plan Review Resolution
+
+CodeWhale reviewed the initial Stage 11 plan and approved it with two medium implementation guardrails plus one evidence naming recommendation. This revision incorporates them:
+
+- Refactoring is capped at the five named helper blocks. Any larger extraction requires stopping and asking Codex.
+- `invalid-proof-dispute` must derive a deterministic bad digest through a helper and assert it differs from the valid artifact digest before submission.
+- Evidence now consistently uses top-level `scenario_outcome` for non-happy scenarios.
 
 ## Execution Record
 
-Not started.
+- 2026-06-27: Initial Codex plan committed.
+- 2026-06-27: CodeWhale plan review completed. Plan updated to tighten refactor scope, guard bad digest derivation, and standardize `scenario_outcome`.
