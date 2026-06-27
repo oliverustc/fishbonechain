@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "constraint_kind": "multi_range",
+  "request_hash": "0xc1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2",
+  "dataset_id": "factory-sensors",
+  "record_id": "sensor-a-0001",
+  "constraints": [
+    {
+      "field_name": "temperature",
+      "range": {
+        "min_value": 18,
+        "max_value": 65
+      }
+    },
+    {
+      "field_name": "pressure",
+      "range": {
+        "min_value": 900,
+        "max_value": 1100
+      }
+    }
+  ]
+}
