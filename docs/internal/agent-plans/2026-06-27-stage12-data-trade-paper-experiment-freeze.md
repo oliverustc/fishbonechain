@@ -401,3 +401,21 @@ When reviewing Stage 12 implementation, Codex should check:
 - safe validation results are accurately recorded;
 - roadmap and paper gap matrix remain consistent with the current implementation boundary;
 - no unrelated code or generated artifacts are included.
+
+## Execution Record
+
+### 2026-06-27 CodeWhale Stage 12 Execution
+
+- Branch: `feat/data-trade-stage12-paper-freeze`
+- Validation: JS syntax ✅, Go test ✅, Go build ✅
+- Dry-run results:
+  - `factory-temperature-dry-run`: `result: dry-run-accepted` ✅
+  - `factory-multi-range-dry-run`: `result: dry-run-accepted` ✅
+  - `vehicle-speed-dry-run`: `result: dry-run-accepted` ✅
+  - `factory-temperature-out-of-range`: correctly rejected ✅
+  - `factory-multi-range-out-of-range`: correctly rejected ✅
+- Live-chain: skipped (RPC unavailable)
+- Deliverables:
+  - `docs/implementation/data-trade-demo-guide.md` (7 commands, copy-pasteable)
+  - `docs/implementation/data-trade-stage12-evidence-index.md` (evidence layout + paper usage)
+  - Updated: evidence, implementation, gap-matrix, security-model, roadmap docs
