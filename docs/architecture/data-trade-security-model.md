@@ -28,6 +28,7 @@ This document describes the security model of FishboneChain data-trade scenarios
 - **Stage 9**: Dynamic scripted E2E — the real ZK data-trade script (`zk_real_data_trade_flow.js`) composes dynamic `dataset + request → make-witness → business-fixture → verify` into the existing on-chain escrow/session/proof/attestation/settlement flow. Dynamic input validation runs as a preflight before chain interaction. This is still range-only, script-only, off-chain verifier plus on-chain attestation; not on-chain ZK verification, trustless bridge, subset/substr, verifier quorum, or frontend.
 - **Stage 10**: Multi-range constraint requests — `multi_range` is an off-chain/scripted conjunction of multiple `BusinessRangeProof` range artifacts. The chain still binds one proof digest per round; live compatibility binds the first verified constraint digest on-chain and records the full proof set in evidence. No subset/substr, aggregate proof, on-chain verifier, trustless bridge, verifier quorum, or frontend.
 - **Stage 11**: Scripted failure/dispute scenarios — `zk_real_data_trade_flow.js --scenario` supports `invalid-proof-dispute`, `invalid-plaintext-dispute`, and `requester-refuses-payment`. All disputes use existing pallet paths; no new dispute mechanism, production timeout, on-chain ZK verification, trustless bridge, or verifier quorum.
+- **Stage 12**: Paper experiment freeze — demo guide and evidence index packaging. No new security capabilities added.
 
 ## Current Non-Guarantees
 

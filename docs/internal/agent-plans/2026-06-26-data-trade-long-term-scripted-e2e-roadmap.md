@@ -239,6 +239,10 @@
 
 ## Stage 12：论文实验封版
 
+### 进度（2026-06-27）
+
+- ✅ **Stage 12 完成**：产出 demo guide（7 命令）和 evidence index。5 dry-run 验证通过，live-chain 因 RPC 不可用标记 skipped。详见 `data-trade-demo-guide.md` 和 `data-trade-stage12-evidence-index.md`。
+
 ### 目标
 
 把前面阶段沉淀为论文可引用、可复现、可截图的最终实验材料。
