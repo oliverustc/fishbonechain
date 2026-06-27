@@ -241,7 +241,7 @@
 
 ### 进度（2026-06-27）
 
-- ✅ **Stage 12 完成**：产出 demo guide（7 命令）和 evidence index。5 dry-run 验证通过，live-chain 因 RPC 不可用标记 skipped。详见 `data-trade-demo-guide.md` 和 `data-trade-stage12-evidence-index.md`。
+- ✅ **Stage 12 完成**：产出 demo guide（9 命令完整 demo matrix）和 evidence index。5 dry-run 验证通过，live-chain 因 RPC 不可用标记 skipped。详见 `data-trade-demo-guide.md` 和 `data-trade-stage12-evidence-index.md`。
 
 ### 目标
 

@@ -139,7 +139,7 @@ VM E2E 结果（main @ `ws://10.2.2.11:9944`，child6 @ `ws://10.2.2.11:9950`，
 - **Stage 9 动态脚本化 E2E**：`zk_real_data_trade_flow.js` 扩展支持 `--dataset`/`--request` 动态模式，将 Stage 8 的 `make-witness` pipeline 整合进完整链上 E2E 流程。新增 `--dry-run-dynamic`（无链 ZK 验证）和 `--evidence-out`（per-run evidence JSON）参数。仍为 range-only；不涉及前端、runtime、artifact schema、JS digest 或 attestation 变更。
 - **Stage 10 多约束 range 请求**：支持 `multi_range` 请求（同一 record 的多个 `uint64` field 各带独立 range 约束，逻辑 AND）。`BuildRangeWitnesses` 返回多个 witness；`make-witness --out-dir` 输出 manifest + 多个 witness；E2E 脚本对每个约束独立生成/验证 proof artifact，归一化 evidence 为 `rounds[].constraints[]`。电路仍是 `BusinessRangeProof`，不涉及 subset/substr、新电路、runtime 或 artifact schema 变更。
 - **Stage 11 失败与争议场景脚本化**：`zk_real_data_trade_flow.js` 扩展 `--scenario` 支持 `invalid-proof-dispute`、`invalid-plaintext-dispute`、`requester-refuses-payment`。共享 setup/round helpers 避免重复代码。争议通过现有 pallet dispute 路径实现，无新 dispute 机制或 production timeout。
-- **Stage 12 论文实验封版**：无新功能。产出 demo guide（7 命令）和 evidence index。5 dry-run 验证通过，live-chain 因 RPC 不可用标记 skipped。详见 [data-trade-demo-guide.md](./data-trade-demo-guide.md) 和 [data-trade-stage12-evidence-index.md](./data-trade-stage12-evidence-index.md)。
+- **Stage 12 论文实验封版**：无新功能。产出 demo guide（9 命令完整 demo matrix）和 evidence index。5 dry-run 验证通过，live-chain 因 RPC 不可用标记 skipped。详见 [data-trade-demo-guide.md](./data-trade-demo-guide.md) 和 [data-trade-stage12-evidence-index.md](./data-trade-stage12-evidence-index.md)。
 - **Bridge 非 trustless**：session-escrow 绑定由 E2E/bridge 脚本在链下校验，未接入 CCMC/Merkle proof 做链上跨链验证。
 - **Settlement 模式**：仅实现 `MainEscrow`。`FmcAssisted` 和 `Hybrid` 预留为后续。
 - **单 verifier**：`VerifierAuthority` 是单一 dev 账户（Charlie），不是多签委员会。

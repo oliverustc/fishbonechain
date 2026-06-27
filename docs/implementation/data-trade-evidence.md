@@ -231,7 +231,7 @@ Evidence 包含 `scenario`、`scenario_outcome`（含 `events` 数组）、`resu
 
 Stage 12 将 Stage 8-11 的产出打包为论文可用的实验材料。
 
-- **Demo guide**: [docs/implementation/data-trade-demo-guide.md](./data-trade-demo-guide.md) — 7 个可复制的 dry-run/live-chain 命令。
+- **Demo guide**: [docs/implementation/data-trade-demo-guide.md](./data-trade-demo-guide.md) — 9 个可复制的 dry-run/live-chain 命令（完整 demo matrix）。
 - **Evidence index**: [docs/implementation/data-trade-stage12-evidence-index.md](./data-trade-stage12-evidence-index.md) — 期望证据布局和每个命令的预期结果。
 
 Stage 12 验证结果：
