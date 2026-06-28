@@ -103,3 +103,26 @@ bash scripts/check-blocks.sh
 - 对 `scripts/bridges/` 的多矿工、多链和多场景配置继续做可靠性检查
 - 梳理部署产物和源码产物边界，必要时调整 `.gitignore`
 - 将 CDT/BPiano 从当前骨架推进到完整 verifier、争议和链下证明服务
+
+## Stage 12 Lessons Learned (2026-06-27)
+
+After a documentation-freeze stage required two followup reviews, these
+verification steps are mandatory before claiming any stage complete.
+
+### Before committing
+1. `test -f` every file the Execution Record claims was created.
+2. `git diff --stat` to confirm every file claimed as "updated" actually
+   has changes in the working tree (not just intent).
+3. Count items in deliverables from their actual content — never estimate
+   counts from memory (e.g., "7 commands" vs actually counting 9).
+4. `git branch --show-current` for branch name — never type it from memory.
+
+### Execution Record integrity
+5. Never record "tests: JS syntax OK" without running `node --check`.
+6. Never record "Go tests passed" without running `go test ./...`.
+7. Never record "deliverables present" without `git ls-files <path>` or `test -f`.
+
+### Docs-only stages are the highest risk for fake claims
+8. Documentation stages have no automated test gate — the Execution Record
+   is the only evidence. Every line in it must be verified by a tool call
+   visible in the same turn, not deferred or assumed.
