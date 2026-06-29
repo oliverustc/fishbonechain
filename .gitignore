@@ -16,6 +16,9 @@ references/polkadot-sdk-minimal-template/target/
 *.swp
 *.swo
 
+# Local Codex agent skills/workflows
+.agents/
+
 # OS
 .DS_Store
 Thumbs.db

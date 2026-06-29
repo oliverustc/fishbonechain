@@ -36,7 +36,7 @@
 | Multi-verifier quorum | Not present | `not-implemented` | Security model marks future work | Single trusted verifier remains central trust assumption | Add verifier set + threshold policy |
 | Failure/dispute paths | Stage 11 `--scenario` supports invalid-proof-dispute, invalid-plaintext-dispute, requester-refuses-payment with `findEvent()` assertions | `prototype-supported` | `scripts/zk_real_data_trade_flow.js` | Script-demonstrated over existing pallet behavior; production timeout/challenge-period not implemented | Production timeout, trustless dispute verification |
 | Trustless cross-chain settlement | Bridge/session-escrow binding checked by scripts | `not-implemented` | `scripts/lib/data_trade_binding.js`, security model | MainEscrow does not verify child proof on-chain | Future trustless bridge hardening |
-| Multiple data-trade child chains | `child6-data-trade` and `child7-business-trade` profiles configured | `prototype-supported` | `scripts/profiles/chains.json`, Stage 3 record | Current 2026-06-26 child RPC check timed out; production deployment needs hardening | Refresh child7 VM smoke before claiming live availability |
+| Multiple data-trade child chains | `child6-data-trade` and `child7-business-trade` profiles configured | `prototype-supported` | `scripts/profiles/chains.json`, Stage 3 record | child6 已恢复并通过 Stage 13 live-chain 验证；child7 生产部署硬化仍需刷新验证 | Refresh child7 VM smoke before claiming live availability |
 | FmcAssisted / Hybrid settlement | Reserved in docs/security model | `future-work` | `docs/architecture/data-trade-security-model.md` | No wired pallet/script flow | Lower priority unless paper needs Fishbone funding integration |
 
 ## Paper Wording Guidance

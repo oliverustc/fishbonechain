@@ -5,6 +5,7 @@
 建议执行者：CodeWhale
 长期路线图：`docs/internal/agent-plans/2026-06-28-data-flow-platform-long-term-roadmap.md`
 前置基线：Stage 13 已合并到 `main`，结论为 `green`
+当前计划分支：`stage/stage14-data-trade-validation`
 
 ## 1. 背景与目标
 
@@ -69,6 +70,22 @@ Stage 14 完成后，应满足：
 5. 文档说明如何复现、如何阅读 evidence、哪些结论可以写进论文、哪些仍是 prototype / future work。
 6. 不引入新协议功能，不改变 Stage 13 已通过的核心交易脚本行为。
 
+## 3.1 分支与提交计划
+
+Stage 14 使用单一 stage 分支：
+
+```text
+stage/stage14-data-trade-validation
+```
+
+提交规则：
+
+- 计划文件已经以 `plan: define Stage 14 data trade validation` 提交；后续 plan review、implementation、code review 和 review fix 都应继续使用同一分支。
+- 实现提交应保持 2-3 个可审阅提交：脚本/summary 工具、正式文档/evidence index、可选 live-chain 结果记录。
+- 每次实现提交前必须更新本计划的 `Execution Record`，记录实际命令、结果、偏离和风险。
+- 不提交 `.agents/`、`.deepseek/`、`target/`、`/tmp`、大体积 proof artifact、部署密钥或与 Stage 14 无关的本地改动。
+- 当前工作区已有 `.gitignore` 修改和 `.deepseek/` 未跟踪目录；除非 owner 另行要求，Stage 14 不应提交或回滚这些既有改动。
+
 ## 4. 非目标
 
 Stage 14 不做：
@@ -106,9 +123,17 @@ docs/internal/agent-reviews/2026-06-28-data-trade-stage14-code-review.md   (由 
 docs/implementation/data-trade-demo-guide.md
 docs/implementation/data-trade-evidence.md
 docs/implementation/data-trade-paper-gap-matrix.md
+docs/implementation/data-trade-stage12-evidence-index.md
 ```
 
-只在必要时修改，并且不得把 Stage 14 文档变成过度宣传。
+修改策略：
+
+- `data-trade-demo-guide.md` 必须增加 Stage 14 一键复现入口，并改写 Section 3 中“当前环境 RPC 不可用，以下命令仅供文档参考，未经此阶段运行”的历史声明。改写时应明确 Stage 12 的历史语境和 Stage 13/14 的当前验证入口，避免把 Stage 12 当时未运行误读为当前能力缺失。
+- `data-trade-stage12-evidence-index.md` 必须保留 Stage 12 历史语境，但添加清晰的前向注释或链接，说明 Stage 13 已完成 live-chain happy path 和三个 failure/dispute 场景验证，Stage 14 提供新的标准 evidence index。不要直接把 Stage 12 当时的 `not run` 记录改写成当时已运行。
+- `data-trade-paper-gap-matrix.md` 必须修正 Multiple data-trade child chains 行中已过期的 “Current 2026-06-26 child RPC check timed out” 描述；应反映 Stage 13 child6 恢复和 live-chain 验证已通过，同时保留 child7/生产部署硬化仍需验证的限制。
+- `data-trade-evidence.md` 只有在新增 Stage 14 validation 脚本或 Stage 14 evidence index 后仍会让读者误以为 live-chain 场景从未验证时才修改。若 `docs/experiments/data-trade-validation.md`、`data-trade-stage14-evidence-index.md`、`data-trade-demo-guide.md` 和 `data-trade-stage12-evidence-index.md` 已经足够承载 Stage 13/14 当前事实，则可以不修改该文件，并在 Execution Record 中记录未修改理由。
+
+只做上述必要更新，不得把 Stage 14 文档变成过度宣传。
 
 ### 默认不应修改
 
@@ -210,6 +235,7 @@ Options:
 - 如果 `target/tools/fishbone-zk` 不存在且未指定 `--no-build-zk`，自动构建。
 - live-chain 前先运行 readiness check。
 - 如果 readiness 失败，live scenarios 标记为 `skipped` 或 `failed`，不要伪造 evidence。
+- 如果 main RPC 正常但 child RPC 不可用，或 child RPC 正常但 main RPC 不可用，`summary.json`/`summary.md` 应分别记录 main/child readiness 状态、失败 endpoint、错误摘要和 skipped 的 live scenarios，整体 status 为 `partial`。
 
 ## 8. Summary schema 初稿
 
@@ -268,6 +294,7 @@ Options:
 注意：
 
 - `summary.json` 是平台化 evidence metadata 的雏形，不是最终 Web 后端数据库 schema。
+- `version` 仅表示 evidence summary 格式版本，不代表未来 Web/API 版本。
 - 字段应尽量通用，后续数据收集/跨域/训练也能参考。
 - 不要把完整 proof artifact 塞进 summary。
 
@@ -275,10 +302,10 @@ Options:
 
 ### Step 1：创建 Stage 14 分支
 
-建议：
+已创建/确认：
 
 ```bash
-git checkout -b feat/data-trade-stage14-reproducible-validation
+git switch -c stage/stage14-data-trade-validation
 ```
 
 确认：
@@ -287,7 +314,7 @@ git checkout -b feat/data-trade-stage14-reproducible-validation
 git status --short --branch
 ```
 
-如果存在用户未提交改动，只记录，不提交、不回滚。
+如果存在用户未提交改动，只记录，不提交、不回滚。执行实现、review 或 fix 时必须继续留在该 stage 分支，除非 owner 明确改分支。
 
 ### Step 2：实现 summary 工具
 
@@ -457,13 +484,17 @@ docs/implementation/data-trade-stage14-evidence-index.md
 docs/implementation/data-trade-demo-guide.md
 docs/implementation/data-trade-evidence.md
 docs/implementation/data-trade-paper-gap-matrix.md
+docs/implementation/data-trade-stage12-evidence-index.md
 ```
 
 最低要求：
 
 - `data-trade-demo-guide.md` 增加 Stage 14 一键复现入口。
-- 如果 `data-trade-stage12-evidence-index.md` 仍写 live-chain not run，可以保留历史语境，但应指向 Stage 14/Stage 13 green 结果，避免读者误解当前状态。
-- `paper-gap-matrix` 如有“live-chain 未跑”之类陈旧描述，需要修正。
+- `data-trade-demo-guide.md` Section 3 必须移除或改写“当前环境 RPC 不可用，以下命令仅供文档参考，未经此阶段运行”的当前式表达；建议改为“Stage 12 当时未运行 live-chain，Stage 13 已验证，Stage 14 可用一键脚本复现”。
+- `data-trade-stage12-evidence-index.md` 若仍写 live-chain not run，必须保留为 Stage 12 历史记录并添加显式前向引用，指向 Stage 13 green 结果和 Stage 14 evidence index，避免读者误解当前状态。
+- `data-trade-paper-gap-matrix.md` 必须修正 Multiple data-trade child chains 行中 “Current 2026-06-26 child RPC check timed out” 的过期描述；该行应区分 child6 已恢复并通过 Stage 13 live-chain 验证、child7/生产部署硬化仍需刷新验证。
+- `data-trade-evidence.md` 按第 5 节策略处理：只有当其它正式文档更新后仍会留下“Stage 11/12 live-chain 未运行”等当前事实误导时才更新；若不更新，Execution Record 必须说明原因。
+- 新增 `docs/experiments/data-trade-validation.md` 后，应更新 `docs/README.md` 的索引；如该文档改变 `docs/experiments/experiment-report.md` 的实验叙述或复现入口，也应添加交叉引用。
 
 ### Step 10：最终检查
 
@@ -543,6 +574,36 @@ Stage 14 code review 时，Codex 应重点检查：
 - 是否未提交大体积生成物。
 - 是否没有把数据交易写成未来平台唯一业务模型。
 
+## 12.1 Plan Review Resolution
+
+Plan review:
+
+```text
+docs/internal/agent-reviews/2026-06-29-data-trade-stage14-plan-review.md
+```
+
+Decision: `approved-with-required-fixes`
+
+Required fixes applied:
+
+- F1 applied: Section 5 now includes `docs/implementation/data-trade-stage12-evidence-index.md` in the modifiable files list and defines a historical-record-plus-forward-reference strategy.
+- F2 applied: Section 5 and Step 9 now define when `docs/implementation/data-trade-evidence.md` must be updated and when it may be left unchanged with an Execution Record note.
+- F3 applied: Step 9 now explicitly names the stale `data-trade-paper-gap-matrix.md` Multiple data-trade child chains entry containing “Current 2026-06-26 child RPC check timed out”.
+
+Suggestions accepted:
+
+- F4 accepted: Step 9 now gives the rewrite direction for the stale `data-trade-demo-guide.md` Section 3 live-chain statement.
+- F6 accepted: Section 7 now requires separate main/child readiness diagnostics when live checks are skipped.
+- F7 accepted: Section 8 now states that `summary.json.version` is an evidence summary format version, not a future Web/API version.
+- Suggested docs cross-reference accepted in scoped form: Step 9 now requires adding `docs/README.md` index coverage for the new experiment doc and updating `docs/experiments/experiment-report.md` only if the Stage 14 doc changes that report's experiment narrative or reproduction entry.
+
+Suggestions not applied:
+
+- The optional `--summary-only` / `--dry-run-validate` CLI suggestion is not required for Stage 14. The existing `--skip-live` path already provides the required no-chain validation path without adding more CLI surface.
+- The `zk_real_data_trade_flow.js --help` warning is not added as a new plan task because the plan never instructs the implementation to call that command; validation already uses `node --check` and wrapper execution.
+
+Plan status after fix: ready for implementation. No additional plan review round is required unless the owner wants independent confirmation before `fwf execute`.
+
 ## 13. 预期完成后的状态
 
 完成后，用户应能执行：
@@ -568,3 +629,166 @@ scripts/run_data_trade_validation.sh --out /tmp/fishbone-stage14-full
 - 哪些结论可用于论文。
 - 哪些能力仍属于 future work。
 - 这套 evidence 结构如何服务未来 Web 后端的平台对象。
+
+## 14. Execution Record
+
+### 2026-06-29 Codex Plan Authoring
+
+- Branch: `stage/stage14-data-trade-validation`
+- Commits: existing plan commit `652c43e plan: define Stage 14 data trade validation`; this pass only reconciles the plan with current FWF branch/record requirements.
+- Tasks completed:
+  - Read `agent.md`.
+  - Read `docs/internal/agent-collaboration.md`.
+  - Read fixed FWF prompts `workflow-common.md` and `plan-author-prompt.md`.
+  - Read Stage 14 section of `docs/internal/agent-plans/2026-06-28-data-flow-platform-long-term-roadmap.md`.
+  - Verified current relevant files include `scripts/run_data_trade_vm_regression.sh`, `scripts/lib/vm_regression_summary.js`, `docs/implementation/data-trade-evidence.md`, and Stage 13 quality baseline records.
+  - Confirmed the Stage 14 detailed plan already exists and is tracked.
+  - Created/confirmed stage branch `stage/stage14-data-trade-validation`.
+- Tests run:
+  - `git status --short --branch`
+  - `git branch --show-current`
+  - `git ls-files docs/internal/agent-plans/2026-06-28-stage14-data-trade-reproducible-validation.md`
+  - `git log --oneline -- docs/internal/agent-plans/2026-06-28-stage14-data-trade-reproducible-validation.md | head -5`
+- Tests not run:
+  - No implementation validation; this pass only updates the process plan.
+- Deviations from plan:
+  - The plan file preexisted from commit `652c43e`; Codex updated it rather than creating a duplicate plan.
+  - Branch name uses the FWF recommended `stage/` prefix instead of the older `feat/` suggestion.
+- Questions for Codex/Owner:
+  - None.
+- Remaining risks:
+  - Implementation still must verify whether child6 RPC is available at execution time and must not clean redeploy without owner approval.
+
+### YYYY-MM-DD CodeWhale Pass N
+
+### 2026-06-29 opencode Pass 1
+
+- Branch: `stage/stage14-data-trade-validation`
+- Base commit: `bc80997` (plan: address Stage 14 plan review fixes)
+- Head commit: `1a9d1ef` (test: add reproducible data trade validation runner)
+- Commits: `1a9d1ef`
+- Tasks completed:
+  - Step 2: Implemented `scripts/lib/data_trade_validation_summary.js` with `init`, `record`, `readiness`, `finish` subcommands. Reads evidence.json to extract scenario/result/listing/escrow/session/settlement/constraints/events. Writes summary.json and summary.md.
+  - Step 3: Implemented `scripts/run_data_trade_validation.sh` with full CLI from Section 7. Non-destructive (no clean redeploy). Runs readiness check, dry-run matrix, negative validation, live scenarios (happy then failure/dispute in order), and postcheck. Respects --skip-live / --skip-dry-run / --skip-negative.
+  - Step 4: Basic checks passed.
+  - Step 5: Dry-run/negative validation passed.
+- Files changed:
+  - `scripts/lib/data_trade_validation_summary.js` (new)
+  - `scripts/run_data_trade_validation.sh` (new)
+- Tests run:
+  - `node --check scripts/lib/data_trade_validation_summary.js` — passed
+  - `bash -n scripts/run_data_trade_validation.sh` — passed
+  - `scripts/run_data_trade_validation.sh --skip-live --out .agents/fwf/runs/stage14/dry-run` — 3 dry-run passed, 2 negative passed, live skipped, status partial
+- Tests not run:
+  - `node --check scripts/zk_real_data_trade_flow.js` — skipped (not modified in this pass)
+  - Live-chain scenarios — skipped (no RPC verification attempted; child6 availability unknown at implementation time)
+- Deviations from plan:
+  - None. Plan was executed as specified.
+- Questions for Codex/Owner:
+  - None.
+- Remaining risks:
+  - Live-chain scenarios untested; readiness depends on child6 RPC availability.
+  - Shell script uses heredoc-based scenario dispatch; error handling for individual live scenarios could be hardened in a future pass but meets current plan requirements.
+
+### 2026-06-29 opencode Pass 2
+
+- Branch: `stage/stage14-data-trade-validation`
+- Base commit: `1a9d1ef` (test: add reproducible data trade validation runner)
+- Head commit: `70e9f86` (docs: document data trade validation evidence)
+- Commits: `70e9f86`
+- Tasks completed:
+  - Step 7: Created `docs/experiments/data-trade-validation.md` — experiment doc covering purpose, reproduction commands, output directory, scenario matrix, evidence fields, capability boundaries, and security claims.
+  - Step 8: Created `docs/implementation/data-trade-stage14-evidence-index.md` — evidence index with standard directory structure, per-scenario specs, summary.json field documentation, and future platform object mappings.
+  - Step 9: Updated existing docs:
+    - `docs/README.md`: added new experiment doc and evidence index to index.
+    - `docs/implementation/data-trade-demo-guide.md`: added Stage 14 one-click entry; rewritten Section 3 stale "RPC 不可用/未经此阶段运行" statement to reflect Stage 13/14 current state.
+    - `docs/implementation/data-trade-stage12-evidence-index.md`: added forward reference banner pointing to Stage 13 quality baseline and Stage 14 evidence index.
+    - `docs/implementation/data-trade-paper-gap-matrix.md`: fixed "Multiple data-trade child chains" row — replaced expired "Current 2026-06-26 child RPC check timed out" with "child6 已恢复并通过 Stage 13 live-chain 验证；child7 生产部署硬化仍需刷新验证".
+    - `docs/implementation/data-trade-evidence.md`: not modified. With the new experiment doc, Stage 14 evidence index, updated demo guide, updated Stage 12 index, and updated gap matrix all reflecting Stage 13/14 current state, no reader would reasonably conclude live-chain was never verified. Per plan Section 5 strategy, this file's existing historical record remains correct for its validation timestamp and the other updated docs sufficiently communicate current truth.
+- Files changed:
+  - `docs/experiments/data-trade-validation.md` (new)
+  - `docs/implementation/data-trade-stage14-evidence-index.md` (new)
+  - `docs/README.md` (modified)
+  - `docs/implementation/data-trade-demo-guide.md` (modified)
+  - `docs/implementation/data-trade-paper-gap-matrix.md` (modified)
+  - `docs/implementation/data-trade-stage12-evidence-index.md` (modified)
+- Tests run:
+  - `test -f <path>` — all 6 files confirmed present
+  - `git diff --check` — no whitespace errors
+- Tests not run:
+  - `node --check scripts/zk_real_data_trade_flow.js` — not modified in this pass
+  - Rust cargo test / Go test — no code changes in this pass
+  - Live-chain validation — child6 RPC availability unknown; `--skip-live` used
+- Deviations from plan:
+  - None. `docs/implementation/data-trade-evidence.md` intentionally not modified per plan Section 5 strategy. Reasoning recorded above.
+- Questions for Codex/Owner:
+  - None.
+- Remaining risks:
+  - Live-chain scenarios untested; readiness depends on child6 RPC availability.
+  - `docs/experiments/experiment-report.md` not modified — the new validation doc is standalone and does not change the experiment report's narrative or reproduction entry; cross-reference from experiment-report.md is optional (plan says "如该文档改变…也应添加交叉引用").
+
+### 2026-06-29 opencode Review Fix Pass
+
+- Branch: `stage/stage14-data-trade-validation`
+- Base commit: `ed1afa6` (record: update Stage 14 Execution Record with commit hashes)
+- Head commit: `7f155c0` (fix: address Stage 14 code review required findings)
+- Commits: `7f155c0`
+- Tasks completed:
+  - F1 (Required): Fixed `--skip-live` status semantics. Removed unconditional `OVERALL_STATUS="partial"` override in the `--skip-live` branch (line ~416) so that explicitly requested no-chain validation produces `summary.json.status = "passed"` when all dry-run and negative scenarios pass.
+  - F2 (Required): Removed invalid top-level `local` keyword (was at line ~341) that caused bash to abort after live happy path with `set -e`. Replaced with ordinary variable assignments.
+- Files changed:
+  - `scripts/run_data_trade_validation.sh` (modified)
+- Tests run:
+  - `bash -n scripts/run_data_trade_validation.sh` — passed
+  - `bash -lc 'if [[ "1" == "1" ]]; then scenario=""; ... done; fi'` — verified no-local assignment works at top level
+  - `scripts/run_data_trade_validation.sh --skip-live --out .agents/fwf/runs/stage14/review-fix` — 3 dry-run passed, 2 negative passed, live skipped, status `passed`
+  - Verified `summary.json.status == "passed"` in `.agents/fwf/runs/stage14/review-fix/summary.json`
+- Tests not run:
+  - Live-chain verification — child6 RPC availability unknown
+  - Full live flow (F2 fix exercises the failure/dispute dispatch path only on live-chain)
+- Deviations from plan:
+  - None. Fixes address code-review required findings (F1, F2) within scope.
+- Questions for Codex/Owner:
+  - None.
+- Remaining risks:
+  - F2 fix removes the invalid `local` but the live failure/dispute dispatch block remains unexercised in dry-only runs. The fix should be confirmed during live-chain validation.
+
+### 2026-06-29 Codex Live Validation
+
+- Branch: `stage/stage14-data-trade-validation`
+- Base commit: `20389ac` (review: approve Stage 14 review fixes)
+- Commits: none yet for code/docs; this record will be committed after validation.
+- Tasks completed:
+  - Ran full Stage 14 validation directly from Codex, without opencode, against main `ws://10.2.2.11:9944` and child6 `ws://10.2.2.11:9950`.
+  - Confirmed dry-run matrix, negative validation, main/child readiness, four live-chain scenarios, and postcheck all passed.
+- Evidence:
+  - Summary JSON: `.agents/fwf/runs/stage14/full-codex/summary.json`
+  - Summary MD: `.agents/fwf/runs/stage14/full-codex/summary.md`
+  - Generated run logs/evidence are under `.agents/fwf/runs/stage14/full-codex/` and are intentionally not committed.
+- Scenario results:
+  - `dry-run-factory-temperature`: passed, `result = dry-run-accepted`
+  - `dry-run-factory-multi-range`: passed, `result = dry-run-accepted`
+  - `dry-run-vehicle-speed`: passed, `result = dry-run-accepted`
+  - `neg-factory-temp-out`: passed, expected non-zero validation rejection
+  - `neg-factory-multi-out`: passed, expected non-zero validation rejection
+  - `live-happy-multi-range`: passed, `result = accepted`, `listing_id = 4`, `escrow_id = 4`, `session_id = 4`, settlement `completed_rounds = 2`, `remaining_rounds = 1`
+  - `live-invalid-proof`: passed, `result = expected-dispute-accepted`, events `tradeSession.SessionPunished`, `mainEscrow.EscrowPunished`
+  - `live-invalid-plaintext`: passed, `result = expected-plaintext-dispute-accepted`, events `tradeSession.SessionPunished`, `mainEscrow.EscrowPunished`
+  - `live-requester-refuses-payment`: passed, `result = expected-last-payment-claimed`, events `tradeSession.LastPaymentClaimed`, `mainEscrow.EscrowSettled`
+  - `postcheck`: passed
+- Tests run:
+  - `node --check scripts/lib/data_trade_validation_summary.js` — passed
+  - `bash -n scripts/run_data_trade_validation.sh` — passed
+  - `node --check scripts/zk_real_data_trade_flow.js` — passed
+  - `scripts/run_data_trade_validation.sh --main ws://10.2.2.11:9944 --child ws://10.2.2.11:9950 --out .agents/fwf/runs/stage14/full-codex` — passed, overall status `passed`
+  - `jq '{status, readiness, scenarios: [.scenarios[] | {id, category, status, scenario, result, listing_id, escrow_id, session_id, settlement, events, error}]}' .agents/fwf/runs/stage14/full-codex/summary.json` — verified summary status, readiness, scenario results, IDs, settlement, and expected events
+  - `test -f .agents/fwf/runs/stage14/full-codex/summary.md` and inspected summary markdown — passed
+  - `find .agents/fwf/runs/stage14/full-codex -maxdepth 4 -type f | sort` — verified expected generated artifacts exist
+- Tests not run:
+  - No Rust, Go, or pallet tests rerun in this pass; no code changed since the approved code review.
+- Deviations from plan:
+  - Used repo-local ignored output path `.agents/fwf/runs/stage14/full-codex` instead of `/tmp/...`, per current FWF evidence rules.
+- Questions for Codex/Owner:
+  - None.
+- Remaining risks:
+  - Generated evidence is intentionally uncommitted; future reviewers need local access to `.agents/fwf/runs/stage14/full-codex/` or a fresh rerun to inspect full logs/artifacts.

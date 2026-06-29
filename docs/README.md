@@ -25,7 +25,7 @@
 - [implementation/data-trade-evidence.md](implementation/data-trade-evidence.md)：数据交易实现证据记录，本地验证、VM 回归摘要和复现命令
 - [implementation/data-trade-paper-gap-matrix.md](implementation/data-trade-paper-gap-matrix.md)：数据交易论文要求与当前实现的差距矩阵
 - [implementation/data-trade-flow.md](implementation/data-trade-flow.md)：数据交易 E2E 运行手册（happy path + negative scenarios）
-- [implementation/data-trade-zk-verifier-plan.md](implementation/data-trade-zk-verifier-plan.md)：ZK verifier 接入计划
+- [implementation/data-trade-stage14-evidence-index.md](implementation/data-trade-stage14-evidence-index.md)：Stage 14 数据交易 evidence 索引
 - [implementation/implementation-plan.md](implementation/implementation-plan.md)：早期总体实现规划，已被当前实现记录覆盖的部分仅作历史参考
 - [development/developer-guide.md](development/developer-guide.md)：开发者指南
 - [development/rust-setup.md](development/rust-setup.md)：Rust/Substrate 环境说明
@@ -41,7 +41,7 @@
 - [experiments/linear-scaling-mainchain-load.md](experiments/linear-scaling-mainchain-load.md)：N=1..6 子链线性扩展与主链负载实验规划、采集口径和绘图说明
 - [experiments/capacity-experiment.md](experiments/capacity-experiment.md)：MaxSubmissions=10000 高压容量实验、最终 TPS 数据和复现方法
 - [experiments/liquidity-experiment.md](experiments/liquidity-experiment.md)：资金流动性实验数据、图表和口径说明
-- [experiments/figures/](experiments/figures/)：实验报告图表和数据
+- [experiments/data-trade-validation.md](experiments/data-trade-validation.md)：数据交易实验固化与一键复现（Stage 14）
 
 ## 内部资料
 
