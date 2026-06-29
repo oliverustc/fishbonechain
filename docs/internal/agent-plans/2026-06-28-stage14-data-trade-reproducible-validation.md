@@ -731,8 +731,8 @@ scripts/run_data_trade_validation.sh --out /tmp/fishbone-stage14-full
 
 - Branch: `stage/stage14-data-trade-validation`
 - Base commit: `ed1afa6` (record: update Stage 14 Execution Record with commit hashes)
-- Head commit: (pending)
-- Commits: (pending)
+- Head commit: `7f155c0` (fix: address Stage 14 code review required findings)
+- Commits: `7f155c0`
 - Tasks completed:
   - F1 (Required): Fixed `--skip-live` status semantics. Removed unconditional `OVERALL_STATUS="partial"` override in the `--skip-live` branch (line ~416) so that explicitly requested no-chain validation produces `summary.json.status = "passed"` when all dry-run and negative scenarios pass.
   - F2 (Required): Removed invalid top-level `local` keyword (was at line ~341) that caused bash to abort after live happy path with `set -e`. Replaced with ordinary variable assignments.
