@@ -661,6 +661,37 @@ scripts/run_data_trade_validation.sh --out /tmp/fishbone-stage14-full
 
 ### YYYY-MM-DD CodeWhale Pass N
 
+### 2026-06-29 opencode Pass 1
+
+- Branch: `stage/stage14-data-trade-validation`
+- Base commit: `bc80997` (plan: address Stage 14 plan review fixes)
+- Head commit: (pending)
+- Commits: (pending)
+- Tasks completed:
+  - Step 2: Implemented `scripts/lib/data_trade_validation_summary.js` with `init`, `record`, `readiness`, `finish` subcommands. Reads evidence.json to extract scenario/result/listing/escrow/session/settlement/constraints/events. Writes summary.json and summary.md.
+  - Step 3: Implemented `scripts/run_data_trade_validation.sh` with full CLI from Section 7. Non-destructive (no clean redeploy). Runs readiness check, dry-run matrix, negative validation, live scenarios (happy then failure/dispute in order), and postcheck. Respects --skip-live / --skip-dry-run / --skip-negative.
+  - Step 4: Basic checks passed.
+  - Step 5: Dry-run/negative validation passed.
+- Files changed:
+  - `scripts/lib/data_trade_validation_summary.js` (new)
+  - `scripts/run_data_trade_validation.sh` (new)
+- Tests run:
+  - `node --check scripts/lib/data_trade_validation_summary.js` — passed
+  - `bash -n scripts/run_data_trade_validation.sh` — passed
+  - `scripts/run_data_trade_validation.sh --skip-live --out .agents/fwf/runs/stage14/dry-run` — 3 dry-run passed, 2 negative passed, live skipped, status partial
+- Tests not run:
+  - `node --check scripts/zk_real_data_trade_flow.js` — skipped (not modified in this pass)
+  - Live-chain scenarios — skipped (no RPC verification attempted; child6 availability unknown at implementation time)
+- Deviations from plan:
+  - None. Plan was executed as specified.
+- Questions for Codex/Owner:
+  - None.
+- Remaining risks:
+  - Live-chain scenarios untested; readiness depends on child6 RPC availability.
+  - Shell script uses heredoc-based scenario dispatch; error handling for individual live scenarios could be hardened in a future pass but meets current plan requirements.
+
+### YYYY-MM-DD opencode Pass 2
+
 - Branch:
 - Commits:
 - Tasks completed:
