@@ -665,8 +665,8 @@ scripts/run_data_trade_validation.sh --out /tmp/fishbone-stage14-full
 
 - Branch: `stage/stage14-data-trade-validation`
 - Base commit: `bc80997` (plan: address Stage 14 plan review fixes)
-- Head commit: (pending)
-- Commits: (pending)
+- Head commit: `1a9d1ef` (test: add reproducible data trade validation runner)
+- Commits: `1a9d1ef`
 - Tasks completed:
   - Step 2: Implemented `scripts/lib/data_trade_validation_summary.js` with `init`, `record`, `readiness`, `finish` subcommands. Reads evidence.json to extract scenario/result/listing/escrow/session/settlement/constraints/events. Writes summary.json and summary.md.
   - Step 3: Implemented `scripts/run_data_trade_validation.sh` with full CLI from Section 7. Non-destructive (no clean redeploy). Runs readiness check, dry-run matrix, negative validation, live scenarios (happy then failure/dispute in order), and postcheck. Respects --skip-live / --skip-dry-run / --skip-negative.
@@ -694,8 +694,8 @@ scripts/run_data_trade_validation.sh --out /tmp/fishbone-stage14-full
 
 - Branch: `stage/stage14-data-trade-validation`
 - Base commit: `1a9d1ef` (test: add reproducible data trade validation runner)
-- Head commit: (pending)
-- Commits: (pending)
+- Head commit: `70e9f86` (docs: document data trade validation evidence)
+- Commits: `70e9f86`
 - Tasks completed:
   - Step 7: Created `docs/experiments/data-trade-validation.md` — experiment doc covering purpose, reproduction commands, output directory, scenario matrix, evidence fields, capability boundaries, and security claims.
   - Step 8: Created `docs/implementation/data-trade-stage14-evidence-index.md` — evidence index with standard directory structure, per-scenario specs, summary.json field documentation, and future platform object mappings.
