@@ -123,9 +123,17 @@ docs/internal/agent-reviews/2026-06-28-data-trade-stage14-code-review.md   (由 
 docs/implementation/data-trade-demo-guide.md
 docs/implementation/data-trade-evidence.md
 docs/implementation/data-trade-paper-gap-matrix.md
+docs/implementation/data-trade-stage12-evidence-index.md
 ```
 
-只在必要时修改，并且不得把 Stage 14 文档变成过度宣传。
+修改策略：
+
+- `data-trade-demo-guide.md` 必须增加 Stage 14 一键复现入口，并改写 Section 3 中“当前环境 RPC 不可用，以下命令仅供文档参考，未经此阶段运行”的历史声明。改写时应明确 Stage 12 的历史语境和 Stage 13/14 的当前验证入口，避免把 Stage 12 当时未运行误读为当前能力缺失。
+- `data-trade-stage12-evidence-index.md` 必须保留 Stage 12 历史语境，但添加清晰的前向注释或链接，说明 Stage 13 已完成 live-chain happy path 和三个 failure/dispute 场景验证，Stage 14 提供新的标准 evidence index。不要直接把 Stage 12 当时的 `not run` 记录改写成当时已运行。
+- `data-trade-paper-gap-matrix.md` 必须修正 Multiple data-trade child chains 行中已过期的 “Current 2026-06-26 child RPC check timed out” 描述；应反映 Stage 13 child6 恢复和 live-chain 验证已通过，同时保留 child7/生产部署硬化仍需验证的限制。
+- `data-trade-evidence.md` 只有在新增 Stage 14 validation 脚本或 Stage 14 evidence index 后仍会让读者误以为 live-chain 场景从未验证时才修改。若 `docs/experiments/data-trade-validation.md`、`data-trade-stage14-evidence-index.md`、`data-trade-demo-guide.md` 和 `data-trade-stage12-evidence-index.md` 已经足够承载 Stage 13/14 当前事实，则可以不修改该文件，并在 Execution Record 中记录未修改理由。
+
+只做上述必要更新，不得把 Stage 14 文档变成过度宣传。
 
 ### 默认不应修改
 
@@ -227,6 +235,7 @@ Options:
 - 如果 `target/tools/fishbone-zk` 不存在且未指定 `--no-build-zk`，自动构建。
 - live-chain 前先运行 readiness check。
 - 如果 readiness 失败，live scenarios 标记为 `skipped` 或 `failed`，不要伪造 evidence。
+- 如果 main RPC 正常但 child RPC 不可用，或 child RPC 正常但 main RPC 不可用，`summary.json`/`summary.md` 应分别记录 main/child readiness 状态、失败 endpoint、错误摘要和 skipped 的 live scenarios，整体 status 为 `partial`。
 
 ## 8. Summary schema 初稿
 
@@ -285,6 +294,7 @@ Options:
 注意：
 
 - `summary.json` 是平台化 evidence metadata 的雏形，不是最终 Web 后端数据库 schema。
+- `version` 仅表示 evidence summary 格式版本，不代表未来 Web/API 版本。
 - 字段应尽量通用，后续数据收集/跨域/训练也能参考。
 - 不要把完整 proof artifact 塞进 summary。
 
@@ -474,13 +484,17 @@ docs/implementation/data-trade-stage14-evidence-index.md
 docs/implementation/data-trade-demo-guide.md
 docs/implementation/data-trade-evidence.md
 docs/implementation/data-trade-paper-gap-matrix.md
+docs/implementation/data-trade-stage12-evidence-index.md
 ```
 
 最低要求：
 
 - `data-trade-demo-guide.md` 增加 Stage 14 一键复现入口。
-- 如果 `data-trade-stage12-evidence-index.md` 仍写 live-chain not run，可以保留历史语境，但应指向 Stage 14/Stage 13 green 结果，避免读者误解当前状态。
-- `paper-gap-matrix` 如有“live-chain 未跑”之类陈旧描述，需要修正。
+- `data-trade-demo-guide.md` Section 3 必须移除或改写“当前环境 RPC 不可用，以下命令仅供文档参考，未经此阶段运行”的当前式表达；建议改为“Stage 12 当时未运行 live-chain，Stage 13 已验证，Stage 14 可用一键脚本复现”。
+- `data-trade-stage12-evidence-index.md` 若仍写 live-chain not run，必须保留为 Stage 12 历史记录并添加显式前向引用，指向 Stage 13 green 结果和 Stage 14 evidence index，避免读者误解当前状态。
+- `data-trade-paper-gap-matrix.md` 必须修正 Multiple data-trade child chains 行中 “Current 2026-06-26 child RPC check timed out” 的过期描述；该行应区分 child6 已恢复并通过 Stage 13 live-chain 验证、child7/生产部署硬化仍需刷新验证。
+- `data-trade-evidence.md` 按第 5 节策略处理：只有当其它正式文档更新后仍会留下“Stage 11/12 live-chain 未运行”等当前事实误导时才更新；若不更新，Execution Record 必须说明原因。
+- 新增 `docs/experiments/data-trade-validation.md` 后，应更新 `docs/README.md` 的索引；如该文档改变 `docs/experiments/experiment-report.md` 的实验叙述或复现入口，也应添加交叉引用。
 
 ### Step 10：最终检查
 
@@ -559,6 +573,36 @@ Stage 14 code review 时，Codex 应重点检查：
 - 是否不夸大 off-chain attestation 的安全边界。
 - 是否未提交大体积生成物。
 - 是否没有把数据交易写成未来平台唯一业务模型。
+
+## 12.1 Plan Review Resolution
+
+Plan review:
+
+```text
+docs/internal/agent-reviews/2026-06-29-data-trade-stage14-plan-review.md
+```
+
+Decision: `approved-with-required-fixes`
+
+Required fixes applied:
+
+- F1 applied: Section 5 now includes `docs/implementation/data-trade-stage12-evidence-index.md` in the modifiable files list and defines a historical-record-plus-forward-reference strategy.
+- F2 applied: Section 5 and Step 9 now define when `docs/implementation/data-trade-evidence.md` must be updated and when it may be left unchanged with an Execution Record note.
+- F3 applied: Step 9 now explicitly names the stale `data-trade-paper-gap-matrix.md` Multiple data-trade child chains entry containing “Current 2026-06-26 child RPC check timed out”.
+
+Suggestions accepted:
+
+- F4 accepted: Step 9 now gives the rewrite direction for the stale `data-trade-demo-guide.md` Section 3 live-chain statement.
+- F6 accepted: Section 7 now requires separate main/child readiness diagnostics when live checks are skipped.
+- F7 accepted: Section 8 now states that `summary.json.version` is an evidence summary format version, not a future Web/API version.
+- Suggested docs cross-reference accepted in scoped form: Step 9 now requires adding `docs/README.md` index coverage for the new experiment doc and updating `docs/experiments/experiment-report.md` only if the Stage 14 doc changes that report's experiment narrative or reproduction entry.
+
+Suggestions not applied:
+
+- The optional `--summary-only` / `--dry-run-validate` CLI suggestion is not required for Stage 14. The existing `--skip-live` path already provides the required no-chain validation path without adding more CLI surface.
+- The `zk_real_data_trade_flow.js --help` warning is not added as a new plan task because the plan never instructs the implementation to call that command; validation already uses `node --check` and wrapper execution.
+
+Plan status after fix: ready for implementation. No additional plan review round is required unless the owner wants independent confirmation before `fwf execute`.
 
 ## 13. 预期完成后的状态
 
