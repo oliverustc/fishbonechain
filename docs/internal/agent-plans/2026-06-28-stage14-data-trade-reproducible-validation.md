@@ -5,6 +5,7 @@
 建议执行者：CodeWhale
 长期路线图：`docs/internal/agent-plans/2026-06-28-data-flow-platform-long-term-roadmap.md`
 前置基线：Stage 13 已合并到 `main`，结论为 `green`
+当前计划分支：`stage/stage14-data-trade-validation`
 
 ## 1. 背景与目标
 
@@ -68,6 +69,22 @@ Stage 14 完成后，应满足：
    - error summary
 5. 文档说明如何复现、如何阅读 evidence、哪些结论可以写进论文、哪些仍是 prototype / future work。
 6. 不引入新协议功能，不改变 Stage 13 已通过的核心交易脚本行为。
+
+## 3.1 分支与提交计划
+
+Stage 14 使用单一 stage 分支：
+
+```text
+stage/stage14-data-trade-validation
+```
+
+提交规则：
+
+- 计划文件已经以 `plan: define Stage 14 data trade validation` 提交；后续 plan review、implementation、code review 和 review fix 都应继续使用同一分支。
+- 实现提交应保持 2-3 个可审阅提交：脚本/summary 工具、正式文档/evidence index、可选 live-chain 结果记录。
+- 每次实现提交前必须更新本计划的 `Execution Record`，记录实际命令、结果、偏离和风险。
+- 不提交 `.agents/`、`.deepseek/`、`target/`、`/tmp`、大体积 proof artifact、部署密钥或与 Stage 14 无关的本地改动。
+- 当前工作区已有 `.gitignore` 修改和 `.deepseek/` 未跟踪目录；除非 owner 另行要求，Stage 14 不应提交或回滚这些既有改动。
 
 ## 4. 非目标
 
@@ -275,10 +292,10 @@ Options:
 
 ### Step 1：创建 Stage 14 分支
 
-建议：
+已创建/确认：
 
 ```bash
-git checkout -b feat/data-trade-stage14-reproducible-validation
+git switch -c stage/stage14-data-trade-validation
 ```
 
 确认：
@@ -287,7 +304,7 @@ git checkout -b feat/data-trade-stage14-reproducible-validation
 git status --short --branch
 ```
 
-如果存在用户未提交改动，只记录，不提交、不回滚。
+如果存在用户未提交改动，只记录，不提交、不回滚。执行实现、review 或 fix 时必须继续留在该 stage 分支，除非 owner 明确改分支。
 
 ### Step 2：实现 summary 工具
 
@@ -568,3 +585,43 @@ scripts/run_data_trade_validation.sh --out /tmp/fishbone-stage14-full
 - 哪些结论可用于论文。
 - 哪些能力仍属于 future work。
 - 这套 evidence 结构如何服务未来 Web 后端的平台对象。
+
+## 14. Execution Record
+
+### 2026-06-29 Codex Plan Authoring
+
+- Branch: `stage/stage14-data-trade-validation`
+- Commits: existing plan commit `652c43e plan: define Stage 14 data trade validation`; this pass only reconciles the plan with current FWF branch/record requirements.
+- Tasks completed:
+  - Read `agent.md`.
+  - Read `docs/internal/agent-collaboration.md`.
+  - Read fixed FWF prompts `workflow-common.md` and `plan-author-prompt.md`.
+  - Read Stage 14 section of `docs/internal/agent-plans/2026-06-28-data-flow-platform-long-term-roadmap.md`.
+  - Verified current relevant files include `scripts/run_data_trade_vm_regression.sh`, `scripts/lib/vm_regression_summary.js`, `docs/implementation/data-trade-evidence.md`, and Stage 13 quality baseline records.
+  - Confirmed the Stage 14 detailed plan already exists and is tracked.
+  - Created/confirmed stage branch `stage/stage14-data-trade-validation`.
+- Tests run:
+  - `git status --short --branch`
+  - `git branch --show-current`
+  - `git ls-files docs/internal/agent-plans/2026-06-28-stage14-data-trade-reproducible-validation.md`
+  - `git log --oneline -- docs/internal/agent-plans/2026-06-28-stage14-data-trade-reproducible-validation.md | head -5`
+- Tests not run:
+  - No implementation validation; this pass only updates the process plan.
+- Deviations from plan:
+  - The plan file preexisted from commit `652c43e`; Codex updated it rather than creating a duplicate plan.
+  - Branch name uses the FWF recommended `stage/` prefix instead of the older `feat/` suggestion.
+- Questions for Codex/Owner:
+  - None.
+- Remaining risks:
+  - Implementation still must verify whether child6 RPC is available at execution time and must not clean redeploy without owner approval.
+
+### YYYY-MM-DD CodeWhale Pass N
+
+- Branch:
+- Commits:
+- Tasks completed:
+- Tests run:
+- Tests not run:
+- Deviations from plan:
+- Questions for Codex/Owner:
+- Remaining risks:
