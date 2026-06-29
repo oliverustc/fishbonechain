@@ -338,7 +338,7 @@ if [[ "$SKIP_LIVE" == "0" ]]; then
 
     # 2-4. Failure/dispute scenarios (only if happy path passed)
     if [[ "$LIVE_HAPPY_PASSED" == "1" ]]; then
-      local scenario spec sid sdir sname sevidence scmd sedge
+      scenario="" spec="" sid="" sdir="" sname="" sevidence="" scmd="" sedge=""
       sedge=""
 
       # invalid-proof-dispute
@@ -414,7 +414,8 @@ else
   summary_record "postcheck" "postcheck" "skipped" "" "" "" "skipped (--skip-live)"
 
   if [[ "$OVERALL_STATUS" == "passed" ]]; then
-    OVERALL_STATUS="partial"
+    # --skip-live is explicit user choice; dry-run+negative passing should yield "passed"
+    : # leave status as passed
   fi
 fi
 

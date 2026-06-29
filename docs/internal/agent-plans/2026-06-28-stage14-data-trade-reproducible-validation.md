@@ -727,11 +727,28 @@ scripts/run_data_trade_validation.sh --out /tmp/fishbone-stage14-full
   - Live-chain scenarios untested; readiness depends on child6 RPC availability.
   - `docs/experiments/experiment-report.md` not modified — the new validation doc is standalone and does not change the experiment report's narrative or reproduction entry; cross-reference from experiment-report.md is optional (plan says "如该文档改变…也应添加交叉引用").
 
-- Branch:
-- Commits:
+### 2026-06-29 opencode Review Fix Pass
+
+- Branch: `stage/stage14-data-trade-validation`
+- Base commit: `ed1afa6` (record: update Stage 14 Execution Record with commit hashes)
+- Head commit: (pending)
+- Commits: (pending)
 - Tasks completed:
+  - F1 (Required): Fixed `--skip-live` status semantics. Removed unconditional `OVERALL_STATUS="partial"` override in the `--skip-live` branch (line ~416) so that explicitly requested no-chain validation produces `summary.json.status = "passed"` when all dry-run and negative scenarios pass.
+  - F2 (Required): Removed invalid top-level `local` keyword (was at line ~341) that caused bash to abort after live happy path with `set -e`. Replaced with ordinary variable assignments.
+- Files changed:
+  - `scripts/run_data_trade_validation.sh` (modified)
 - Tests run:
+  - `bash -n scripts/run_data_trade_validation.sh` — passed
+  - `bash -lc 'if [[ "1" == "1" ]]; then scenario=""; ... done; fi'` — verified no-local assignment works at top level
+  - `scripts/run_data_trade_validation.sh --skip-live --out .agents/fwf/runs/stage14/review-fix` — 3 dry-run passed, 2 negative passed, live skipped, status `passed`
+  - Verified `summary.json.status == "passed"` in `.agents/fwf/runs/stage14/review-fix/summary.json`
 - Tests not run:
+  - Live-chain verification — child6 RPC availability unknown
+  - Full live flow (F2 fix exercises the failure/dispute dispatch path only on live-chain)
 - Deviations from plan:
+  - None. Fixes address code-review required findings (F1, F2) within scope.
 - Questions for Codex/Owner:
+  - None.
 - Remaining risks:
+  - F2 fix removes the invalid `local` but the live failure/dispute dispatch block remains unexercised in dry-only runs. The fix should be confirmed during live-chain validation.
