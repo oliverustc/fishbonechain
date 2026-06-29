@@ -752,3 +752,43 @@ scripts/run_data_trade_validation.sh --out /tmp/fishbone-stage14-full
   - None.
 - Remaining risks:
   - F2 fix removes the invalid `local` but the live failure/dispute dispatch block remains unexercised in dry-only runs. The fix should be confirmed during live-chain validation.
+
+### 2026-06-29 Codex Live Validation
+
+- Branch: `stage/stage14-data-trade-validation`
+- Base commit: `20389ac` (review: approve Stage 14 review fixes)
+- Commits: none yet for code/docs; this record will be committed after validation.
+- Tasks completed:
+  - Ran full Stage 14 validation directly from Codex, without opencode, against main `ws://10.2.2.11:9944` and child6 `ws://10.2.2.11:9950`.
+  - Confirmed dry-run matrix, negative validation, main/child readiness, four live-chain scenarios, and postcheck all passed.
+- Evidence:
+  - Summary JSON: `.agents/fwf/runs/stage14/full-codex/summary.json`
+  - Summary MD: `.agents/fwf/runs/stage14/full-codex/summary.md`
+  - Generated run logs/evidence are under `.agents/fwf/runs/stage14/full-codex/` and are intentionally not committed.
+- Scenario results:
+  - `dry-run-factory-temperature`: passed, `result = dry-run-accepted`
+  - `dry-run-factory-multi-range`: passed, `result = dry-run-accepted`
+  - `dry-run-vehicle-speed`: passed, `result = dry-run-accepted`
+  - `neg-factory-temp-out`: passed, expected non-zero validation rejection
+  - `neg-factory-multi-out`: passed, expected non-zero validation rejection
+  - `live-happy-multi-range`: passed, `result = accepted`, `listing_id = 4`, `escrow_id = 4`, `session_id = 4`, settlement `completed_rounds = 2`, `remaining_rounds = 1`
+  - `live-invalid-proof`: passed, `result = expected-dispute-accepted`, events `tradeSession.SessionPunished`, `mainEscrow.EscrowPunished`
+  - `live-invalid-plaintext`: passed, `result = expected-plaintext-dispute-accepted`, events `tradeSession.SessionPunished`, `mainEscrow.EscrowPunished`
+  - `live-requester-refuses-payment`: passed, `result = expected-last-payment-claimed`, events `tradeSession.LastPaymentClaimed`, `mainEscrow.EscrowSettled`
+  - `postcheck`: passed
+- Tests run:
+  - `node --check scripts/lib/data_trade_validation_summary.js` — passed
+  - `bash -n scripts/run_data_trade_validation.sh` — passed
+  - `node --check scripts/zk_real_data_trade_flow.js` — passed
+  - `scripts/run_data_trade_validation.sh --main ws://10.2.2.11:9944 --child ws://10.2.2.11:9950 --out .agents/fwf/runs/stage14/full-codex` — passed, overall status `passed`
+  - `jq '{status, readiness, scenarios: [.scenarios[] | {id, category, status, scenario, result, listing_id, escrow_id, session_id, settlement, events, error}]}' .agents/fwf/runs/stage14/full-codex/summary.json` — verified summary status, readiness, scenario results, IDs, settlement, and expected events
+  - `test -f .agents/fwf/runs/stage14/full-codex/summary.md` and inspected summary markdown — passed
+  - `find .agents/fwf/runs/stage14/full-codex -maxdepth 4 -type f | sort` — verified expected generated artifacts exist
+- Tests not run:
+  - No Rust, Go, or pallet tests rerun in this pass; no code changed since the approved code review.
+- Deviations from plan:
+  - Used repo-local ignored output path `.agents/fwf/runs/stage14/full-codex` instead of `/tmp/...`, per current FWF evidence rules.
+- Questions for Codex/Owner:
+  - None.
+- Remaining risks:
+  - Generated evidence is intentionally uncommitted; future reviewers need local access to `.agents/fwf/runs/stage14/full-codex/` or a fresh rerun to inspect full logs/artifacts.
