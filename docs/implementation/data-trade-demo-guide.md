@@ -1,6 +1,8 @@
-# Data Trade Demo Guide (Stage 12 freeze)
+# Data Trade Demo Guide (Stage 12 freeze, updated Stage 14)
 
 本文档面向论文写作和演示场景，提供可直接复制的命令来运行数据交易 ZK 证明管线、多约束 range 请求和失败/争议场景。
+
+**Stage 14 一键复现**：推荐使用 `scripts/run_data_trade_validation.sh` 自动执行 dry-run、negative validation 和 live-chain 完整验证，详见 [Data Trade Validation Experiment](../experiments/data-trade-validation.md)。
 
 ## 前置条件
 
@@ -88,7 +90,7 @@ ZK_VERIFIER_CMD=target/tools/fishbone-zk node scripts/zk_real_data_trade_flow.js
 
 ## 3. Live-Chain 命令
 
-以下命令需要可用的 RPC 端点（`scripts/profiles/chains.json` 中配置）。**当前环境 RPC 不可用，以下命令仅供文档参考，未经此阶段运行。**
+以下命令需要可用的 RPC 端点（`scripts/profiles/chains.json` 中配置）。**Stage 12 撰写时 RPC 不可用，这些命令当时未运行。** Stage 13 已在恢复后的 child6 上验证了所有四个 live-chain 场景并通过；Stage 14 已将完整流程固化为 `scripts/run_data_trade_validation.sh` 一键脚本。
 
 ### 3.1 Live chain happy path
 

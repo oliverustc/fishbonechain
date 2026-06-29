@@ -1,8 +1,8 @@
 # Stage 12 Evidence Index
 
-本文档定义 `target/data-trade-stage12/` 下期望的证据布局，并记录每个 demo 命令的证据路径、类别、预期结果和论文使用注意事项。
+本文档定义 `target/data-trade-stage12/` 下期望的证据布局，并记录每个 demo 命令的证据路径、类别、预期结果和论文使用注意事项。**本文保留为 Stage 12 历史记录。**
 
-当前环境 RPC 不可用。Live-chain 证据项标记为 **未运行**。
+> **当前状态（2026-06-29）**：Stage 13 已在恢复后的 child6 上验证了 live-chain happy path 和三个 failure/dispute 场景（详见 [Stage 13 Quality Baseline](../internal/agent-reviews/2026-06-27-data-trade-stage13-quality-baseline.md)）。Stage 14 已将完整流程固化为 `scripts/run_data_trade_validation.sh` 一键脚本（详见 [Stage 14 Evidence Index](data-trade-stage14-evidence-index.md) 和 [Data Trade Validation Experiment](../experiments/data-trade-validation.md)）。以下是 Stage 12 撰写时的原始记录，当时 RPC 不可用，live-chain 未运行。
 
 ## 证据布局
 

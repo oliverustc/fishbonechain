@@ -690,7 +690,42 @@ scripts/run_data_trade_validation.sh --out /tmp/fishbone-stage14-full
   - Live-chain scenarios untested; readiness depends on child6 RPC availability.
   - Shell script uses heredoc-based scenario dispatch; error handling for individual live scenarios could be hardened in a future pass but meets current plan requirements.
 
-### YYYY-MM-DD opencode Pass 2
+### 2026-06-29 opencode Pass 2
+
+- Branch: `stage/stage14-data-trade-validation`
+- Base commit: `1a9d1ef` (test: add reproducible data trade validation runner)
+- Head commit: (pending)
+- Commits: (pending)
+- Tasks completed:
+  - Step 7: Created `docs/experiments/data-trade-validation.md` — experiment doc covering purpose, reproduction commands, output directory, scenario matrix, evidence fields, capability boundaries, and security claims.
+  - Step 8: Created `docs/implementation/data-trade-stage14-evidence-index.md` — evidence index with standard directory structure, per-scenario specs, summary.json field documentation, and future platform object mappings.
+  - Step 9: Updated existing docs:
+    - `docs/README.md`: added new experiment doc and evidence index to index.
+    - `docs/implementation/data-trade-demo-guide.md`: added Stage 14 one-click entry; rewritten Section 3 stale "RPC 不可用/未经此阶段运行" statement to reflect Stage 13/14 current state.
+    - `docs/implementation/data-trade-stage12-evidence-index.md`: added forward reference banner pointing to Stage 13 quality baseline and Stage 14 evidence index.
+    - `docs/implementation/data-trade-paper-gap-matrix.md`: fixed "Multiple data-trade child chains" row — replaced expired "Current 2026-06-26 child RPC check timed out" with "child6 已恢复并通过 Stage 13 live-chain 验证；child7 生产部署硬化仍需刷新验证".
+    - `docs/implementation/data-trade-evidence.md`: not modified. With the new experiment doc, Stage 14 evidence index, updated demo guide, updated Stage 12 index, and updated gap matrix all reflecting Stage 13/14 current state, no reader would reasonably conclude live-chain was never verified. Per plan Section 5 strategy, this file's existing historical record remains correct for its validation timestamp and the other updated docs sufficiently communicate current truth.
+- Files changed:
+  - `docs/experiments/data-trade-validation.md` (new)
+  - `docs/implementation/data-trade-stage14-evidence-index.md` (new)
+  - `docs/README.md` (modified)
+  - `docs/implementation/data-trade-demo-guide.md` (modified)
+  - `docs/implementation/data-trade-paper-gap-matrix.md` (modified)
+  - `docs/implementation/data-trade-stage12-evidence-index.md` (modified)
+- Tests run:
+  - `test -f <path>` — all 6 files confirmed present
+  - `git diff --check` — no whitespace errors
+- Tests not run:
+  - `node --check scripts/zk_real_data_trade_flow.js` — not modified in this pass
+  - Rust cargo test / Go test — no code changes in this pass
+  - Live-chain validation — child6 RPC availability unknown; `--skip-live` used
+- Deviations from plan:
+  - None. `docs/implementation/data-trade-evidence.md` intentionally not modified per plan Section 5 strategy. Reasoning recorded above.
+- Questions for Codex/Owner:
+  - None.
+- Remaining risks:
+  - Live-chain scenarios untested; readiness depends on child6 RPC availability.
+  - `docs/experiments/experiment-report.md` not modified — the new validation doc is standalone and does not change the experiment report's narrative or reproduction entry; cross-reference from experiment-report.md is optional (plan says "如该文档改变…也应添加交叉引用").
 
 - Branch:
 - Commits:
