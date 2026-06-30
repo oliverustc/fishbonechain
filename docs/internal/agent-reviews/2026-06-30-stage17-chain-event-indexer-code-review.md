@@ -98,4 +98,3 @@ Required fix: reject any `--chain` value outside `main`, `child`, and `both` wit
 ## Decision
 
 `approved-with-required-fixes`
-
