@@ -525,3 +525,33 @@ Readiness: implementation should proceed only after opencode re-reviews and appr
 - Remaining risks:
   - Live RPC scan not validated; requires chain availability on deployment VMs.
   - CamelCase canonicalization map may need updates if new pallet events are added with additional camelCase field names.
+
+### 2026-06-30 opencode Pass 3 (Review-Fix Re-Confirmation)
+
+- Branch: `stage/stage17-chain-event-indexer`
+- Base commit: `9a4e87b` (Pass 2 review fix)
+- Head commit: (no new changes)
+- Commits:
+  - None. Both required fixes already applied in Pass 2 (`9a4e87b`).
+- Tasks completed:
+  - Verified code review `docs/internal/agent-reviews/2026-06-30-stage17-chain-event-indexer-code-review.md` has not changed since Pass 2.
+  - Verified Fix 1 (field name canonicalization): `CANONICAL_FIELD_NAMES` map and `canonicalizeFieldNames()` in `scripts/lib/chain_event_normalizer.js`, `fieldValue()` dual-read in `scripts/lib/data_trade_state_sync.js` and `scripts/lib/data_trade_evidence_correlation.js` all present.
+  - Verified Fix 2 (--chain validation): `--chain nope` rejected with exit code 1.
+  - Verified all JS files pass `node --check`.
+  - Verified regression: data_trade_cli.js, zk_real_data_trade_flow.js, run_data_trade_validation.sh pass.
+- Files changed:
+  - None (no new changes needed).
+- Tests run:
+  - `node --check` on all 4 JS files — passed
+  - `node scripts/chain_event_indexer.js scan --chain nope ...` — exit 1 (expected)
+  - `node --check scripts/data_trade_cli.js` — passed
+  - `node --check scripts/zk_real_data_trade_flow.js` — passed
+  - `bash -n scripts/run_data_trade_validation.sh` — passed
+- Tests not run:
+  - Live RPC scan: endpoints still unavailable.
+- Deviations from plan:
+  - None. No new fixes required beyond those already committed in Pass 2.
+- Questions for Codex/Owner:
+  - None.
+- Remaining risks:
+  - Live RPC scan not validated; requires chain availability on deployment VMs.
