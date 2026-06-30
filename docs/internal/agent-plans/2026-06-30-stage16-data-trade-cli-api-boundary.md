@@ -336,9 +336,9 @@ Readiness: implementation may proceed after this plan fix; another plan-review r
 
 - Branch: `stage/stage16-data-trade-cli-api-boundary`
 - Base commit: `2196eef` (plan review follow-up)
-- Head commit: `595a1d9` → `e24a9ef` (amended for commit hash)
+- Head commit: `f174a77`
 - Commits:
-  - `e24a9ef feat(data-trade): standardize CLI operation boundary`
+  - `f174a77 feat(data-trade): standardize CLI operation boundary`
 - Tasks completed:
   - Created `docs/implementation/data-trade-cli-api-boundary.md` with all 10 command definitions, actor/role, chain/off-chain classification, inputs, outputs, evidence fields, and backend-call suitability.
   - Created `scripts/data_trade_cli.js` with subcommand dispatch for all 10 Stage 16 operation names.
