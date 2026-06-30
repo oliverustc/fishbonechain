@@ -51,6 +51,7 @@ Allowed changes:
   - `summary.json` and `summary.md` for human-readable validation.
 - Support profile-based RPC configuration using `--profile child6-data-trade` and explicit overrides `--main`, `--child`.
 - Support no-RPC fixture/replay validation using committed small fixture files or generated local fixtures under `.agents/fwf/runs/stage17/...`.
+- Add and commit a deliberately small deterministic fixture at `scripts/fixtures/chain_events/data_trade_sample_events.jsonl`. This fixture should contain hand-crafted normalized events for one listing, one escrow, one session, one completed round, and one settlement path. It must not be presented as measured chain data.
 - Add a formal documentation page, preferably `docs/implementation/chain-event-indexer-state-sync.md`, describing indexer scope, normalized schema, cursor semantics, event mappings, state derivation rules, evidence correlation, and current limitations.
 - Update `docs/README.md`, `docs/architecture/platform-business-model.md`, and data-trade implementation docs with forward references only where they describe current Stage 17 behavior.
 
@@ -75,6 +76,7 @@ Allowed changes:
 - Event field names are available from metadata at runtime when decoding events. The indexer should prefer named fields when present and fall back to positional names only when metadata does not expose field names.
 - The repository already has Stage 14 evidence and Stage 16 CLI boundary outputs; Stage 17 should correlate with those artifacts rather than rewriting them.
 - Because scan outputs can be large and environment-specific, generated events, cursors, state snapshots, and correlations belong under `.agents/fwf/runs/stage17/...` during validation and must not be committed unless a deliberately tiny fixture is added for no-RPC tests.
+- `chain_role` is Stage 17 indexer metadata, not a new platform `ChainEvent` field. It must be one of `main` or `child`, derived from `--chain` and the selected trade profile, and used only to make multi-chain scan outputs easier to inspect. `chain_id` remains the platform source-chain identifier.
 
 ## Event Mapping Baseline
 
@@ -108,6 +110,36 @@ The initial indexer must normalize at least these data-trade events:
 - `mainEscrow.EscrowPunished`
 
 Other events may be recorded when `--include-all` is set, but the state derivation and summaries should focus on the baseline mapping above.
+
+## Normalized Event Format
+
+`events.jsonl` must be newline-delimited JSON: one complete JSON object per line, no array wrapper, no trailing commas, and the file should end with a newline. This format is chosen so future scanners can append safely without rewriting the whole file.
+
+Each normalized event must include:
+
+```text
+event_id
+chain_id
+profile
+block_number
+block_hash
+extrinsic_index
+event_index
+pallet
+variant
+fields
+cursor
+ingested_at
+```
+
+Stage 17 may additionally include:
+
+```text
+chain_role
+raw
+```
+
+`chain_role` is script-local metadata with values `main` or `child`. It is not part of the Stage 15 platform `ChainEvent` object and must not be required by future backend schemas. `raw` may contain JSON-compatible `event.toHuman()` or equivalent audit data.
 
 ## State Derivation Baseline
 
@@ -190,19 +222,21 @@ Validation:
   - `--from <block>`, `--to <block>`, and `--max-blocks <n>` bound live scans.
 - [ ] Implement normalized event record generation with stable fields:
   - `event_id`, `chain_id`, `chain_role`, `profile`, `block_number`, `block_hash`, `extrinsic_index`, `event_index`, `pallet`, `variant`, `fields`, `cursor`, `ingested_at`, and optional `raw`.
+  - `chain_role` must be `main` or `child`, derived from the scan target/profile, and documented as script-local metadata rather than a Stage 15 platform model field.
 - [ ] Ensure event field serialization is JSON-compatible for `BN`, `u128`, account IDs, hashes, bools, enums, vectors, and nulls.
-- [ ] Implement `scan` to read historical events with `@polkadot/api`, filter to the baseline data-trade event mapping by default, append/write `events.jsonl`, and update `cursor.json`.
-- [ ] Implement `replay --events <events.jsonl> --out <dir>` to rebuild `state.json`, `summary.json`, and `summary.md` without RPC.
+- [ ] Implement `scan` to read historical events with `@polkadot/api`, filter to the baseline data-trade event mapping by default, append/write `events.jsonl`, and update `cursor.json`. `scan` does not have to write `state.json`; state derivation may be a separate follow-up `state` command.
+- [ ] Implement `replay --events <events.jsonl> --out <dir>` to copy or rewrite normalized `events.jsonl`, rebuild `state.json`, `summary.json`, and `summary.md` without RPC. `replay` may delegate the state derivation logic to the same helper used by `state`.
 - [ ] Implement `state --events <events.jsonl> --out <dir>` or equivalent to derive listing/session/escrow snapshots from normalized events.
 - [ ] Implement `inspect` modes that do not require RPC:
-  - list supported event mappings;
+  - `inspect mappings --out <path>` writes JSON with `version`, `generated_at`, `supported_events.child`, `supported_events.main`, and `state_derivation_events`;
   - print cursor summary from `cursor.json`;
   - print event/state counts from generated files.
 - [ ] Implement `correlate-evidence --events <events.jsonl> --evidence <path-or-summary> --out <dir>`:
   - match live-chain evidence by `listing_id`, `session_id`, `escrow_id`, and expected event names where present;
   - mark dry-run/no-chain evidence as `not_applicable` when IDs are null;
   - write `correlations.json` and summary.
-- [ ] Add no-RPC fixture support. Prefer a small committed fixture under `scripts/fixtures/chain_events/` if it is stable and minimal; otherwise generate fixture files under `.agents/fwf/runs/stage17/fixtures/` during validation and do not commit generated outputs.
+- [ ] Add no-RPC fixture support by creating and committing `scripts/fixtures/chain_events/data_trade_sample_events.jsonl`. The fixture must be hand-crafted or otherwise deterministic, minimal, and clearly documented as a validation fixture rather than measured/live-chain data.
+- [ ] Add a command or documented validation step to create `.agents/fwf/runs/stage17/sample-dry-run-evidence.json` before correlation validation. The sample should contain Stage 14/16-style dry-run evidence with `listing_id: null`, `escrow_id: null`, `session_id: 0` or `null`, `result: "dry-run-accepted"`, and at least one constraint, so `correlate-evidence` can prove that no-chain evidence is marked `not_applicable`.
 - [ ] Add formal documentation `docs/implementation/chain-event-indexer-state-sync.md` covering:
   - commands and examples;
   - normalized `ChainEvent` schema;
@@ -274,6 +308,11 @@ node scripts/chain_event_indexer.js state \
   --out .agents/fwf/runs/stage17/state-fixture
 test -f .agents/fwf/runs/stage17/state-fixture/state.json
 
+node scripts/chain_event_indexer.js inspect sample-evidence \
+  --kind dry-run \
+  --out .agents/fwf/runs/stage17/sample-dry-run-evidence.json
+test -f .agents/fwf/runs/stage17/sample-dry-run-evidence.json
+
 node scripts/chain_event_indexer.js correlate-evidence \
   --events .agents/fwf/runs/stage17/replay-fixture/events.jsonl \
   --evidence .agents/fwf/runs/stage17/sample-dry-run-evidence.json \
@@ -281,7 +320,7 @@ node scripts/chain_event_indexer.js correlate-evidence \
 test -f .agents/fwf/runs/stage17/correlate-dry-run/correlations.json
 ```
 
-The implementation may choose a different fixture file path, but it must be repo-local and committed if referenced by required validation. If it generates `sample-dry-run-evidence.json` during validation, the command that creates it must be recorded and the file must remain uncommitted.
+The committed fixture path for required validation is `scripts/fixtures/chain_events/data_trade_sample_events.jsonl`. If implementation needs additional generated fixtures, they must be repo-local under `.agents/fwf/runs/stage17/...`, uncommitted, and recorded in the Execution Record.
 
 Optional bounded live scan validation, only if RPC readiness is available:
 
@@ -294,7 +333,11 @@ node scripts/chain_event_indexer.js scan \
   --out .agents/fwf/runs/stage17/live-scan
 test -f .agents/fwf/runs/stage17/live-scan/events.jsonl
 test -f .agents/fwf/runs/stage17/live-scan/cursor.json
-test -f .agents/fwf/runs/stage17/live-scan/state.json
+
+node scripts/chain_event_indexer.js state \
+  --events .agents/fwf/runs/stage17/live-scan/events.jsonl \
+  --out .agents/fwf/runs/stage17/live-scan-state
+test -f .agents/fwf/runs/stage17/live-scan-state/state.json
 ```
 
 If live RPC is unavailable, record the exact reason and do not claim live indexing validation.
@@ -343,6 +386,31 @@ Ask opencode plan review to focus on:
 - whether fixture/replay validation is sufficient when live RPC is unavailable;
 - whether evidence correlation requirements avoid false links for dry-run/no-chain evidence;
 - whether the plan contains enough guardrails against changing protocol, proof, settlement, metrics, or deployment topology.
+
+## Plan Review Resolution
+
+Plan review: `docs/internal/agent-reviews/2026-06-30-stage17-chain-event-indexer-plan-review.md`
+
+Decision: `approved-with-required-fixes`
+
+Required fixes applied:
+
+- F1: Required a committed deterministic fixture at `scripts/fixtures/chain_events/data_trade_sample_events.jsonl` and made the validation path unambiguous.
+- F2: Clarified that `scan` writes `events.jsonl` and `cursor.json`; state derivation is validated with a follow-up `state` command for live scans.
+- F3: Defined `inspect mappings --out <path>` and its minimum JSON output fields.
+- F4: Added an explicit validation command to create `.agents/fwf/runs/stage17/sample-dry-run-evidence.json` before correlation validation.
+- F5: Defined `chain_role` as Stage 17 script-local metadata with values `main` or `child`, not a new platform `ChainEvent` model field.
+
+Accepted suggestions:
+
+- Added a normalized JSONL format note: one JSON object per line, no array wrapper or trailing commas, newline at EOF.
+- Clarified that `replay` may delegate state derivation to the same helper as `state`.
+
+Rejected suggestions:
+
+- None.
+
+Readiness: implementation should proceed only after opencode re-reviews and approves this revised plan, unless the owner explicitly overrides the re-review gate.
 
 ## Execution Record
 
