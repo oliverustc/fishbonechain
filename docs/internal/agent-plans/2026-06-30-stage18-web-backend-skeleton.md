@@ -337,8 +337,9 @@ Do not update experiment reports, paper gap matrices, deployment runbooks, or ch
 
 - Branch: `stage/stage18-web-backend-skeleton`
 - Base commit: `2771161` (Stage 18 implementation)
-- Head commit: (pending commit)
-- Commits: (pending)
+- Head commit: `b7378c7` (`fix(backend): validate password input and harden import path against symlinks`)
+- Commits:
+  - `b7378c7` (`fix(backend): validate password input and harden import path against symlinks`)
 - Tasks completed:
   - Fix 1: Validate registration password input (reject missing, empty, non-string).
   - Fix 2: Harden chain-event file import path confinement against symlink escape.
