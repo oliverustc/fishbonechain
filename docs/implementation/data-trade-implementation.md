@@ -204,6 +204,7 @@ MAIN_WS=ws://10.2.2.11:9944 CHILD_WS=ws://10.2.2.11:9950 scripts/run_data_trade_
 ## 后续方向
 
 - CLI/API 边界标准化：详见 [data-trade-cli-api-boundary.md](data-trade-cli-api-boundary.md)（Stage 16）
+- 链上事件索引与状态同步：详见 [chain-event-indexer-state-sync.md](chain-event-indexer-state-sync.md)（Stage 17）
 - Trustless 跨链证明：CCMC/Merkle proof 接入主链 escrow
 - 多 verifier 委员会 + 阈值 attestation
 - FmcAssisted / Hybrid 结算模式

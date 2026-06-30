@@ -341,4 +341,5 @@ Per-constraint binding:
 - [Data Trade Implementation](data-trade-implementation.md)
 - [Data Trade Validation Experiment](../experiments/data-trade-validation.md)
 - [Stage 14 Evidence Index](data-trade-stage14-evidence-index.md)
+- [Chain Event Indexer and State Sync](chain-event-indexer-state-sync.md) (Stage 17)
 - [Stage 16 Plan](../internal/agent-plans/2026-06-30-stage16-data-trade-cli-api-boundary.md)

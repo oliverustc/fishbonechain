@@ -1,0 +1,557 @@
+# Stage 17 Plan: Chain Event Indexer And State Sync
+
+Date: 2026-06-30
+Stage: Stage 17
+Roadmap: `docs/internal/agent-plans/2026-06-28-data-flow-platform-long-term-roadmap.md`
+Branch: `stage/stage17-chain-event-indexer`
+
+## Goal
+
+Build a reusable, file-backed chain event indexer and state-sync foundation that can scan FishboneChain main/data-trade child chain events into normalized records, maintain resumable cursors, derive data-trade listing/session/escrow state snapshots, and correlate indexed events with existing evidence files without introducing a Web backend, database, protocol change, or new dependency.
+
+## Background
+
+Roadmap Stage 17 targets chain event indexing and state synchronization as future Web backend infrastructure. Required capabilities are multi-chain RPC configuration, event scanning, cursor saving, event normalization, listing/session/escrow state parsing, evidence-to-event correlation, and replay scanning. The roadmap explicitly allows this stage to begin as a script or lightweight service and does not require a complete Web backend.
+
+Current repository facts verified while writing this plan:
+
+- `docs/architecture/platform-business-model.md` defines `ChainEvent` as a normalized platform object with `chain_id`, `block_number`, `block_hash`, `extrinsic_index`, `event_index`, `pallet`, `variant`, `fields`, `cursor`, and `ingested_at`. It states chain events are a recoverable state source and backend records are indexing/orchestration metadata, not protocol finality.
+- `scripts/platform-model/types.ts` contains dependency-free JSDoc type drafts for `ChainEvent`, `Evidence`, `EvidenceChainEventRef`, `DataAsset`, `WorkflowRun`, and related Stage 15 platform objects.
+- `docs/implementation/data-trade-cli-api-boundary.md` defines the Stage 16 command boundary and evidence fields. It keeps independently chain-mutating subcommands planned/non-executable and preserves `run-flow` as the only full-flow transaction wrapper.
+- `scripts/profiles/chains.json` defines `child6-data-trade` and `child7-business-trade` trade profiles with `main_ws`, `child_ws`, settlement mode, verifier mode, verifier authority, and proof config.
+- `scripts/lib/trade_profile.js` already loads and validates trade profiles from `scripts/profiles/chains.json`.
+- `scripts/lib/data_trade_events.js` only extracts events from transaction results; it is not a block scanner or durable indexer.
+- `scripts/bridges/data_trade.js` can subscribe to live child-chain `tradeSession` events and optionally coordinate main-chain actions in dev mode, but it does not persist normalized events, cursors, replay windows, or derived platform state.
+- `package.json` already uses ES modules and has `@polkadot/api` as a dev dependency. Stage 17 should not add npm dependencies.
+- Runtime event sources verified in pallets:
+  - `pallet-data-registry`: `DataPublished`, `ImtRootUpdated`, `ListingStatusChanged`.
+  - `pallet-trade-session`: `SessionCreated`, `SessionAccepted`, `RoundOpened`, `PaymentProofSubmitted`, `DataProofSubmitted`, `DataProofAttested`, `ProofSignatureSubmitted`, `DataDelivered`, `PaymentPreimageSubmitted`, `RoundCompleted`, `SettlementClaimed`, `SessionPunished`, `LastPaymentClaimed`.
+  - `pallet-main-escrow`: `EscrowOpened`, `FundsLocked`, `DepositLocked`, `EscrowSettled`, `EscrowPunished`.
+- Existing Stage 14 validation summary records data-trade evidence metadata, including `listing_id`, `escrow_id`, `session_id`, `scenario_outcome.events`, per-scenario `log_path`, and `evidence_path`, but it does not index chain blocks.
+
+## Scope
+
+Allowed changes:
+
+- Add a new script entrypoint, preferably `scripts/chain_event_indexer.js`, with explicit subcommands for:
+  - `scan`: scan one or both chains over a bounded block range and write normalized chain events.
+  - `replay`: rebuild normalized events and derived state from a stored raw/normalized event file.
+  - `state`: derive or print data-trade state snapshots from indexed events.
+  - `correlate-evidence`: correlate evidence JSON/summary files with indexed events by `listing_id`, `session_id`, `escrow_id`, and event names where available.
+  - `inspect`: inspect cursor, event count, state summary, or supported event mappings without RPC.
+- Add focused helper modules under `scripts/lib/` when useful, such as:
+  - `chain_event_indexer.js` or `chain_event_normalizer.js` for normalization and field serialization.
+  - `data_trade_state_sync.js` for deriving listing/session/escrow status from normalized events.
+  - `data_trade_evidence_correlation.js` for evidence-to-event matching.
+- Use file-backed outputs under a user-provided `--out <dir>`:
+  - `events.jsonl` for normalized `ChainEvent` records.
+  - `cursor.json` for resumable scan position by chain.
+  - `state.json` for derived listing/session/escrow state.
+  - `correlations.json` for evidence-event links.
+  - `summary.json` and `summary.md` for human-readable validation.
+- Support profile-based RPC configuration using `--profile child6-data-trade` and explicit overrides `--main`, `--child`.
+- Support no-RPC fixture/replay validation using committed small fixture files or generated local fixtures under `.agents/fwf/runs/stage17/...`.
+- Add and commit a deliberately small deterministic fixture at `scripts/fixtures/chain_events/data_trade_sample_events.jsonl`. This fixture should contain hand-crafted normalized events for one listing, one escrow, one session, one completed round, and one settlement path. It must not be presented as measured chain data.
+- Add a formal documentation page, preferably `docs/implementation/chain-event-indexer-state-sync.md`, describing indexer scope, normalized schema, cursor semantics, event mappings, state derivation rules, evidence correlation, and current limitations.
+- Update `docs/README.md`, `docs/architecture/platform-business-model.md`, and data-trade implementation docs with forward references only where they describe current Stage 17 behavior.
+
+## Non-Goals
+
+- No Web backend, HTTP server, REST/RPC API, database schema, migrations, authentication, frontend, or long-running production daemon.
+- No pallet/runtime/extrinsic/event changes.
+- No protocol changes, proof digest changes, verifier changes, settlement changes, bridge trust changes, deployment topology changes, or chain reset.
+- No private-key handling, signing, transaction submission, or backend custody.
+- No new npm, Rust, Go, Python, or system dependencies.
+- No paper-facing metric or conclusion changes.
+- No claim that event indexing makes cross-chain settlement trustless. The current bridge/session-escrow binding remains off-chain coordination.
+- No requirement that live RPC be available as the only validation path.
+
+## Current Facts
+
+- The platform model already treats `ChainEvent` as infrastructure for reconstruction and correlation, but no implementation writes durable `ChainEvent` records yet.
+- Data-trade chain state spans at least two chains in current profiles:
+  - Child data-trade chain: `dataRegistry` and `tradeSession` events.
+  - Main chain: `mainEscrow` events.
+- `@polkadot/api` can read historical block hashes and events with `api.rpc.chain.getBlockHash(blockNumber)` and `api.query.system.events.at(blockHash)`. This is the expected scan mechanism.
+- Event field names are available from metadata at runtime when decoding events. The indexer should prefer named fields when present and fall back to positional names only when metadata does not expose field names.
+- The repository already has Stage 14 evidence and Stage 16 CLI boundary outputs; Stage 17 should correlate with those artifacts rather than rewriting them.
+- Because scan outputs can be large and environment-specific, generated events, cursors, state snapshots, and correlations belong under `.agents/fwf/runs/stage17/...` during validation and must not be committed unless a deliberately tiny fixture is added for no-RPC tests.
+- `chain_role` is Stage 17 indexer metadata, not a new platform `ChainEvent` field. It must be one of `main` or `child`, derived from `--chain` and the selected trade profile, and used only to make multi-chain scan outputs easier to inspect. `chain_id` remains the platform source-chain identifier.
+
+## Event Mapping Baseline
+
+The initial indexer must normalize at least these data-trade events:
+
+### Child Chain
+
+- `dataRegistry.DataPublished`
+- `dataRegistry.ImtRootUpdated`
+- `dataRegistry.ListingStatusChanged`
+- `tradeSession.SessionCreated`
+- `tradeSession.SessionAccepted`
+- `tradeSession.RoundOpened`
+- `tradeSession.PaymentProofSubmitted`
+- `tradeSession.DataProofSubmitted`
+- `tradeSession.DataProofAttested`
+- `tradeSession.ProofSignatureSubmitted`
+- `tradeSession.DataDelivered`
+- `tradeSession.PaymentPreimageSubmitted`
+- `tradeSession.RoundCompleted`
+- `tradeSession.SettlementClaimed`
+- `tradeSession.SessionPunished`
+- `tradeSession.LastPaymentClaimed`
+
+### Main Chain
+
+- `mainEscrow.EscrowOpened`
+- `mainEscrow.FundsLocked`
+- `mainEscrow.DepositLocked`
+- `mainEscrow.EscrowSettled`
+- `mainEscrow.EscrowPunished`
+
+Other events may be recorded when `--include-all` is set, but the state derivation and summaries should focus on the baseline mapping above.
+
+## Normalized Event Format
+
+`events.jsonl` must be newline-delimited JSON: one complete JSON object per line, no array wrapper, no trailing commas, and the file should end with a newline. This format is chosen so future scanners can append safely without rewriting the whole file.
+
+Each normalized event must include:
+
+```text
+event_id
+chain_id
+profile
+block_number
+block_hash
+extrinsic_index
+event_index
+pallet
+variant
+fields
+cursor
+ingested_at
+```
+
+Stage 17 may additionally include:
+
+```text
+chain_role
+raw
+```
+
+`chain_role` is script-local metadata with values `main` or `child`. It is not part of the Stage 15 platform `ChainEvent` object and must not be required by future backend schemas. `raw` may contain JSON-compatible `event.toHuman()` or equivalent audit data.
+
+## State Derivation Baseline
+
+Implement state derivation as replay over normalized events, not as hidden DB mutation.
+
+Required derived records:
+
+- `listings[listing_id]`
+  - `owner`, `price_per_round`, `max_rounds`, `status`, `last_event_id`.
+  - `DataPublished` creates/activates a listing.
+  - `ListingStatusChanged` updates listing status.
+  - `ImtRootUpdated` records latest IMT root.
+- `sessions[session_id]`
+  - `requester`, `data_owner`, `listing_id`, `escrow_id`, `status`, `rounds`, `last_event_id`.
+  - `SessionCreated` creates pending/created session state.
+  - `SessionAccepted` marks active.
+  - Round events update per-round status in event order.
+  - `SettlementClaimed` marks settlement claimed on child chain.
+  - `SessionPunished` marks punished.
+  - `LastPaymentClaimed` records last-payment path.
+- `escrows[escrow_id]`
+  - `requester`, `data_owner`, `status`, `funds_locked`, `deposit_locked`, `paid_rounds`, `refunded`, `slashed_deposit`, `last_event_id`.
+  - `EscrowOpened` creates opened state.
+  - `FundsLocked` marks funded amount.
+  - `DepositLocked` marks ready.
+  - `EscrowSettled` marks settled.
+  - `EscrowPunished` marks punished.
+
+The state snapshot must keep source event references so later backend code can audit how each derived status was reached.
+
+## Risks
+
+- Security risk: indexer output can look authoritative. Documentation and output fields must state that indexed state is a replay/cache of chain events and not a substitute for chain finality.
+- Data integrity risk: cross-chain event order is not globally ordered. The plan must avoid deriving main/child causality from wall-clock ordering alone; correlation should use explicit IDs (`session_id`, `escrow_id`, `listing_id`) and chain IDs.
+- Compatibility risk: event metadata field names can differ across runtime versions. Normalization should include raw `event.toHuman()` or JSON-compatible raw fields for audit, plus a stable normalized field map.
+- Deployment risk: live RPC may be unavailable. Required validation must include no-RPC fixture/replay tests and optional bounded live scans only when endpoints are reachable.
+- Performance risk: full-chain scans can be slow. Required CLI must support bounded `--from`/`--to`, `--max-blocks`, and clear refusal or warning for unbounded live scans.
+- Evidence-correlation risk: dry-run evidence has null chain IDs; correlation should mark no-chain evidence as `not_applicable` rather than inventing event links.
+- Paper-facing risk: do not change experiment metrics or claim stronger guarantees from indexing.
+
+## Stop Conditions
+
+Implementation agent must stop and ask Codex/Owner before:
+
+- changing pallet events, runtime metadata, extrinsics, storage layouts, proof digest fields, verifier assumptions, settlement rules, or bridge trust assumptions;
+- adding a database, backend server, REST/RPC API, frontend, auth system, or new dependency;
+- introducing transaction submission or signer/private-key handling in the indexer;
+- changing Stage 14 evidence schema, scenario IDs, expected result strings, experiment metrics, or paper-facing conclusions;
+- making live RPC mutation or chain reset part of validation;
+- deleting or rewriting existing validation evidence, generated experiment data, or deployment artifacts;
+- claiming trustless cross-chain event ordering or finality beyond what the current chains provide.
+
+## Branch And Commit Plan
+
+- Continue on branch `stage/stage17-chain-event-indexer`.
+- Commit only after:
+  - the indexer script and helper modules pass syntax checks;
+  - fixture/replay validation writes normalized events, cursor, derived state, and summary under `.agents/fwf/runs/stage17/...`;
+  - evidence correlation is validated against at least one no-chain/dry-run evidence file and correctly reports non-applicable chain links when IDs are null;
+  - formal docs are updated and indexed;
+  - this plan's Execution Record is updated with exact commands and results.
+- Recommended implementation commit message:
+
+```text
+feat(indexer): add chain event state sync foundation
+
+Plan: docs/internal/agent-plans/2026-06-30-stage17-chain-event-indexer-state-sync.md
+Validation:
+- <commands run>
+```
+
+## Task List
+
+- [ ] Re-read required inputs: `agent.md`, `docs/internal/agent-collaboration.md`, this plan, roadmap Stage 17, `docs/architecture/platform-business-model.md`, `docs/implementation/data-trade-cli-api-boundary.md`, `scripts/platform-model/types.ts`, `scripts/profiles/chains.json`, `scripts/lib/trade_profile.js`, `scripts/bridges/data_trade.js`, and relevant pallet event definitions.
+- [ ] Add `scripts/chain_event_indexer.js` with discoverable `--help` and subcommand help for `scan`, `replay`, `state`, `correlate-evidence`, and `inspect`.
+- [ ] Implement profile/RPC option parsing:
+  - `--profile <id>` loads `main_ws` and `child_ws` from `scripts/profiles/chains.json`;
+  - `--main <ws>` and `--child <ws>` override profile endpoints;
+  - `--chain main|child|both` selects scan target;
+  - `--from <block>`, `--to <block>`, and `--max-blocks <n>` bound live scans.
+- [ ] Implement normalized event record generation with stable fields:
+  - `event_id`, `chain_id`, `chain_role`, `profile`, `block_number`, `block_hash`, `extrinsic_index`, `event_index`, `pallet`, `variant`, `fields`, `cursor`, `ingested_at`, and optional `raw`.
+  - `chain_role` must be `main` or `child`, derived from the scan target/profile, and documented as script-local metadata rather than a Stage 15 platform model field.
+- [ ] Ensure event field serialization is JSON-compatible for `BN`, `u128`, account IDs, hashes, bools, enums, vectors, and nulls.
+- [ ] Implement `scan` to read historical events with `@polkadot/api`, filter to the baseline data-trade event mapping by default, append/write `events.jsonl`, and update `cursor.json`. `scan` does not have to write `state.json`; state derivation may be a separate follow-up `state` command.
+- [ ] Implement `replay --events <events.jsonl> --out <dir>` to copy or rewrite normalized `events.jsonl`, rebuild `state.json`, `summary.json`, and `summary.md` without RPC. `replay` may delegate the state derivation logic to the same helper used by `state`.
+- [ ] Implement `state --events <events.jsonl> --out <dir>` or equivalent to derive listing/session/escrow snapshots from normalized events.
+- [ ] Implement `inspect` modes that do not require RPC:
+  - `inspect mappings --out <path>` writes JSON with `version`, `generated_at`, `supported_events.child`, `supported_events.main`, and `state_derivation_events`;
+  - print cursor summary from `cursor.json`;
+  - print event/state counts from generated files.
+- [ ] Implement `correlate-evidence --events <events.jsonl> --evidence <path-or-summary> --out <dir>`:
+  - match live-chain evidence by `listing_id`, `session_id`, `escrow_id`, and expected event names where present;
+  - mark dry-run/no-chain evidence as `not_applicable` when IDs are null;
+  - write `correlations.json` and summary.
+- [ ] Add no-RPC fixture support by creating and committing `scripts/fixtures/chain_events/data_trade_sample_events.jsonl`. The fixture must be hand-crafted or otherwise deterministic, minimal, and clearly documented as a validation fixture rather than measured/live-chain data.
+- [ ] Add a command or documented validation step to create `.agents/fwf/runs/stage17/sample-dry-run-evidence.json` before correlation validation. The sample should contain Stage 14/16-style dry-run evidence with `listing_id: null`, `escrow_id: null`, `session_id: 0` or `null`, `result: "dry-run-accepted"`, and at least one constraint, so `correlate-evidence` can prove that no-chain evidence is marked `not_applicable`.
+- [ ] Add formal documentation `docs/implementation/chain-event-indexer-state-sync.md` covering:
+  - commands and examples;
+  - normalized `ChainEvent` schema;
+  - cursor semantics;
+  - event mapping baseline;
+  - state derivation rules;
+  - evidence correlation behavior;
+  - live scan limitations and replay validation flow;
+  - explicit non-goals and trust boundaries.
+- [ ] Update `docs/README.md` to index the new formal documentation.
+- [ ] Add a forward reference from `docs/architecture/platform-business-model.md` to the Stage 17 indexer document in the `ChainEvent` section.
+- [ ] Add a short forward reference from `docs/implementation/data-trade-implementation.md` or `docs/implementation/data-trade-cli-api-boundary.md` if needed to point data-trade operators to the indexer.
+- [ ] Do not alter Stage 14 validation scripts or Stage 16 CLI behavior except to read their outputs for correlation.
+- [ ] Update this plan's Execution Record with commits, files changed, exact validation commands, skipped validations, deviations, and remaining risks.
+
+## Acceptance Criteria
+
+- `scripts/chain_event_indexer.js` exists and exposes help for all Stage 17 subcommands.
+- The indexer can produce normalized `ChainEvent` JSONL records from a fixture or bounded live scan.
+- Cursor output records per-chain scan progress and can be inspected without RPC.
+- Replay/state derivation from normalized events produces listing/session/escrow snapshots with source event references.
+- Evidence correlation handles both:
+  - no-chain/dry-run evidence by reporting `not_applicable`;
+  - fixture or live events by linking matching IDs/events when available.
+- Formal docs describe current behavior and limitations, and `docs/README.md` indexes the new document.
+- No backend/server/database/auth/frontend/dependency/protocol/runtime/settlement/proof changes are made.
+- Validation evidence is stored under `.agents/fwf/runs/stage17/...` and not committed.
+
+## Validation Commands
+
+Run these at minimum:
+
+```bash
+git status --short --branch
+test -f scripts/chain_event_indexer.js
+test -f docs/implementation/chain-event-indexer-state-sync.md
+rg -n "chain-event-indexer-state-sync" docs/README.md docs/architecture/platform-business-model.md
+node --check scripts/chain_event_indexer.js
+node --check scripts/lib/chain_event_normalizer.js
+node --check scripts/lib/data_trade_state_sync.js
+node --check scripts/lib/data_trade_evidence_correlation.js
+node scripts/chain_event_indexer.js --help
+node scripts/chain_event_indexer.js scan --help
+node scripts/chain_event_indexer.js replay --help
+node scripts/chain_event_indexer.js state --help
+node scripts/chain_event_indexer.js correlate-evidence --help
+node scripts/chain_event_indexer.js inspect --help
+```
+
+If a helper module listed above is not created because the implementation keeps the logic in fewer files, replace its `node --check` command with the actual helper file(s) created and record the deviation in the Execution Record.
+
+Required no-RPC fixture/replay validation:
+
+```bash
+node scripts/chain_event_indexer.js inspect mappings \
+  --out .agents/fwf/runs/stage17/inspect-mappings.json
+test -f .agents/fwf/runs/stage17/inspect-mappings.json
+
+node scripts/chain_event_indexer.js replay \
+  --events scripts/fixtures/chain_events/data_trade_sample_events.jsonl \
+  --out .agents/fwf/runs/stage17/replay-fixture
+test -f .agents/fwf/runs/stage17/replay-fixture/events.jsonl
+test -f .agents/fwf/runs/stage17/replay-fixture/state.json
+test -f .agents/fwf/runs/stage17/replay-fixture/summary.json
+test -f .agents/fwf/runs/stage17/replay-fixture/summary.md
+
+node scripts/chain_event_indexer.js state \
+  --events .agents/fwf/runs/stage17/replay-fixture/events.jsonl \
+  --out .agents/fwf/runs/stage17/state-fixture
+test -f .agents/fwf/runs/stage17/state-fixture/state.json
+
+node scripts/chain_event_indexer.js inspect sample-evidence \
+  --kind dry-run \
+  --out .agents/fwf/runs/stage17/sample-dry-run-evidence.json
+test -f .agents/fwf/runs/stage17/sample-dry-run-evidence.json
+
+node scripts/chain_event_indexer.js correlate-evidence \
+  --events .agents/fwf/runs/stage17/replay-fixture/events.jsonl \
+  --evidence .agents/fwf/runs/stage17/sample-dry-run-evidence.json \
+  --out .agents/fwf/runs/stage17/correlate-dry-run
+test -f .agents/fwf/runs/stage17/correlate-dry-run/correlations.json
+```
+
+The committed fixture path for required validation is `scripts/fixtures/chain_events/data_trade_sample_events.jsonl`. If implementation needs additional generated fixtures, they must be repo-local under `.agents/fwf/runs/stage17/...`, uncommitted, and recorded in the Execution Record.
+
+Optional bounded live scan validation, only if RPC readiness is available:
+
+```bash
+node scripts/chain_event_indexer.js scan \
+  --profile child6-data-trade \
+  --chain both \
+  --from <known-safe-start-block> \
+  --to <known-safe-end-block> \
+  --out .agents/fwf/runs/stage17/live-scan
+test -f .agents/fwf/runs/stage17/live-scan/events.jsonl
+test -f .agents/fwf/runs/stage17/live-scan/cursor.json
+
+node scripts/chain_event_indexer.js state \
+  --events .agents/fwf/runs/stage17/live-scan/events.jsonl \
+  --out .agents/fwf/runs/stage17/live-scan-state
+test -f .agents/fwf/runs/stage17/live-scan-state/state.json
+```
+
+If live RPC is unavailable, record the exact reason and do not claim live indexing validation.
+
+Regression/compatibility checks:
+
+```bash
+node --check scripts/data_trade_cli.js
+node --check scripts/zk_real_data_trade_flow.js
+bash -n scripts/run_data_trade_validation.sh
+node scripts/data_trade_cli.js --help
+```
+
+## Validation Output Paths
+
+Use repo-local ignored output paths:
+
+```text
+.agents/fwf/runs/stage17/
+```
+
+Do not write validation output to `/tmp` or commit generated outputs under `.agents/fwf/runs/stage17/`.
+
+## Documentation Updates
+
+Required:
+
+- `docs/implementation/chain-event-indexer-state-sync.md`
+- `docs/README.md`
+- `docs/architecture/platform-business-model.md` forward reference in or near the `ChainEvent` section
+
+Expected forward reference if useful:
+
+- `docs/implementation/data-trade-implementation.md`
+- `docs/implementation/data-trade-cli-api-boundary.md`
+
+Do not alter experiment conclusions, measured results, security claims, or paper-facing statements except to add an indexer pointer and clarify that indexed state is a replay/cache of chain events.
+
+## Plan-Review Focus
+
+Ask opencode plan review to focus on:
+
+- whether the Stage 17 scope is narrow enough to avoid accidentally building a backend/database/server;
+- whether the normalized `ChainEvent` schema and cursor semantics are concrete enough for implementation;
+- whether the state derivation rules cover the current data-trade listing/session/escrow events without inventing cross-chain finality;
+- whether fixture/replay validation is sufficient when live RPC is unavailable;
+- whether evidence correlation requirements avoid false links for dry-run/no-chain evidence;
+- whether the plan contains enough guardrails against changing protocol, proof, settlement, metrics, or deployment topology.
+
+## Plan Review Resolution
+
+Plan review: `docs/internal/agent-reviews/2026-06-30-stage17-chain-event-indexer-plan-review.md`
+
+Decision: `approved-with-required-fixes`
+
+Required fixes applied:
+
+- F1: Required a committed deterministic fixture at `scripts/fixtures/chain_events/data_trade_sample_events.jsonl` and made the validation path unambiguous.
+- F2: Clarified that `scan` writes `events.jsonl` and `cursor.json`; state derivation is validated with a follow-up `state` command for live scans.
+- F3: Defined `inspect mappings --out <path>` and its minimum JSON output fields.
+- F4: Added an explicit validation command to create `.agents/fwf/runs/stage17/sample-dry-run-evidence.json` before correlation validation.
+- F5: Defined `chain_role` as Stage 17 script-local metadata with values `main` or `child`, not a new platform `ChainEvent` model field.
+
+Accepted suggestions:
+
+- Added a normalized JSONL format note: one JSON object per line, no array wrapper or trailing commas, newline at EOF.
+- Clarified that `replay` may delegate state derivation to the same helper as `state`.
+
+Rejected suggestions:
+
+- None.
+
+Readiness: implementation should proceed only after opencode re-reviews and approves this revised plan, unless the owner explicitly overrides the re-review gate.
+
+## Execution Record
+
+### 2026-06-30 Codex Plan Authoring
+
+- Branch: `stage/stage17-chain-event-indexer`
+- Commits:
+  - Pending.
+- Tasks completed:
+  - Created Stage 17 branch from local `main`.
+  - Authored initial Stage 17 plan from the long-term roadmap.
+- Tests run:
+  - `git status --short --branch`
+  - `git branch --show-current`
+- Tests not run:
+  - Implementation validation commands are for the implementation pass and were not run during plan authoring.
+- Deviations from plan:
+  - None.
+- Questions for Codex/Owner:
+  - None.
+- Remaining risks:
+  - Live RPC availability for optional bounded scan validation is unknown.
+
+### 2026-06-30 opencode Pass 1
+
+- Branch: `stage/stage17-chain-event-indexer`
+- Base commit: `460f8d0` (plan re-review approved)
+- Head commit: (pending)
+- Commits:
+  - (pending)
+- Tasks completed:
+  - Re-read all required inputs
+  - Created committed fixture `scripts/fixtures/chain_events/data_trade_sample_events.jsonl` (17 hand-crafted events covering one listing, one escrow, one session, one completed round, and settlement path)
+  - Implemented `scripts/lib/chain_event_normalizer.js` with baseline event mapping, normalizeEventFields, normalizeEvent, JSONL read/write, cursor helpers
+  - Implemented `scripts/lib/data_trade_state_sync.js` with deriveState, generateStateSummary, generateMarkdownSummary
+  - Implemented `scripts/lib/data_trade_evidence_correlation.js` with correlate function handling matched/not_applicable/partial
+  - Implemented `scripts/chain_event_indexer.js` CLI entrypoint with scan, replay, state, correlate-evidence, inspect subcommands
+  - Implemented `inspect mappings`, `inspect cursor`, `inspect counts`, `inspect sample-evidence` modes
+  - Added formal documentation `docs/implementation/chain-event-indexer-state-sync.md`
+  - Updated `docs/README.md` to index the new formal documentation
+  - Added forward reference in `docs/architecture/platform-business-model.md` ChainEvent section
+  - Added forward references in `docs/implementation/data-trade-implementation.md` and `docs/implementation/data-trade-cli-api-boundary.md`
+- Files changed:
+  - `docs/implementation/chain-event-indexer-state-sync.md` (new)
+  - `docs/README.md` (updated)
+  - `docs/architecture/platform-business-model.md` (updated)
+  - `docs/implementation/data-trade-implementation.md` (updated)
+  - `docs/implementation/data-trade-cli-api-boundary.md` (updated)
+  - `scripts/chain_event_indexer.js` (new)
+  - `scripts/lib/chain_event_normalizer.js` (new)
+  - `scripts/lib/data_trade_state_sync.js` (new)
+  - `scripts/lib/data_trade_evidence_correlation.js` (new)
+  - `scripts/fixtures/chain_events/data_trade_sample_events.jsonl` (new)
+- Tests run:
+  - `node --check scripts/chain_event_indexer.js` — passed
+  - `node --check scripts/lib/chain_event_normalizer.js` — passed
+  - `node --check scripts/lib/data_trade_state_sync.js` — passed
+  - `node --check scripts/lib/data_trade_evidence_correlation.js` — passed
+  - `node scripts/chain_event_indexer.js --help` — all help output present
+  - `node scripts/chain_event_indexer.js <subcommand> --help` — all 5 subcommands + inspect sub-modes
+  - `node scripts/chain_event_indexer.js inspect mappings --out .agents/fwf/runs/stage17/inspect-mappings.json` — wrote mappings JSON
+  - `node scripts/chain_event_indexer.js replay --events scripts/fixtures/chain_events/data_trade_sample_events.jsonl --out .agents/fwf/runs/stage17/replay-fixture` — wrote events.jsonl, state.json, summary.json, summary.md
+  - `node scripts/chain_event_indexer.js state --events .agents/fwf/runs/stage17/replay-fixture/events.jsonl --out .agents/fwf/runs/stage17/state-fixture` — wrote state.json, summary.json
+  - `node scripts/chain_event_indexer.js inspect sample-evidence --kind dry-run --out .agents/fwf/runs/stage17/sample-dry-run-evidence.json` — wrote evidence JSON
+  - `node scripts/chain_event_indexer.js correlate-evidence --events .agents/fwf/runs/stage17/replay-fixture/events.jsonl --evidence .agents/fwf/runs/stage17/sample-dry-run-evidence.json --out .agents/fwf/runs/stage17/correlate-dry-run` — wrote correlations.json; dry-run correctly marked `not_applicable`
+  - `node scripts/chain_event_indexer.js inspect counts --events .agents/fwf/runs/stage17/replay-fixture/events.jsonl` — reported 17 events, 1 listing, 1 session, 1 escrow
+  - Verified state derivation: listing 1=active, session 1=settled, escrow 1=settled
+  - Regression: `node --check scripts/data_trade_cli.js` passed; `node --check scripts/zk_real_data_trade_flow.js` passed; `bash -n scripts/run_data_trade_validation.sh` passed; `node scripts/data_trade_cli.js --help` ran
+  - Forward references verified: `rg -n "chain-event-indexer-state-sync" docs/README.md docs/architecture/platform-business-model.md docs/implementation/data-trade-cli-api-boundary.md docs/implementation/data-trade-implementation.md` — all 4 docs updated
+- Tests not run:
+  - Live RPC scan validation: RPC endpoints not available in this environment; validations requiring `@polkadot/api` chain connections skipped. No live indexing validation claimed.
+- Deviations from plan:
+  - None. All tasks executed per plan.
+- Questions for Codex/Owner:
+  - None.
+- Remaining risks:
+  - Live RPC scan not validated; requires chain availability on deployment VMs.
+  - Event field name normalization depends on @polkadot/api metadata at scan time; fixture events use hand-crafted field names matching the baseline pallet definitions.
+
+### 2026-06-30 opencode Pass 2 (Review Fix)
+
+- Branch: `stage/stage17-chain-event-indexer`
+- Base commit: `dc08a4f`
+- Head commit: (pending)
+- Commits:
+  - (pending)
+- Tasks completed (from code review required fixes):
+  - Fix 1: Added canonical field name map in `scripts/lib/chain_event_normalizer.js` mapping Polkadot.js camelCase names (listingId, escrowId, sessionId, roundIndex, etc.) to stable snake_case (listing_id, escrow_id, etc.). Applied `canonicalizeFieldNames()` at the end of `normalizeEventFields()`.
+  - Fix 1: Updated `scripts/lib/data_trade_state_sync.js` with `fieldValue()` helper that reads both snake_case and camelCase field names for all state-derivation fields (listing_id/listingId, escrow_id/escrowId, session_id/sessionId, round_index/roundIndex, etc.).
+  - Fix 1: Updated `scripts/lib/data_trade_evidence_correlation.js` with `fieldValue()` helper for dual-read of listing_id/listingId, session_id/sessionId, escrow_id/escrowId.
+  - Fix 2: Added `--chain` value validation in `scripts/chain_event_indexer.js:cmdScan` — rejects any value outside `main`, `child`, `both` with exit code 1 before creating any output files.
+  - Created `.agents/fwf/runs/stage17/camelCase_events.jsonl` — minimal no-RPC fixture with 7 events using camelCase field names, used for regression coverage.
+- Files changed:
+  - `scripts/lib/chain_event_normalizer.js` — added CANONICAL_FIELD_NAMES map, canonicalizeFieldNames(), applied in normalizeEventFields()
+  - `scripts/lib/data_trade_state_sync.js` — added fieldValue() helper, dual-read in all derive functions
+  - `scripts/lib/data_trade_evidence_correlation.js` — added fieldValue() helper, dual-read in findMatchingEvents()
+  - `scripts/chain_event_indexer.js` — added --chain validation with early exit
+- Tests run:
+  - `node --check` on all 4 JS files — passed
+  - `node scripts/chain_event_indexer.js scan --chain nope --from 1 --to 1 --out ...` — exit 1 with error message
+  - `node scripts/chain_event_indexer.js state --events camelCase_events.jsonl` — listing 100=active, session 100=settled, escrow 100=settled
+  - `node scripts/chain_event_indexer.js correlate-evidence` with dry-run evidence against camelCase events — `not_applicable` (correct)
+  - `node scripts/chain_event_indexer.js correlate-evidence` with live-chain evidence (listing_id=100, escrow_id=100, session_id=100) against camelCase events — `matched` with 7 events (correct)
+  - Snake_case fixture regression: replay + state + correlation all produce identical results (listing 1=active, session 1=settled, escrow 1=settled; correlation not_applicable)
+  - Regression: data_trade_cli.js, zk_real_data_trade_flow.js, run_data_trade_validation.sh all pass
+- Tests not run:
+  - Live RPC scan: endpoints still unavailable in this environment
+- Deviations from plan:
+  - None. Fixes address exactly the required findings in `docs/internal/agent-reviews/2026-06-30-stage17-chain-event-indexer-code-review.md`.
+- Questions for Codex/Owner:
+  - None.
+- Remaining risks:
+  - Live RPC scan not validated; requires chain availability on deployment VMs.
+  - CamelCase canonicalization map may need updates if new pallet events are added with additional camelCase field names.
+
+### 2026-06-30 opencode Pass 3 (Review-Fix Re-Confirmation)
+
+- Branch: `stage/stage17-chain-event-indexer`
+- Base commit: `9a4e87b` (Pass 2 review fix)
+- Head commit: (no new changes)
+- Commits:
+  - None. Both required fixes already applied in Pass 2 (`9a4e87b`).
+- Tasks completed:
+  - Verified code review `docs/internal/agent-reviews/2026-06-30-stage17-chain-event-indexer-code-review.md` has not changed since Pass 2.
+  - Verified Fix 1 (field name canonicalization): `CANONICAL_FIELD_NAMES` map and `canonicalizeFieldNames()` in `scripts/lib/chain_event_normalizer.js`, `fieldValue()` dual-read in `scripts/lib/data_trade_state_sync.js` and `scripts/lib/data_trade_evidence_correlation.js` all present.
+  - Verified Fix 2 (--chain validation): `--chain nope` rejected with exit code 1.
+  - Verified all JS files pass `node --check`.
+  - Verified regression: data_trade_cli.js, zk_real_data_trade_flow.js, run_data_trade_validation.sh pass.
+- Files changed:
+  - None (no new changes needed).
+- Tests run:
+  - `node --check` on all 4 JS files — passed
+  - `node scripts/chain_event_indexer.js scan --chain nope ...` — exit 1 (expected)
+  - `node --check scripts/data_trade_cli.js` — passed
+  - `node --check scripts/zk_real_data_trade_flow.js` — passed
+  - `bash -n scripts/run_data_trade_validation.sh` — passed
+- Tests not run:
+  - Live RPC scan: endpoints still unavailable.
+- Deviations from plan:
+  - None. No new fixes required beyond those already committed in Pass 2.
+- Questions for Codex/Owner:
+  - None.
+- Remaining risks:
+  - Live RPC scan not validated; requires chain availability on deployment VMs.
