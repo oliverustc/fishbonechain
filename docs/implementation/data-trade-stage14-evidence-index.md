@@ -159,4 +159,5 @@ Live-chain 场景需要可用的 main RPC 和 child6 RPC。Readiness 失败时�
 - [Stage 14 Plan](../internal/agent-plans/2026-06-28-stage14-data-trade-reproducible-validation.md)
 - [Stage 13 Quality Baseline](../internal/agent-reviews/2026-06-27-data-trade-stage13-quality-baseline.md)
 - [Stage 12 Evidence Index (历史)](../implementation/data-trade-stage12-evidence-index.md)
+- [Platform Business Model](../architecture/platform-business-model.md) — Stage 15 platform object model; supersedes the inline mapping in section "与未来平台对象的映射" above
 - [Data Trade Validation Experiment](../experiments/data-trade-validation.md)
