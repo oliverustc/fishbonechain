@@ -43,6 +43,50 @@ export const BASELINE_EVENTS = Object.freeze(
 );
 
 /**
+ * Canonical field name map: Polkadot.js camelCase → stable snake_case.
+ *
+ * State derivation and evidence correlation read snake_case field names.
+ * Live chains expose camelCase metadata names.  This map ensures scanned
+ * and fixture events use the same canonical names.
+ */
+const CANONICAL_FIELD_NAMES = Object.freeze({
+  listingId: "listing_id",
+  escrowId: "escrow_id",
+  sessionId: "session_id",
+  roundIndex: "round_index",
+  remainingRounds: "remaining_rounds",
+  newRoot: "new_root",
+  pricePerRound: "price_per_round",
+  maxRounds: "max_rounds",
+  dataOwner: "data_owner",
+  paidRounds: "paid_rounds",
+  slashedDeposit: "slashed_deposit",
+  extrinsicIndex: "extrinsic_index",
+  imtRoot: "imt_root",
+  depositHint: "deposit_hint",
+  requestSchemaHash: "request_schema_hash",
+  proofParamsHash: "proof_params_hash",
+  hashChainAnchor: "hash_chain_anchor",
+  settlementMode: "settlement_mode",
+  verifierAuthority: "verifier_authority",
+});
+
+/**
+ * Canonicalize field names from Polkadot.js camelCase to stable snake_case.
+ *
+ * @param {object} fields - raw field map from normalizeEventFields
+ * @returns {object} field map with canonical names
+ */
+export function canonicalizeFieldNames(fields) {
+  const result = {};
+  for (const [key, value] of Object.entries(fields)) {
+    const canon = CANONICAL_FIELD_NAMES[key] || key;
+    result[canon] = value;
+  }
+  return result;
+}
+
+/**
  * Convert any value to a JSON-compatible representation.
  *
  * Handles BN (from @polkadot util), u128, AccountId (SS58), hashes (hex),
@@ -102,7 +146,7 @@ export function normalizeEventFields(eventRecord) {
     }
   }
 
-  return fields;
+  return canonicalizeFieldNames(fields);
 }
 
 /**

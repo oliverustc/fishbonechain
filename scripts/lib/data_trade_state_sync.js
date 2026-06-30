@@ -32,16 +32,29 @@ export function deriveState(events) {
   return { listings, sessions, escrows };
 }
 
+/**
+ * Read a field value by trying snake_case first, then camelCase.
+ */
+function fieldValue(fields, snake, camel) {
+  if (snake in fields) return fields[snake];
+  if (camel in fields) return fields[camel];
+  return undefined;
+}
+
 function listingId(fields) {
-  return fields.listing_id;
+  return fieldValue(fields, "listing_id", "listingId");
 }
 
 function sessionId(fields) {
-  return fields.session_id;
+  return fieldValue(fields, "session_id", "sessionId");
 }
 
 function escrowId(fields) {
-  return fields.escrow_id;
+  return fieldValue(fields, "escrow_id", "escrowId");
+}
+
+function roundIdx(fields) {
+  return fieldValue(fields, "round_index", "roundIndex");
 }
 
 function deriveListingState(listings, variant, fields, event_id) {
@@ -67,13 +80,13 @@ function deriveListingState(listings, variant, fields, event_id) {
 
   if (variant === "DataPublished") {
     rec.owner = fields.owner;
-    rec.price_per_round = fields.price_per_round;
-    rec.max_rounds = Number(fields.max_rounds);
+    rec.price_per_round = fieldValue(fields, "price_per_round", "pricePerRound");
+    rec.max_rounds = Number(fieldValue(fields, "max_rounds", "maxRounds"));
     rec.status = "active";
   } else if (variant === "ListingStatusChanged") {
     rec.status = fields.status;
   } else if (variant === "ImtRootUpdated") {
-    rec.imt_root = fields.new_root;
+    rec.imt_root = fieldValue(fields, "new_root", "newRoot");
   }
 }
 
@@ -101,9 +114,9 @@ function deriveSessionState(sessions, variant, fields, event_id) {
 
   if (variant === "SessionCreated") {
     rec.requester = fields.requester;
-    rec.data_owner = fields.data_owner;
-    rec.listing_id = fields.listing_id != null ? Number(fields.listing_id) : null;
-    rec.escrow_id = fields.escrow_id != null ? Number(fields.escrow_id) : null;
+    rec.data_owner = fieldValue(fields, "data_owner", "dataOwner");
+    rec.listing_id = listingId(fields) != null ? Number(listingId(fields)) : null;
+    rec.escrow_id = escrowId(fields) != null ? Number(escrowId(fields)) : null;
   } else if (variant === "SessionAccepted") {
     rec.status = "active";
   } else if (variant === "SettlementClaimed") {
@@ -114,14 +127,14 @@ function deriveSessionState(sessions, variant, fields, event_id) {
     rec.status = "last_payment_claimed";
   }
 
-  const roundIdx = fields.round_index;
-  if (roundIdx != null) {
-    if (!rec.rounds[roundIdx]) {
-      rec.rounds[roundIdx] = { round_index: Number(roundIdx), events: [], status: "in_progress" };
+  const rIdx = roundIdx(fields);
+  if (rIdx != null) {
+    if (!rec.rounds[rIdx]) {
+      rec.rounds[rIdx] = { round_index: Number(rIdx), events: [], status: "in_progress" };
     }
-    rec.rounds[roundIdx].events.push(variant);
+    rec.rounds[rIdx].events.push(variant);
     if (variant === "RoundCompleted") {
-      rec.rounds[roundIdx].status = "completed";
+      rec.rounds[rIdx].status = "completed";
     }
   }
 }
@@ -152,7 +165,7 @@ function deriveEscrowState(escrows, variant, fields, event_id) {
 
   if (variant === "EscrowOpened") {
     rec.requester = fields.requester;
-    rec.data_owner = fields.data_owner;
+    rec.data_owner = fieldValue(fields, "data_owner", "dataOwner");
   } else if (variant === "FundsLocked") {
     rec.funds_locked = fields.amount;
     rec.status = "funded";
@@ -160,11 +173,12 @@ function deriveEscrowState(escrows, variant, fields, event_id) {
     rec.deposit_locked = fields.amount;
     rec.status = "ready";
   } else if (variant === "EscrowSettled") {
-    rec.paid_rounds = fields.paid_rounds != null ? Number(fields.paid_rounds) : null;
+    rec.paid_rounds = fieldValue(fields, "paid_rounds", "paidRounds") != null
+      ? Number(fieldValue(fields, "paid_rounds", "paidRounds")) : null;
     rec.refunded = fields.refunded;
     rec.status = "settled";
   } else if (variant === "EscrowPunished") {
-    rec.slashed_deposit = fields.slashed_deposit;
+    rec.slashed_deposit = fieldValue(fields, "slashed_deposit", "slashedDeposit");
     rec.status = "punished";
   }
 }

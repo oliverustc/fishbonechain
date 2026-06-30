@@ -218,6 +218,11 @@ async function cmdScan(args) {
   const mainWs = optionalArg(args, "--main");
   const childWs = optionalArg(args, "--child");
   const chainRole = optionalArg(args, "--chain") || "both";
+  if (!["main", "child", "both"].includes(chainRole)) {
+    console.error(`invalid --chain value: ${chainRole}`);
+    console.error("expected: main | child | both");
+    process.exit(1);
+  }
   const fromBlock = Number(optionalArg(args, "--from"));
   const toBlock = Number(optionalArg(args, "--to"));
   const maxBlocks = optionalArg(args, "--max-blocks") ? Number(optionalArg(args, "--max-blocks")) : null;

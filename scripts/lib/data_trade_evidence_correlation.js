@@ -87,22 +87,28 @@ export function correlate(events, evidenceInput) {
   };
 }
 
+function fieldValue(fields, snake, camel) {
+  if (snake in fields) return fields[snake];
+  if (camel in fields) return fields[camel];
+  return undefined;
+}
+
 function findMatchingEvents(events, listingId, sessionId, escrowId, expectedEvents) {
   return events.filter((e) => {
     const fields = e.fields || {};
 
     if (listingId != null) {
-      const evtListingId = fields.listing_id;
+      const evtListingId = fieldValue(fields, "listing_id", "listingId");
       if (evtListingId != null && Number(evtListingId) === Number(listingId)) return true;
     }
 
     if (sessionId != null) {
-      const evtSessionId = fields.session_id;
+      const evtSessionId = fieldValue(fields, "session_id", "sessionId");
       if (evtSessionId != null && Number(evtSessionId) === Number(sessionId)) return true;
     }
 
     if (escrowId != null) {
-      const evtEscrowId = fields.escrow_id;
+      const evtEscrowId = fieldValue(fields, "escrow_id", "escrowId");
       if (evtEscrowId != null && Number(evtEscrowId) === Number(escrowId)) return true;
     }
 

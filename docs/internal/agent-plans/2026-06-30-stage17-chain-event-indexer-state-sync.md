@@ -489,3 +489,39 @@ Readiness: implementation should proceed only after opencode re-reviews and appr
 - Remaining risks:
   - Live RPC scan not validated; requires chain availability on deployment VMs.
   - Event field name normalization depends on @polkadot/api metadata at scan time; fixture events use hand-crafted field names matching the baseline pallet definitions.
+
+### 2026-06-30 opencode Pass 2 (Review Fix)
+
+- Branch: `stage/stage17-chain-event-indexer`
+- Base commit: `dc08a4f`
+- Head commit: (pending)
+- Commits:
+  - (pending)
+- Tasks completed (from code review required fixes):
+  - Fix 1: Added canonical field name map in `scripts/lib/chain_event_normalizer.js` mapping Polkadot.js camelCase names (listingId, escrowId, sessionId, roundIndex, etc.) to stable snake_case (listing_id, escrow_id, etc.). Applied `canonicalizeFieldNames()` at the end of `normalizeEventFields()`.
+  - Fix 1: Updated `scripts/lib/data_trade_state_sync.js` with `fieldValue()` helper that reads both snake_case and camelCase field names for all state-derivation fields (listing_id/listingId, escrow_id/escrowId, session_id/sessionId, round_index/roundIndex, etc.).
+  - Fix 1: Updated `scripts/lib/data_trade_evidence_correlation.js` with `fieldValue()` helper for dual-read of listing_id/listingId, session_id/sessionId, escrow_id/escrowId.
+  - Fix 2: Added `--chain` value validation in `scripts/chain_event_indexer.js:cmdScan` — rejects any value outside `main`, `child`, `both` with exit code 1 before creating any output files.
+  - Created `.agents/fwf/runs/stage17/camelCase_events.jsonl` — minimal no-RPC fixture with 7 events using camelCase field names, used for regression coverage.
+- Files changed:
+  - `scripts/lib/chain_event_normalizer.js` — added CANONICAL_FIELD_NAMES map, canonicalizeFieldNames(), applied in normalizeEventFields()
+  - `scripts/lib/data_trade_state_sync.js` — added fieldValue() helper, dual-read in all derive functions
+  - `scripts/lib/data_trade_evidence_correlation.js` — added fieldValue() helper, dual-read in findMatchingEvents()
+  - `scripts/chain_event_indexer.js` — added --chain validation with early exit
+- Tests run:
+  - `node --check` on all 4 JS files — passed
+  - `node scripts/chain_event_indexer.js scan --chain nope --from 1 --to 1 --out ...` — exit 1 with error message
+  - `node scripts/chain_event_indexer.js state --events camelCase_events.jsonl` — listing 100=active, session 100=settled, escrow 100=settled
+  - `node scripts/chain_event_indexer.js correlate-evidence` with dry-run evidence against camelCase events — `not_applicable` (correct)
+  - `node scripts/chain_event_indexer.js correlate-evidence` with live-chain evidence (listing_id=100, escrow_id=100, session_id=100) against camelCase events — `matched` with 7 events (correct)
+  - Snake_case fixture regression: replay + state + correlation all produce identical results (listing 1=active, session 1=settled, escrow 1=settled; correlation not_applicable)
+  - Regression: data_trade_cli.js, zk_real_data_trade_flow.js, run_data_trade_validation.sh all pass
+- Tests not run:
+  - Live RPC scan: endpoints still unavailable in this environment
+- Deviations from plan:
+  - None. Fixes address exactly the required findings in `docs/internal/agent-reviews/2026-06-30-stage17-chain-event-indexer-code-review.md`.
+- Questions for Codex/Owner:
+  - None.
+- Remaining risks:
+  - Live RPC scan not validated; requires chain availability on deployment VMs.
+  - CamelCase canonicalization map may need updates if new pallet events are added with additional camelCase field names.
