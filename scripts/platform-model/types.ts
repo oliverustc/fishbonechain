@@ -1,203 +1,248 @@
-// Platform Business Model — Stage 15 type draft.
-// Dependency-free TypeScript interfaces for the 9 core platform objects.
-// No import/require statements. Backend-neutral. Used for schema review,
-// documentation, and future implementation.
+/**
+ * Platform Business Model — Stage 15 type draft.
+ *
+ * Dependency-free type documentation using JSDoc @typedef annotations.
+ * This file passes `node --check` (no TypeScript-only syntax). It is
+ * backend-neutral and used for schema review, documentation, and future
+ * implementation.
+ *
+ * @module platform-model
+ */
 
 // ── Type Aliases ──
 
-type HexHash = string;
-type ChainKey = string;
-type PlatformId = string;
-type IsoTimestamp = string;
-type ChainId = string;
+/**
+ * @typedef {string} HexHash
+ */
+/**
+ * @typedef {string} ChainKey
+ */
+/**
+ * @typedef {string} PlatformId
+ */
+/**
+ * @typedef {string} IsoTimestamp
+ */
+/**
+ * @typedef {string} ChainId
+ */
 
 // ── Enums & Literal Unions ──
 
-type UserRole = "data_owner" | "data_requester" | "verifier" | "admin";
-
-type SceneKind = "DataTrade" | "Crowdsource" | "CrossDomainFlow" | "VerifiableTraining";
-
-type DatasetStatus = "draft" | "published" | "retired";
-
-type DataAssetStatus = "active" | "suspended" | "retired";
-
-type BusinessModule = "data_trade" | "data_collection" | "cross_domain_flow" | "verifiable_training";
-
-type TaskStatus = "pending" | "active" | "completed" | "failed" | "disputed" | "cancelled";
-
-type WorkflowRunStatus = "running" | "completed" | "failed" | "disputed" | "timeout";
-
-type EvidenceCategory = "dry_run" | "negative" | "live_chain" | "postcheck";
-
-type EvidenceStatus = "passed" | "failed" | "skipped";
-
-type JobType = "proof_generation" | "data_preprocessing" | "anonymization" | "verification" | "training";
-
-type JobStatus = "queued" | "running" | "completed" | "failed";
-
-type SettlementMode = "MainEscrow" | "FmcAssisted" | "Hybrid" | "None";
+/**
+ * @typedef {"data_owner"|"data_requester"|"verifier"|"admin"} UserRole
+ */
+/**
+ * @typedef {"DataTrade"|"Crowdsource"|"CrossDomainFlow"|"VerifiableTraining"} SceneKind
+ */
+/**
+ * @typedef {"draft"|"published"|"retired"} DatasetStatus
+ */
+/**
+ * @typedef {"active"|"suspended"|"retired"} DataAssetStatus
+ */
+/**
+ * @typedef {"data_trade"|"data_collection"|"cross_domain_flow"|"verifiable_training"} BusinessModule
+ */
+/**
+ * @typedef {"pending"|"active"|"completed"|"failed"|"disputed"|"cancelled"} TaskStatus
+ */
+/**
+ * @typedef {"running"|"completed"|"failed"|"disputed"|"timeout"} WorkflowRunStatus
+ */
+/**
+ * @typedef {"dry_run"|"negative"|"live_chain"|"postcheck"} EvidenceCategory
+ */
+/**
+ * @typedef {"passed"|"failed"|"skipped"} EvidenceStatus
+ */
+/**
+ * @typedef {"proof_generation"|"data_preprocessing"|"anonymization"|"verification"|"training"} JobType
+ */
+/**
+ * @typedef {"queued"|"running"|"completed"|"failed"} JobStatus
+ */
+/**
+ * @typedef {"MainEscrow"|"FmcAssisted"|"Hybrid"|"None"} SettlementMode
+ */
 
 // ── Nested Types ──
 
-interface FieldSpec {
-  field_name: string;
-  field_type: "uint64" | "bytes" | "string";
-  has_salt: boolean;
-}
+/**
+ * @typedef {object} FieldSpec
+ * @property {string} field_name
+ * @property {"uint64"|"bytes"|"string"} field_type
+ * @property {boolean} has_salt
+ */
 
-interface ImtConfig {
-  depth: number;
-  schema_version: string;
-}
+/**
+ * @typedef {object} ImtConfig
+ * @property {number} depth
+ * @property {string} schema_version
+ */
 
-interface ArtifactRef {
-  path: string;
-  digest: HexHash | null;
-  artifact_type: string;
-}
+/**
+ * @typedef {object} ArtifactRef
+ * @property {string} path
+ * @property {HexHash|null} digest
+ * @property {string} artifact_type
+ */
 
-interface EvidenceChainEventRef {
-  pallet: string;
-  variant: string;
-  block_number: number;
-  event_index: number;
-}
+/**
+ * @typedef {object} EvidenceChainEventRef
+ * @property {string} pallet
+ * @property {string} variant
+ * @property {number} block_number
+ * @property {number} event_index
+ */
 
-interface EvidenceConstraint {
-  round_index: number;
-  field_name: string;
-  proof_digest: HexHash;
-  business_input_hash: HexHash;
-  vk_hash: HexHash;
-  public_input_hash: HexHash;
-  on_chain_bound: boolean;
-}
+/**
+ * @typedef {object} EvidenceConstraint
+ * @property {number} round_index
+ * @property {string} field_name
+ * @property {HexHash} proof_digest
+ * @property {HexHash} business_input_hash
+ * @property {HexHash} vk_hash
+ * @property {HexHash} public_input_hash
+ * @property {boolean} on_chain_bound
+ */
 
-interface SettlementRecord {
-  completed_rounds: number;
-  remaining_rounds: number;
-}
+/**
+ * @typedef {object} SettlementRecord
+ * @property {number} completed_rounds
+ * @property {number} remaining_rounds
+ */
 
-interface ScenarioOutcome {
-  type: string;
-  events: string[];
-  description: string | null;
-}
+/**
+ * @typedef {object} ScenarioOutcome
+ * @property {string} type
+ * @property {string[]} events
+ * @property {string|null} description
+ */
 
 // ── Core Objects ──
 
-interface User {
-  user_id: PlatformId;
-  display_name: string;
-  role: UserRole;
-  created_at: IsoTimestamp;
-  updated_at: IsoTimestamp;
-}
+/**
+ * @typedef {object} User
+ * @property {PlatformId} user_id
+ * @property {string} display_name
+ * @property {UserRole} role
+ * @property {IsoTimestamp} created_at
+ * @property {IsoTimestamp} updated_at
+ */
 
-interface ChainAccount {
-  account_id: PlatformId;
-  user_id: PlatformId;
-  chain_id: ChainId;
-  address: ChainKey;
-  scene_kind: SceneKind;
-  verified_at: IsoTimestamp | null;
-  created_at: IsoTimestamp;
-}
+/**
+ * @typedef {object} ChainAccount
+ * @property {PlatformId} account_id
+ * @property {PlatformId} user_id
+ * @property {ChainId} chain_id
+ * @property {ChainKey} address
+ * @property {SceneKind} scene_kind
+ * @property {IsoTimestamp|null} verified_at
+ * @property {IsoTimestamp} created_at
+ */
 
-interface Dataset {
-  dataset_id: PlatformId;
-  owner_account_id: PlatformId;
-  name: string;
-  description: string;
-  schema_version: string;
-  field_specs: FieldSpec[];
-  imt_config: ImtConfig | null;
-  status: DatasetStatus;
-  created_at: IsoTimestamp;
-  updated_at: IsoTimestamp;
-}
+/**
+ * @typedef {object} Dataset
+ * @property {PlatformId} dataset_id
+ * @property {PlatformId} owner_account_id
+ * @property {string} name
+ * @property {string} description
+ * @property {string} schema_version
+ * @property {FieldSpec[]} field_specs
+ * @property {ImtConfig|null} imt_config
+ * @property {DatasetStatus} status
+ * @property {IsoTimestamp} created_at
+ * @property {IsoTimestamp} updated_at
+ */
 
-interface DataAsset {
-  asset_id: PlatformId;
-  dataset_id: PlatformId;
-  owner_account_id: PlatformId;
-  chain_listing_id: number | null;
-  price_per_round: number;
-  max_rounds: number;
-  deposit_hint: number;
-  request_schema_hash: HexHash;
-  proof_params_hash: HexHash;
-  status: DataAssetStatus;
-  created_at: IsoTimestamp;
-  updated_at: IsoTimestamp;
-}
+/**
+ * @typedef {object} DataAsset
+ * @property {PlatformId} asset_id
+ * @property {PlatformId} dataset_id
+ * @property {PlatformId} owner_account_id
+ * @property {number|null} chain_listing_id
+ * @property {number} price_per_round
+ * @property {number} max_rounds
+ * @property {number} deposit_hint
+ * @property {HexHash} request_schema_hash
+ * @property {HexHash} proof_params_hash
+ * @property {DataAssetStatus} status
+ * @property {IsoTimestamp} created_at
+ * @property {IsoTimestamp} updated_at
+ */
 
-interface BusinessTask {
-  task_id: PlatformId;
-  module: BusinessModule;
-  initiator_account_id: PlatformId;
-  counterparty_account_id: PlatformId | null;
-  reference_ids: Record<string, string>;
-  status: TaskStatus;
-  created_at: IsoTimestamp;
-  updated_at: IsoTimestamp;
-}
+/**
+ * @typedef {object} BusinessTask
+ * @property {PlatformId} task_id
+ * @property {BusinessModule} module
+ * @property {PlatformId} initiator_account_id
+ * @property {PlatformId|null} counterparty_account_id
+ * @property {Record<string,string>} reference_ids
+ * @property {TaskStatus} status
+ * @property {IsoTimestamp} created_at
+ * @property {IsoTimestamp} updated_at
+ */
 
-interface WorkflowRun {
-  run_id: PlatformId;
-  task_id: PlatformId;
-  session_id: number | null;
-  escrow_id: number | null;
-  round_count: number;
-  status: WorkflowRunStatus;
-  started_at: IsoTimestamp | null;
-  completed_at: IsoTimestamp | null;
-}
+/**
+ * @typedef {object} WorkflowRun
+ * @property {PlatformId} run_id
+ * @property {PlatformId} task_id
+ * @property {number|null} session_id
+ * @property {number|null} escrow_id
+ * @property {number} round_count
+ * @property {WorkflowRunStatus} status
+ * @property {IsoTimestamp|null} started_at
+ * @property {IsoTimestamp|null} completed_at
+ */
 
-interface Evidence {
-  evidence_id: PlatformId;
-  run_id: PlatformId;
-  category: EvidenceCategory;
-  status: EvidenceStatus;
-  scenario: string | null;
-  result: string | null;
-  command: string | null;
-  log_path: string | null;
-  artifacts: ArtifactRef[];
-  chain_tx_hashes: HexHash[];
-  chain_event_refs: EvidenceChainEventRef[];
-  constraints: EvidenceConstraint[];
-  settlement: SettlementRecord | null;
-  scenario_outcome: ScenarioOutcome | null;
-  error: string | null;
-  created_at: IsoTimestamp;
-}
+/**
+ * @typedef {object} Evidence
+ * @property {PlatformId} evidence_id
+ * @property {PlatformId} run_id
+ * @property {EvidenceCategory} category
+ * @property {EvidenceStatus} status
+ * @property {string|null} scenario
+ * @property {string|null} result
+ * @property {string|null} command
+ * @property {string|null} log_path
+ * @property {ArtifactRef[]} artifacts
+ * @property {HexHash[]} chain_tx_hashes
+ * @property {EvidenceChainEventRef[]} chain_event_refs
+ * @property {EvidenceConstraint[]} constraints
+ * @property {SettlementRecord|null} settlement
+ * @property {ScenarioOutcome|null} scenario_outcome
+ * @property {string|null} error
+ * @property {IsoTimestamp} created_at
+ */
 
-interface ChainEvent {
-  event_id: PlatformId;
-  chain_id: ChainId;
-  block_number: number;
-  block_hash: HexHash;
-  extrinsic_index: number | null;
-  event_index: number;
-  pallet: string;
-  variant: string;
-  fields: Record<string, unknown>;
-  cursor: string | null;
-  ingested_at: IsoTimestamp;
-}
+/**
+ * @typedef {object} ChainEvent
+ * @property {PlatformId} event_id
+ * @property {ChainId} chain_id
+ * @property {number} block_number
+ * @property {HexHash} block_hash
+ * @property {number|null} extrinsic_index
+ * @property {number} event_index
+ * @property {string} pallet
+ * @property {string} variant
+ * @property {Record<string,*>} fields
+ * @property {string|null} cursor
+ * @property {IsoTimestamp} ingested_at
+ */
 
-interface OffchainJob {
-  job_id: PlatformId;
-  job_type: JobType;
-  status: JobStatus;
-  input_refs: ArtifactRef[];
-  output_refs: ArtifactRef[];
-  worker_id: string | null;
-  digest: HexHash | null;
-  error: string | null;
-  evidence_id: PlatformId | null;
-  created_at: IsoTimestamp;
-  started_at: IsoTimestamp | null;
-  completed_at: IsoTimestamp | null;
-}
+/**
+ * @typedef {object} OffchainJob
+ * @property {PlatformId} job_id
+ * @property {JobType} job_type
+ * @property {JobStatus} status
+ * @property {ArtifactRef[]} input_refs
+ * @property {ArtifactRef[]} output_refs
+ * @property {string|null} worker_id
+ * @property {HexHash|null} digest
+ * @property {string|null} error
+ * @property {PlatformId|null} evidence_id
+ * @property {IsoTimestamp} created_at
+ * @property {IsoTimestamp|null} started_at
+ * @property {IsoTimestamp|null} completed_at
+ */

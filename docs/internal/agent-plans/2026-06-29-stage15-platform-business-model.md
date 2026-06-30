@@ -290,4 +290,37 @@ Ask opencode plan review to focus on:
 - Questions for Codex/Owner:
   - None.
 - Remaining risks:
-  - None. All acceptance criteria met: formal doc exists and indexed, 9 core objects covered, data-trade mapped with per-constraint fields, placeholder modules marked as non-claims, type draft is dependency-free, no chain/code/proof/deployment changes.
+   - None. All acceptance criteria met: formal doc exists and indexed, 9 core objects covered, data-trade mapped with per-constraint fields, placeholder modules marked as non-claims, type draft is dependency-free, no chain/code/proof/deployment changes.
+
+### 2026-06-30 opencode Review-Fix Pass 1
+
+- Branch: `stage/stage15-platform-business-model`
+- Base commit: `8c324ee docs(platform): define stage15 business model`
+- Review: `docs/internal/agent-reviews/2026-06-30-stage15-platform-business-model-code-review.md` (decision: `approved-with-required-fixes`)
+- Commits:
+- Tasks completed:
+  - **Fix 1 (High)**: Converted `scripts/platform-model/types.ts` from TypeScript `type`/`interface` syntax to JSDoc `@typedef` annotations in valid JavaScript. File is now dependency-free (0 imports) and passes `node --check`. Preserves all 9 core objects, literal union types, and nested types.
+  - **Fix 2 (Medium)**: Fixed broken relative link from `../scripts/platform-model/types.ts` to `../../scripts/platform-model/types.ts`. Verified target resolves to `scripts/platform-model/types.ts` from `docs/architecture/`.
+  - **Fix 3 (Medium)**: Reworded `on_chain_bound` field description from "Whether proof digest was verified on-chain" to "Whether the proof digest was bound into accepted chain state/events (digest and metadata binding only; not on-chain Groth16 verification)".
+  - **Fix 4 (Low)**: Corrected `DataAsset.chain_listing_id` type in formal doc from `ChainId | null` to `number | null` (consistent with type draft: line 124).
+- Files changed:
+  - Modified: `scripts/platform-model/types.ts` (239 insertions, 194 deletions — converted to JSDoc)
+  - Modified: `docs/architecture/platform-business-model.md` (3 line fixes)
+- Tests run:
+  - `node --check scripts/platform-model/types.ts`: PASSED
+  - `test -f scripts/platform-model/types.ts`: EXISTS
+  - `test -f docs/architecture/platform-business-model.md`: EXISTS
+  - `rg -c '^\s*(import|require)\s' scripts/platform-model/types.ts || true`: output `0` (still dependency-free)
+  - `rg -n "on_chain_bound" docs/architecture/platform-business-model.md`: line 175 shows corrected wording
+  - `rg -n "chain_listing_id" docs/architecture/platform-business-model.md`: line 90 shows `number | null`
+  - `test -f "docs/architecture/../../scripts/platform-model/types.ts"`: LINK RESOLVES
+  - `node --check scripts/zk_real_data_trade_flow.js`: PASSED
+  - `node --check scripts/lib/data_trade_validation_summary.js`: PASSED
+- Tests not run:
+  - None. All targeted validation commands executed successfully.
+- Deviations from plan:
+  - The type draft artifact changed from TypeScript `type`/`interface` syntax to JSDoc `@typedef` annotations, as required by review fix 1. This preserves the type draft intent while satisfying the plan's `node --check` validation command.
+- Questions for Codex/Owner:
+  - None.
+- Remaining risks:
+  - None. All 4 required fixes applied, all validation passes.

@@ -87,7 +87,7 @@
 | `asset_id` | `PlatformId` | Platform-unique data asset identifier |
 | `dataset_id` | `PlatformId` | Source Dataset reference |
 | `owner_account_id` | `PlatformId` | Publishing ChainAccount reference |
-| `chain_listing_id` | `ChainId \| null` | Chain-specific listing ID (e.g., `pallet-data-registry` listing) |
+| `chain_listing_id` | `number \| null` | Chain-specific listing ID (e.g., `pallet-data-registry` listing) |
 | `price_per_round` | `number` | Price per round in chain-native units |
 | `max_rounds` | `number` | Maximum trade rounds |
 | `deposit_hint` | `number` | Suggested deposit amount |
@@ -172,7 +172,7 @@
 | `business_input_hash` | `HexHash` | Business witness input hash | Chain `RoundState` / `business_input_hash` field |
 | `vk_hash` | `HexHash` | Verifying key hash | Chain `RoundState` `vk_hash` field |
 | `public_input_hash` | `HexHash` | Public input hash | Chain `RoundState` `public_input_hash` field |
-| `on_chain_bound` | `boolean` | Whether proof digest was verified on-chain | Chain event + `submit_data_proof` result |
+| `on_chain_bound` | `boolean` | Whether the proof digest was bound into accepted chain state/events (digest and metadata binding only; not on-chain Groth16 verification) | Chain events from `submit_data_proof` / `attest_data_proof` |
 
 **What must NOT be stored or trusted**:
 - Evidence records as replacements for chain state queries (they record, not enforce).
@@ -375,4 +375,4 @@ The following modules are target abstractions for future stages. The mappings be
 - [Data Trade Validation Experiment](../experiments/data-trade-validation.md)
 - [Stage 14 Evidence Index](../implementation/data-trade-stage14-evidence-index.md)
 - [Long-term Roadmap](../internal/agent-plans/2026-06-28-data-flow-platform-long-term-roadmap.md)
-- [Type draft](../scripts/platform-model/types.ts) — dependency-free TypeScript interfaces for this model
+- [Type draft](../../scripts/platform-model/types.ts) — dependency-free JSDoc type definitions for this model
