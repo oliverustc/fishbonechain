@@ -433,3 +433,59 @@ Readiness: implementation should proceed only after opencode re-reviews and appr
   - None.
 - Remaining risks:
   - Live RPC availability for optional bounded scan validation is unknown.
+
+### 2026-06-30 opencode Pass 1
+
+- Branch: `stage/stage17-chain-event-indexer`
+- Base commit: `460f8d0` (plan re-review approved)
+- Head commit: (pending)
+- Commits:
+  - (pending)
+- Tasks completed:
+  - Re-read all required inputs
+  - Created committed fixture `scripts/fixtures/chain_events/data_trade_sample_events.jsonl` (17 hand-crafted events covering one listing, one escrow, one session, one completed round, and settlement path)
+  - Implemented `scripts/lib/chain_event_normalizer.js` with baseline event mapping, normalizeEventFields, normalizeEvent, JSONL read/write, cursor helpers
+  - Implemented `scripts/lib/data_trade_state_sync.js` with deriveState, generateStateSummary, generateMarkdownSummary
+  - Implemented `scripts/lib/data_trade_evidence_correlation.js` with correlate function handling matched/not_applicable/partial
+  - Implemented `scripts/chain_event_indexer.js` CLI entrypoint with scan, replay, state, correlate-evidence, inspect subcommands
+  - Implemented `inspect mappings`, `inspect cursor`, `inspect counts`, `inspect sample-evidence` modes
+  - Added formal documentation `docs/implementation/chain-event-indexer-state-sync.md`
+  - Updated `docs/README.md` to index the new formal documentation
+  - Added forward reference in `docs/architecture/platform-business-model.md` ChainEvent section
+  - Added forward references in `docs/implementation/data-trade-implementation.md` and `docs/implementation/data-trade-cli-api-boundary.md`
+- Files changed:
+  - `docs/implementation/chain-event-indexer-state-sync.md` (new)
+  - `docs/README.md` (updated)
+  - `docs/architecture/platform-business-model.md` (updated)
+  - `docs/implementation/data-trade-implementation.md` (updated)
+  - `docs/implementation/data-trade-cli-api-boundary.md` (updated)
+  - `scripts/chain_event_indexer.js` (new)
+  - `scripts/lib/chain_event_normalizer.js` (new)
+  - `scripts/lib/data_trade_state_sync.js` (new)
+  - `scripts/lib/data_trade_evidence_correlation.js` (new)
+  - `scripts/fixtures/chain_events/data_trade_sample_events.jsonl` (new)
+- Tests run:
+  - `node --check scripts/chain_event_indexer.js` — passed
+  - `node --check scripts/lib/chain_event_normalizer.js` — passed
+  - `node --check scripts/lib/data_trade_state_sync.js` — passed
+  - `node --check scripts/lib/data_trade_evidence_correlation.js` — passed
+  - `node scripts/chain_event_indexer.js --help` — all help output present
+  - `node scripts/chain_event_indexer.js <subcommand> --help` — all 5 subcommands + inspect sub-modes
+  - `node scripts/chain_event_indexer.js inspect mappings --out .agents/fwf/runs/stage17/inspect-mappings.json` — wrote mappings JSON
+  - `node scripts/chain_event_indexer.js replay --events scripts/fixtures/chain_events/data_trade_sample_events.jsonl --out .agents/fwf/runs/stage17/replay-fixture` — wrote events.jsonl, state.json, summary.json, summary.md
+  - `node scripts/chain_event_indexer.js state --events .agents/fwf/runs/stage17/replay-fixture/events.jsonl --out .agents/fwf/runs/stage17/state-fixture` — wrote state.json, summary.json
+  - `node scripts/chain_event_indexer.js inspect sample-evidence --kind dry-run --out .agents/fwf/runs/stage17/sample-dry-run-evidence.json` — wrote evidence JSON
+  - `node scripts/chain_event_indexer.js correlate-evidence --events .agents/fwf/runs/stage17/replay-fixture/events.jsonl --evidence .agents/fwf/runs/stage17/sample-dry-run-evidence.json --out .agents/fwf/runs/stage17/correlate-dry-run` — wrote correlations.json; dry-run correctly marked `not_applicable`
+  - `node scripts/chain_event_indexer.js inspect counts --events .agents/fwf/runs/stage17/replay-fixture/events.jsonl` — reported 17 events, 1 listing, 1 session, 1 escrow
+  - Verified state derivation: listing 1=active, session 1=settled, escrow 1=settled
+  - Regression: `node --check scripts/data_trade_cli.js` passed; `node --check scripts/zk_real_data_trade_flow.js` passed; `bash -n scripts/run_data_trade_validation.sh` passed; `node scripts/data_trade_cli.js --help` ran
+  - Forward references verified: `rg -n "chain-event-indexer-state-sync" docs/README.md docs/architecture/platform-business-model.md docs/implementation/data-trade-cli-api-boundary.md docs/implementation/data-trade-implementation.md` — all 4 docs updated
+- Tests not run:
+  - Live RPC scan validation: RPC endpoints not available in this environment; validations requiring `@polkadot/api` chain connections skipped. No live indexing validation claimed.
+- Deviations from plan:
+  - None. All tasks executed per plan.
+- Questions for Codex/Owner:
+  - None.
+- Remaining risks:
+  - Live RPC scan not validated; requires chain availability on deployment VMs.
+  - Event field name normalization depends on @polkadot/api metadata at scan time; fixture events use hand-crafted field names matching the baseline pallet definitions.

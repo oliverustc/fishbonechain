@@ -200,6 +200,8 @@
 - Event `fields` as the only source of state (replay must be possible from chain).
 - Event ordering across chains without block timestamp normalization.
 
+**Stage 17 implementation**: The chain event indexer (`scripts/chain_event_indexer.js`) provides a file-backed implementation of this model object. See [Chain Event Indexer and State Sync](../implementation/chain-event-indexer-state-sync.md) for commands, normalized schema, cursor semantics, state derivation rules, and current limitations.
+
 ### 2.9 OffchainJob
 
 **Purpose**: An off-chain computation task (proof generation, data preprocessing, verification, model training). OffchainJobs are created by the platform backend, executed by workers, and produce artifacts referenced by Evidence records.
