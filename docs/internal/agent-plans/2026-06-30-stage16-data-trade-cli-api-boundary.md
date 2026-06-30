@@ -120,25 +120,25 @@ Validation:
 
 ## Task List
 
-- [ ] Re-read required inputs: `agent.md`, `docs/internal/agent-collaboration.md`, this plan, roadmap Stage 16, `docs/architecture/platform-business-model.md`, `docs/implementation/data-trade-implementation.md`, `docs/experiments/data-trade-validation.md`, `docs/implementation/data-trade-stage14-evidence-index.md`, `scripts/zk_real_data_trade_flow.js`, `scripts/run_data_trade_validation.sh`, and relevant `scripts/lib/` helpers.
-- [ ] Create `docs/implementation/data-trade-cli-api-boundary.md` with a status note that this is a CLI/API boundary for future backend integration, not a backend/server implementation.
-- [ ] In the boundary document, define each command: `publish-listing`, `create-request`, `create-escrow`, `open-session`, `generate-proof`, `submit-delivery`, `settle`, `dispute`, `inspect`, and `run-flow`.
-- [ ] For each command, document actor/role, whether it is DO/DR/verifier/backend-orchestration/query, chain/off-chain classification, current implementation status, required inputs, outputs/evidence, signer expectations, and failure behavior.
-- [ ] Mark independently chain-mutating boundaries (`publish-listing`, `create-escrow`, `open-session`, `submit-delivery`, `settle`, `dispute`) as `planned` / not independently executable in Stage 16. Their docs/help must describe required signer safeguards and binding checks, but the CLI must not submit those independent transactions yet.
-- [ ] Add `scripts/data_trade_cli.js` as the Stage 16 CLI boundary entrypoint.
-- [ ] Implement `--help` and subcommand help output for every Stage 16 operation name.
-- [ ] Implement `inspect` in a no-live-chain-safe way for:
+- [x] Re-read required inputs: `agent.md`, `docs/internal/agent-collaboration.md`, this plan, roadmap Stage 16, `docs/architecture/platform-business-model.md`, `docs/implementation/data-trade-implementation.md`, `docs/experiments/data-trade-validation.md`, `docs/implementation/data-trade-stage14-evidence-index.md`, `scripts/zk_real_data_trade_flow.js`, `scripts/run_data_trade_validation.sh`, and relevant `scripts/lib/` helpers.
+- [x] Create `docs/implementation/data-trade-cli-api-boundary.md` with a status note that this is a CLI/API boundary for future backend integration, not a backend/server implementation.
+- [x] In the boundary document, define each command: `publish-listing`, `create-request`, `create-escrow`, `open-session`, `generate-proof`, `submit-delivery`, `settle`, `dispute`, `inspect`, and `run-flow`.
+- [x] For each command, document actor/role, whether it is DO/DR/verifier/backend-orchestration/query, chain/off-chain classification, current implementation status, required inputs, outputs/evidence, signer expectations, and failure behavior.
+- [x] Mark independently chain-mutating boundaries (`publish-listing`, `create-escrow`, `open-session`, `submit-delivery`, `settle`, `dispute`) as `planned` / not independently executable in Stage 16. Their docs/help must describe required signer safeguards and binding checks, but the CLI must not submit those independent transactions yet.
+- [x] Add `scripts/data_trade_cli.js` as the Stage 16 CLI boundary entrypoint.
+- [x] Implement `--help` and subcommand help output for every Stage 16 operation name.
+- [x] Implement `inspect` in a no-live-chain-safe way for:
   - `profile` inspection from `scripts/profiles/chains.json`;
   - local evidence JSON inspection or summary of `--evidence <path>`.
-- [ ] Implement `generate-proof` as a no-live-chain command that uses the existing dynamic dataset/request ZK path or delegates to `zk_real_data_trade_flow.js --dry-run-dynamic` without changing evidence semantics.
-- [ ] Implement `run-flow` as a compatibility wrapper around the existing `scripts/zk_real_data_trade_flow.js` options, preserving this explicit flag surface: `--profile`, `--main`, `--child`, `--business-witness`, `--dataset`, `--request`, `--scenario`, `--evidence-out`, `--dry-run-dynamic`, `--verbose`, and environment variable `ZK_VERIFIER_CMD`.
-- [ ] Do not implement independent transaction submission for `publish-listing`, `create-escrow`, `open-session`, `submit-delivery`, `settle`, or `dispute` in this stage. Their help output should explain that Stage 16 exposes their API boundary and that transaction-safe execution is available only via `run-flow`.
-- [ ] If considering extraction from `scripts/zk_real_data_trade_flow.js`, first run `node --check scripts/zk_real_data_trade_flow.js` and the Stage 14 no-live compatibility command as a pre-refactor baseline. After extraction, rerun both commands. If extraction requires changing helper signatures, module-level state ownership, evidence accumulator semantics, or signer flow, stop and ask Codex.
-- [ ] Ensure output/evidence files for new no-live validation commands can be written under `.agents/fwf/runs/stage16/...`.
-- [ ] Update `docs/README.md` to index the new boundary document.
-- [ ] Update `docs/implementation/data-trade-implementation.md` with a forward reference to `docs/implementation/data-trade-cli-api-boundary.md`.
-- [ ] Update other existing data-trade docs only with forward references if useful; do not rewrite paper-facing conclusions.
-- [ ] Update this plan's Execution Record with commits, files changed, exact validation commands, skipped validations, deviations, and remaining risks.
+- [x] Implement `generate-proof` as a no-live-chain command that uses the existing dynamic dataset/request ZK path or delegates to `zk_real_data_trade_flow.js --dry-run-dynamic` without changing evidence semantics.
+- [x] Implement `run-flow` as a compatibility wrapper around the existing `scripts/zk_real_data_trade_flow.js` options, preserving this explicit flag surface: `--profile`, `--main`, `--child`, `--business-witness`, `--dataset`, `--request`, `--scenario`, `--evidence-out`, `--dry-run-dynamic`, `--verbose`, and environment variable `ZK_VERIFIER_CMD`.
+- [x] Do not implement independent transaction submission for `publish-listing`, `create-escrow`, `open-session`, `submit-delivery`, `settle`, or `dispute` in this stage. Their help output should explain that Stage 16 exposes their API boundary and that transaction-safe execution is available only via `run-flow`.
+- [x] If considering extraction from `scripts/zk_real_data_trade_flow.js`, first run `node --check scripts/zk_real_data_trade_flow.js` and the Stage 14 no-live compatibility command as a pre-refactor baseline. After extraction, rerun both commands. If extraction requires changing helper signatures, module-level state ownership, evidence accumulator semantics, or signer flow, stop and ask Codex. (Note: CLI delegates rather than extracts — no extraction was performed.)
+- [x] Ensure output/evidence files for new no-live validation commands can be written under `.agents/fwf/runs/stage16/...`.
+- [x] Update `docs/README.md` to index the new boundary document.
+- [x] Update `docs/implementation/data-trade-implementation.md` with a forward reference to `docs/implementation/data-trade-cli-api-boundary.md`.
+- [x] Update other existing data-trade docs only with forward references if useful; do not rewrite paper-facing conclusions. (None needed beyond implementation doc.)
+- [x] Update this plan's Execution Record with commits, files changed, exact validation commands, skipped validations, deviations, and remaining risks.
 
 ## Acceptance Criteria
 
@@ -331,3 +331,65 @@ Readiness: implementation may proceed after this plan fix; another plan-review r
   - None.
 - Remaining risks:
   - Implementation still needs to create and validate the CLI boundary entrypoint and docs.
+
+### 2026-06-30 opencode Pass 1
+
+- Branch: `stage/stage16-data-trade-cli-api-boundary`
+- Base commit: `2196eef` (plan review follow-up)
+- Head commit: `595a1d9` → `e24a9ef` (amended for commit hash)
+- Commits:
+  - `e24a9ef feat(data-trade): standardize CLI operation boundary`
+- Tasks completed:
+  - Created `docs/implementation/data-trade-cli-api-boundary.md` with all 10 command definitions, actor/role, chain/off-chain classification, inputs, outputs, evidence fields, and backend-call suitability.
+  - Created `scripts/data_trade_cli.js` with subcommand dispatch for all 10 Stage 16 operation names.
+  - Implemented `inspect profile` (chains.json loading) and `inspect evidence` (evidence JSON summary).
+  - Implemented `generate-proof` delegating to `zk_real_data_trade_flow.js --dry-run-dynamic`.
+  - Implemented `run-flow` as full flag-forwarding compatibility wrapper.
+  - Implemented `--help` for all 10 subcommands; chain-mutating subcommands show planned/non-executable status with signer safeguards documented.
+  - Updated `docs/README.md` with boundary document index entry.
+  - Updated `docs/implementation/data-trade-implementation.md` with forward reference to boundary doc.
+  - No code was extracted from `zk_real_data_trade_flow.js` — CLI delegates rather than extracts, preserving backward compatibility.
+- Files changed:
+  - `docs/implementation/data-trade-cli-api-boundary.md` (new)
+  - `scripts/data_trade_cli.js` (new)
+  - `docs/README.md` (modified, 1 line added)
+  - `docs/implementation/data-trade-implementation.md` (modified, 1 line added)
+- Tests run:
+  - `git status --short --branch` → clean except new files
+  - `git branch --show-current` → `stage/stage16-data-trade-cli-api-boundary`
+  - `test -f docs/implementation/data-trade-cli-api-boundary.md` → yes
+  - `test -f scripts/data_trade_cli.js` → yes
+  - `rg -n "data-trade-cli-api-boundary" docs/README.md` → line 26
+  - `rg -n "publish-listing|create-request|...|run-flow" docs/implementation/data-trade-cli-api-boundary.md` → all 10 present
+  - `node --check scripts/data_trade_cli.js` → OK
+  - `node --check scripts/zk_real_data_trade_flow.js` → OK
+  - `bash -n scripts/run_data_trade_validation.sh` → OK
+  - `node scripts/data_trade_cli.js --help` → OK (all 10 subcommands listed)
+  - `node scripts/data_trade_cli.js inspect --help` → OK
+  - `node scripts/data_trade_cli.js generate-proof --help` → OK
+  - `node scripts/data_trade_cli.js run-flow --help` → OK
+  - `node scripts/data_trade_cli.js publish-listing --help` → OK (planned)
+  - `node scripts/data_trade_cli.js create-request --help` → OK (planned)
+  - `node scripts/data_trade_cli.js create-escrow --help` → OK (planned)
+  - `node scripts/data_trade_cli.js open-session --help` → OK (planned)
+  - `node scripts/data_trade_cli.js submit-delivery --help` → OK (planned)
+  - `node scripts/data_trade_cli.js settle --help` → OK (planned)
+  - `node scripts/data_trade_cli.js dispute --help` → OK (planned)
+  - `node scripts/data_trade_cli.js publish-listing` → errors with exit 1 (non-executable)
+  - `node scripts/data_trade_cli.js inspect profile --profile child6-data-trade --out .agents/fwf/runs/stage16/inspect-profile.json` → OK, file exists
+  - `node scripts/data_trade_cli.js generate-proof --profile ... --dataset ... --request ... --evidence-out .agents/fwf/runs/stage16/generate-proof-evidence.json` → OK (ZK pipeline passed, result: dry-run-accepted)
+  - `node scripts/data_trade_cli.js inspect evidence --evidence ... --out .agents/fwf/runs/stage16/inspect-evidence.json` → OK
+  - `node scripts/data_trade_cli.js run-flow --profile ... --dataset ... --request ... --evidence-out .agents/fwf/runs/stage16/run-flow-evidence.json --dry-run-dynamic` → OK (ZK pipeline passed)
+  - `scripts/run_data_trade_validation.sh --skip-live --out .agents/fwf/runs/stage16/stage14-compat-skip-live` → OK (overall status: passed, 5/5 scenarios)
+  - `rg -n "data-trade-cli-api-boundary" docs/implementation/data-trade-implementation.md` → line 206
+  - `node --check scripts/lib/data_trade_validation_summary.js` → OK
+- Tests not run:
+  - None. All plan-specified validation commands were executed.
+- Deviations from plan:
+  - None.
+- Questions for Codex/Owner:
+  - None.
+- Remaining risks:
+  - `run-flow` live-chain execution was not tested (RPC not available in this environment). The `--dry-run-dynamic` path was validated and the flag-forwarding mechanism is mechanical — no transformation of arguments.
+  - `generate-proof` live-chain execution not tested (same RPC limitation). The delegation to `zk_real_data_trade_flow.js --dry-run-dynamic` is the same code path as the standalone script.
+  - All planned subcommands correctly refuse independent execution. No partial transaction paths exist.

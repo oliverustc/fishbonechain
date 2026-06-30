@@ -23,6 +23,7 @@
 
 - [implementation/implementation-record.md](implementation/implementation-record.md)：当前实现记录
 - [implementation/data-trade-implementation.md](implementation/data-trade-implementation.md)：数据交易场景实现记录
+- [implementation/data-trade-cli-api-boundary.md](implementation/data-trade-cli-api-boundary.md)：数据交易 CLI/API 边界定义（Stage 16，面向后续后端集成）
 - [implementation/data-trade-evidence.md](implementation/data-trade-evidence.md)：数据交易实现证据记录，本地验证、VM 回归摘要和复现命令
 - [implementation/data-trade-paper-gap-matrix.md](implementation/data-trade-paper-gap-matrix.md)：数据交易论文要求与当前实现的差距矩阵
 - [implementation/data-trade-flow.md](implementation/data-trade-flow.md)：数据交易 E2E 运行手册（happy path + negative scenarios）
