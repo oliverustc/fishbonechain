@@ -48,6 +48,7 @@ Allowed changes:
 - Add a formal CLI/API boundary document, preferably `docs/implementation/data-trade-cli-api-boundary.md`, with command semantics, roles, chain/off-chain classification, inputs, outputs, evidence fields, and backend-call suitability.
 - Update `docs/README.md` and relevant data-trade docs to point to the new boundary document.
 - Add syntax, help, and no-live-chain dry-run validation for the new CLI boundary.
+- In Stage 16, independently chain-mutating subcommands are boundary definitions only. `publish-listing`, `create-escrow`, `open-session`, `submit-delivery`, `settle`, and `dispute` must be documented and exposed in help as `planned` / not independently executable. The only chain-mutating execution surface in this stage remains the existing full-flow `run-flow` wrapper, which preserves escrow/session binding.
 
 Out of scope unless Codex/Owner explicitly approves a follow-up plan:
 
@@ -76,6 +77,7 @@ Out of scope unless Codex/Owner explicitly approves a follow-up plan:
   - `inspect`: query-only operation for profile, listing/session/escrow, or evidence artifacts.
   - `run-flow`: compatibility command for the current full flow/scenario execution.
 - Stage 14 validation output is the current evidence contract and should remain the compatibility baseline.
+- Stage 16 implementation approach decision: implement no-live-chain `inspect`, no-live-chain `generate-proof`, and compatibility `run-flow`; document independently chain-mutating subcommands as planned until a later stage designs state handoff and binding recovery across separate invocations.
 
 ## Risks
 
@@ -122,19 +124,20 @@ Validation:
 - [ ] Create `docs/implementation/data-trade-cli-api-boundary.md` with a status note that this is a CLI/API boundary for future backend integration, not a backend/server implementation.
 - [ ] In the boundary document, define each command: `publish-listing`, `create-request`, `create-escrow`, `open-session`, `generate-proof`, `submit-delivery`, `settle`, `dispute`, `inspect`, and `run-flow`.
 - [ ] For each command, document actor/role, whether it is DO/DR/verifier/backend-orchestration/query, chain/off-chain classification, current implementation status, required inputs, outputs/evidence, signer expectations, and failure behavior.
-- [ ] Mark non-implemented or partial boundaries clearly. Do not pretend every command is fully independent if Stage 16 only wraps existing full-flow behavior.
+- [ ] Mark independently chain-mutating boundaries (`publish-listing`, `create-escrow`, `open-session`, `submit-delivery`, `settle`, `dispute`) as `planned` / not independently executable in Stage 16. Their docs/help must describe required signer safeguards and binding checks, but the CLI must not submit those independent transactions yet.
 - [ ] Add `scripts/data_trade_cli.js` as the Stage 16 CLI boundary entrypoint.
 - [ ] Implement `--help` and subcommand help output for every Stage 16 operation name.
-- [ ] Implement `inspect` in a no-live-chain-safe way for at least:
+- [ ] Implement `inspect` in a no-live-chain-safe way for:
   - `profile` inspection from `scripts/profiles/chains.json`;
-  - local evidence JSON inspection or summary of `--evidence <path>` when provided.
+  - local evidence JSON inspection or summary of `--evidence <path>`.
 - [ ] Implement `generate-proof` as a no-live-chain command that uses the existing dynamic dataset/request ZK path or delegates to `zk_real_data_trade_flow.js --dry-run-dynamic` without changing evidence semantics.
-- [ ] Implement `run-flow` as a compatibility wrapper around the existing `scripts/zk_real_data_trade_flow.js` options, preserving `--profile`, `--main`, `--child`, `--dataset`, `--request`, `--scenario`, `--evidence-out`, `--dry-run-dynamic`, `--verbose`, and `ZK_VERIFIER_CMD`.
-- [ ] For chain-mutating subcommands (`publish-listing`, `create-escrow`, `open-session`, `submit-delivery`, `settle`, `dispute`), either implement them by reusing existing operation helpers with explicit signer/dev-key safeguards, or mark them as planned/unsafe-to-run independently in help/docs. Do not add incomplete mutation paths that can break escrow/session binding.
-- [ ] If refactoring `zk_real_data_trade_flow.js`, keep the diff mechanical and preserve current scenario outputs. Prefer extracting helpers only when the new CLI needs them.
+- [ ] Implement `run-flow` as a compatibility wrapper around the existing `scripts/zk_real_data_trade_flow.js` options, preserving this explicit flag surface: `--profile`, `--main`, `--child`, `--business-witness`, `--dataset`, `--request`, `--scenario`, `--evidence-out`, `--dry-run-dynamic`, `--verbose`, and environment variable `ZK_VERIFIER_CMD`.
+- [ ] Do not implement independent transaction submission for `publish-listing`, `create-escrow`, `open-session`, `submit-delivery`, `settle`, or `dispute` in this stage. Their help output should explain that Stage 16 exposes their API boundary and that transaction-safe execution is available only via `run-flow`.
+- [ ] If considering extraction from `scripts/zk_real_data_trade_flow.js`, first run `node --check scripts/zk_real_data_trade_flow.js` and the Stage 14 no-live compatibility command as a pre-refactor baseline. After extraction, rerun both commands. If extraction requires changing helper signatures, module-level state ownership, evidence accumulator semantics, or signer flow, stop and ask Codex.
 - [ ] Ensure output/evidence files for new no-live validation commands can be written under `.agents/fwf/runs/stage16/...`.
 - [ ] Update `docs/README.md` to index the new boundary document.
-- [ ] Update existing data-trade docs only with forward references if needed; do not rewrite paper-facing conclusions.
+- [ ] Update `docs/implementation/data-trade-implementation.md` with a forward reference to `docs/implementation/data-trade-cli-api-boundary.md`.
+- [ ] Update other existing data-trade docs only with forward references if useful; do not rewrite paper-facing conclusions.
 - [ ] Update this plan's Execution Record with commits, files changed, exact validation commands, skipped validations, deviations, and remaining risks.
 
 ## Acceptance Criteria
@@ -143,6 +146,7 @@ Validation:
 - `scripts/data_trade_cli.js` exists and exposes discoverable help for all 10 operation names.
 - `inspect` and `generate-proof` provide no-live-chain usable behavior, or an explicitly documented equivalent that preserves Stage 14 evidence semantics.
 - `run-flow` remains compatible with existing `zk_real_data_trade_flow.js` behavior for dry-run and live options.
+- Independently chain-mutating subcommands are clearly documented and exposed as planned/non-executable, with no partial transaction paths added.
 - Existing Stage 14 validation entrypoint remains usable and its no-live dry-run/negative validation passes.
 - No pallet/runtime/proof/settlement/deployment/metric changes are made.
 - Execution Record contains verified evidence for file existence, syntax/help checks, no-live validation, docs indexing, and any skipped live-chain validation.
@@ -164,8 +168,31 @@ node scripts/data_trade_cli.js --help
 node scripts/data_trade_cli.js inspect --help
 node scripts/data_trade_cli.js generate-proof --help
 node scripts/data_trade_cli.js run-flow --help
+node scripts/data_trade_cli.js publish-listing --help
+node scripts/data_trade_cli.js create-escrow --help
+node scripts/data_trade_cli.js open-session --help
+node scripts/data_trade_cli.js submit-delivery --help
+node scripts/data_trade_cli.js settle --help
+node scripts/data_trade_cli.js dispute --help
 node scripts/data_trade_cli.js inspect profile --profile child6-data-trade --out .agents/fwf/runs/stage16/inspect-profile.json
 test -f .agents/fwf/runs/stage16/inspect-profile.json
+node scripts/data_trade_cli.js generate-proof \
+  --profile child6-data-trade \
+  --dataset scripts/fixtures/data_trade_datasets/factory_sensors.json \
+  --request scripts/fixtures/data_trade_requests/factory_temperature_range.json \
+  --evidence-out .agents/fwf/runs/stage16/generate-proof-evidence.json
+test -f .agents/fwf/runs/stage16/generate-proof-evidence.json
+node scripts/data_trade_cli.js inspect evidence \
+  --evidence .agents/fwf/runs/stage16/generate-proof-evidence.json \
+  --out .agents/fwf/runs/stage16/inspect-evidence.json
+test -f .agents/fwf/runs/stage16/inspect-evidence.json
+node scripts/data_trade_cli.js run-flow \
+  --profile child6-data-trade \
+  --dataset scripts/fixtures/data_trade_datasets/factory_sensors.json \
+  --request scripts/fixtures/data_trade_requests/factory_temperature_range.json \
+  --evidence-out .agents/fwf/runs/stage16/run-flow-evidence.json \
+  --dry-run-dynamic
+test -f .agents/fwf/runs/stage16/run-flow-evidence.json
 ```
 
 Note: `scripts/run_data_trade_validation.sh` is a shell script. Validate it with:
@@ -216,10 +243,10 @@ Required:
 
 - `docs/implementation/data-trade-cli-api-boundary.md`
 - `docs/README.md`
+- `docs/implementation/data-trade-implementation.md` forward reference to the new boundary document
 
 Expected forward references if useful:
 
-- `docs/implementation/data-trade-implementation.md`
 - `docs/experiments/data-trade-validation.md`
 - `docs/implementation/data-trade-flow.md`
 - `docs/implementation/data-trade-demo-guide.md`
@@ -236,12 +263,38 @@ Ask opencode plan review to focus on:
 - whether `generate-proof`, `inspect`, and `run-flow` are the right minimal implemented subcommands for Stage 16;
 - whether chain-mutating subcommands should be fully implemented now or documented as planned wrappers with safeguards.
 
+## Plan Review Resolution
+
+Plan review: `docs/internal/agent-reviews/2026-06-30-stage16-data-trade-cli-api-boundary-plan-review.md`
+
+Decision: `approved-with-required-fixes`
+
+Required fixes applied:
+
+- Decided the Stage 16 approach for independently chain-mutating subcommands: `publish-listing`, `create-escrow`, `open-session`, `submit-delivery`, `settle`, and `dispute` are documented/exposed as planned and not independently executable. Full-flow mutation remains available only through `run-flow`.
+- Added execution validation, not just help checks, for `generate-proof` and `run-flow`, with outputs under `.agents/fwf/runs/stage16/`.
+- Made the `docs/implementation/data-trade-implementation.md` forward reference required.
+
+Accepted suggestions:
+
+- Required `inspect evidence` behavior and validation instead of leaving it implicit.
+- Added pre/post-refactor baseline checks and a stop condition for helper extraction that changes signatures, module-level state, evidence semantics, or signer flow.
+- Defined the `run-flow` flag surface explicitly.
+- Added help checks for planned chain-mutating subcommands so their non-executable status is reviewable.
+
+Rejected suggestions:
+
+- None. All required fixes and useful suggestions were incorporated.
+
+Readiness: implementation may proceed after this plan fix; another plan-review round is not required unless the owner wants one.
+
 ## Execution Record
 
 ### 2026-06-30 Codex Plan Authoring
 
 - Branch: `stage/stage16-data-trade-cli-api-boundary`
 - Commits:
+  - `45571a2 docs(stage16): plan data trade CLI boundary`
 - Tasks completed:
   - Authored initial Stage 16 plan from the long-term roadmap.
   - Created the Stage 16 branch from current local `main`.
@@ -256,3 +309,25 @@ Ask opencode plan review to focus on:
   - None.
 - Remaining risks:
   - `main` is locally ahead of `origin/main` by the Stage 15 merge commits. The Stage 16 branch is based on this local `main`.
+
+### 2026-06-30 Codex Plan Fix
+
+- Branch: `stage/stage16-data-trade-cli-api-boundary`
+- Commits:
+- Tasks completed:
+  - Applied required fixes from `docs/internal/agent-reviews/2026-06-30-stage16-data-trade-cli-api-boundary-plan-review.md`.
+  - Decided chain-mutating subcommands are planned/non-executable in Stage 16.
+  - Added execution validation for `generate-proof`, `run-flow`, and `inspect evidence`.
+  - Required `docs/implementation/data-trade-implementation.md` forward reference.
+  - Added refactor baseline/stop-condition guidance.
+- Tests run:
+  - `git status --short --branch`
+  - `git branch --show-current`
+- Tests not run:
+  - Implementation validation commands are for the implementation pass and were not run during plan fix.
+- Deviations from plan:
+  - None.
+- Questions for Codex/Owner:
+  - None.
+- Remaining risks:
+  - Implementation still needs to create and validate the CLI boundary entrypoint and docs.
