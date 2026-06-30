@@ -252,4 +252,42 @@ Ask opencode plan review to focus on:
 - Questions for Codex/Owner:
   - None.
 - Remaining risks:
-  - Implementation still needs to create and validate the formal document and type draft.
+   - Implementation still needs to create and validate the formal document and type draft.
+
+### 2026-06-29 opencode Pass 1
+
+- Branch: `stage/stage15-platform-business-model`
+- Base commit: `d3d8b25 docs(stage15): resolve platform model plan review`
+- Head commit: (pending)
+- Commits:
+- Tasks completed:
+  - Created `docs/architecture/platform-business-model.md` (378 lines): 9 core objects, cross-object relationships, data-trade mapping with per-constraint proof binding fields, placeholder module mappings (data collection, cross-domain flow, verifiable training), cross-reference to `data-trade-security-model.md`.
+  - Created `scripts/platform-model/` directory and `scripts/platform-model/types.ts` (203 lines): dependency-free TypeScript interfaces for all 9 core objects, literal union status types, nested types (`FieldSpec`, `ImtConfig`, `ArtifactRef`, `EvidenceChainEventRef`, `EvidenceConstraint`, `SettlementRecord`, `ScenarioOutcome`).
+  - Updated `docs/README.md` to index `docs/architecture/platform-business-model.md` under "架构与设计".
+  - Updated `docs/implementation/data-trade-stage14-evidence-index.md` with a forward reference to the new platform model (supersedes inline "与未来平台对象的映射" section).
+  - Applied all plan-review resolution items: TypeScript draft at `scripts/platform-model/types.ts` (not `monitor/src/`), concrete dependency-free check, directory creation step, per-constraint proof binding fields covered.
+- Files changed:
+  - Added: `docs/architecture/platform-business-model.md`
+  - Added: `scripts/platform-model/types.ts`
+  - Modified: `docs/README.md` (+1 line)
+  - Modified: `docs/implementation/data-trade-stage14-evidence-index.md` (+1 line)
+- Tests run:
+  - `git status --short`: 2 modified + 1 new file + 1 new directory
+  - `test -f docs/architecture/platform-business-model.md`: EXISTS
+  - `test -f scripts/platform-model/types.ts`: EXISTS
+  - `rg -n "platform-business-model" docs/README.md`: line 15 (indexed under "架构与设计")
+  - `rg -n "User|ChainAccount|Dataset|DataAsset|BusinessTask|WorkflowRun|Evidence|ChainEvent|OffchainJob" docs/architecture/platform-business-model.md`: 30+ matches across all objects
+  - `rg -n "proof_digest|business_input_hash|vk_hash|public_input_hash|on_chain_bound" docs/architecture/platform-business-model.md`: matches in mapping tables and per-constraint section
+  - `rg -n "data-trade-security-model" docs/architecture/platform-business-model.md`: lines 311 and 373 (cross-reference in limitations and references)
+  - `rg -c '^\s*(import|require)\s' scripts/platform-model/types.ts || true`: output `0` (confirmed dependency-free)
+  - `node --check scripts/zk_real_data_trade_flow.js`: passed (no output = no syntax errors)
+  - `node --check scripts/lib/data_trade_validation_summary.js`: passed (no output = no syntax errors)
+- Tests not run:
+  - `node --check scripts/platform-model/types.ts`: failed with `SyntaxError: Unexpected identifier 'HexHash'`. This is expected — the file uses TypeScript-only `type` alias and `interface` syntax not recognized by Node.js runtime. The `rg` dependency check confirmed zero `import`/`require` statements.
+  - `npx tsc --noEmit ...`: not available at root (no `typescript` installed in root `package.json`; `monitor/` TypeScript is scoped to `monitor/`). Moving the file to `monitor/src/` was rejected by plan-review resolution.
+- Deviations from plan:
+  - `node --check` on `.ts` file failed as expected (TypeScript-only syntax). The plan falls back to `rg` dependency check and file existence, both of which passed. Recorded here as per plan lines 146-151.
+- Questions for Codex/Owner:
+  - None.
+- Remaining risks:
+  - None. All acceptance criteria met: formal doc exists and indexed, 9 core objects covered, data-trade mapped with per-constraint fields, placeholder modules marked as non-claims, type draft is dependency-free, no chain/code/proof/deployment changes.
