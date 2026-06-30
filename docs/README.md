@@ -25,6 +25,7 @@
 - [implementation/data-trade-implementation.md](implementation/data-trade-implementation.md)：数据交易场景实现记录
 - [implementation/data-trade-cli-api-boundary.md](implementation/data-trade-cli-api-boundary.md)：数据交易 CLI/API 边界定义（Stage 16，面向后续后端集成）
 - [implementation/chain-event-indexer-state-sync.md](implementation/chain-event-indexer-state-sync.md)：链上事件索引与状态同步（Stage 17，文件级事件索引、cursor、状态推导和 evidence 关联）
+- [implementation/platform-backend-skeleton.md](implementation/platform-backend-skeleton.md)：平台 Web 后端最小骨架（Stage 18，无依赖 Node.js HTTP API，文件级 JSON 存储，开发级用户认证，业务对象持久化，链上事件导入）
 - [implementation/data-trade-evidence.md](implementation/data-trade-evidence.md)：数据交易实现证据记录，本地验证、VM 回归摘要和复现命令
 - [implementation/data-trade-paper-gap-matrix.md](implementation/data-trade-paper-gap-matrix.md)：数据交易论文要求与当前实现的差距矩阵
 - [implementation/data-trade-flow.md](implementation/data-trade-flow.md)：数据交易 E2E 运行手册（happy path + negative scenarios）

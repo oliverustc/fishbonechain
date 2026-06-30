@@ -10,6 +10,9 @@ references/polkadot-sdk-minimal-template/target/
 # Local chain data
 /tmp/fishbone/
 
+# Local backend runtime state
+/var/platform-backend/
+
 # IDE
 .idea/
 .vscode/

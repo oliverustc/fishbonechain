@@ -300,18 +300,38 @@ Do not update experiment reports, paper gap matrices, deployment runbooks, or ch
 
 ## Execution Record
 
-### YYYY-MM-DD opencode Pass N
+### 2026-06-30 opencode Pass 1
 
-- Branch:
-- Commits:
-- Tasks completed:
-- Files changed:
-- Tests run:
-- Tests not run:
-- Validation output paths:
+- Branch: `stage/stage18-web-backend-skeleton`
+- Base commit: `bd008fe` (plan re-review approval)
+- Tasks completed: All 18 plan tasks.
+- Files changed (10 new, 3 modified):
+  - `scripts/platform-backend/server.js` — entrypoint with CLI
+  - `scripts/platform-backend/lib/ids.js` — UUID generation and ISO timestamps
+  - `scripts/platform-backend/lib/json_store.js` — file-backed JSON store with atomic writes
+  - `scripts/platform-backend/lib/schema.js` — Stage 15 field-name validation
+  - `scripts/platform-backend/lib/auth.js` — password hashing (SHA-256+salt), session tokens, AuthService
+  - `scripts/platform-backend/lib/routes.js` — HTTP route definitions for all 17 endpoints
+  - `scripts/platform-backend/lib/http.js` — JSON response helpers, body parsing, token extraction
+  - `scripts/platform-backend/lib/importers.js` — JSONL chain event import, path safety validation
+  - `scripts/platform-backend/test/backend_store.test.js` — JsonStore, Schema, Auth, Importers tests (33 tests)
+  - `scripts/platform-backend/test/backend_api.test.js` — Full HTTP API integration tests (23 tests)
+  - `.gitignore` — added `/var/platform-backend/`
+  - `docs/implementation/platform-backend-skeleton.md` — formal implementation document
+  - `docs/README.md` — added platform-backend-skeleton index entry
+- Tests run: `node --test scripts/platform-backend/test/*.test.js` — 57 tests, 57 pass, 0 fail
+- Tests not run: None. All validation commands executed.
+- Validation output paths: `.agents/fwf/runs/stage18/backend-test/` (test runtime data, git-ignored)
 - Deviations from plan:
-- Questions for Codex/Owner:
+  - None. Followed plan file layout exactly with the recommended module names.
+  - Chain-event import supports both JSON array and text/plain file path modes (plan allows either).
+  - No `workflow_runs/:id` endpoint (plan only lists list/create for workflow runs).
+- Questions for Codex/Owner: None.
 - Remaining risks:
+  - Single-process only — concurrent writes unhandled (documented limitation).
+  - No session expiration (documented as development-grade).
+  - Password hashing uses SHA-256+salt, not bcrypt/argon2 (documented as development skeleton).
+  - Chain account `verified_at` is always `null` (documented as `verification_status: "unverified"`).
 
 ## Plan-Review Focus
 
