@@ -333,6 +333,31 @@ Do not update experiment reports, paper gap matrices, deployment runbooks, or ch
   - Password hashing uses SHA-256+salt, not bcrypt/argon2 (documented as development skeleton).
   - Chain account `verified_at` is always `null` (documented as `verification_status: "unverified"`).
 
+### 2026-06-30 opencode Review-Fix Pass 2
+
+- Branch: `stage/stage18-web-backend-skeleton`
+- Base commit: `2771161` (Stage 18 implementation)
+- Head commit: (pending commit)
+- Commits: (pending)
+- Tasks completed:
+  - Fix 1: Validate registration password input (reject missing, empty, non-string).
+  - Fix 2: Harden chain-event file import path confinement against symlink escape.
+  - Added 6 regression tests (3 API-level password tests, 2 store-level password tests, 1 symlink escape test).
+- Files changed:
+  - `scripts/platform-backend/lib/auth.js` — added password non-empty string validation in `register()`.
+  - `scripts/platform-backend/lib/importers.js` — added `fs.realpathSync()` to `resolveImportPath()`.
+  - `scripts/platform-backend/test/backend_store.test.js` — added 2 password validation tests + 1 symlink escape test.
+  - `scripts/platform-backend/test/backend_api.test.js` — added 3 password validation tests.
+  - `docs/internal/agent-plans/2026-06-30-stage18-web-backend-skeleton.md` — this Execution Record update.
+- Tests run: `node --test scripts/platform-backend/test/*.test.js` — 63 tests, 63 pass, 0 fail
+- Tests not run: None.
+- Validation output paths: (none, test evidence from Pass 1 still at `.agents/fwf/runs/stage18/backend-test/`)
+- Deviations from plan: None. Both fixes scoped to required findings only.
+- Questions for Codex/Owner: None.
+- Remaining risks:
+  - Same as Pass 1 (single-process, no session expiry, SHA-256+salt, `verified_at: null`).
+  - Symlink escape vector is now blocked by `fs.realpathSync()` validation.
+
 ## Plan-Review Focus
 
 opencode should review:

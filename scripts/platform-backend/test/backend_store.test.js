@@ -173,6 +173,38 @@ describe('Auth', () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
+  it('rejects missing password (undefined)', () => {
+    const dir = path.join(TEST_DIR, `auth-nopw-${Date.now()}`);
+    const store = new JsonStore(dir);
+    store.init();
+    const auth = new AuthService(store);
+
+    const result = auth.register('test', 'data_owner', undefined);
+    assert.ok(result.error);
+    assert.ok(result.error.includes('password'));
+
+    const users = store.list('users');
+    assert.equal(users.length, 0);
+
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('rejects empty string password', () => {
+    const dir = path.join(TEST_DIR, `auth-emptypw-${Date.now()}`);
+    const store = new JsonStore(dir);
+    store.init();
+    const auth = new AuthService(store);
+
+    const result = auth.register('test', 'data_owner', '');
+    assert.ok(result.error);
+    assert.ok(result.error.includes('password'));
+
+    const users = store.list('users');
+    assert.equal(users.length, 0);
+
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
   it('rejects duplicate display names', () => {
     const dir = path.join(TEST_DIR, `auth-dup-${Date.now()}`);
     const store = new JsonStore(dir);
@@ -334,6 +366,23 @@ describe('Importers', () => {
     const resolved = resolveImportPath(filePath);
     assert.ok(resolved.resolved);
     assert.ok(!resolved.error);
+
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('rejects repo-local symlink pointing outside repository', () => {
+    const dir = path.join(TEST_DIR, `import-symlink-${Date.now()}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const symlinkPath = path.join(dir, 'outside-link');
+    try {
+      fs.symlinkSync('/etc/passwd', symlinkPath);
+    } catch {
+      fs.rmSync(dir, { recursive: true, force: true });
+      return;
+    }
+    const result = resolveImportPath(symlinkPath);
+    assert.ok(result.error);
+    assert.ok(result.error.includes('outside repository'));
 
     fs.rmSync(dir, { recursive: true, force: true });
   });

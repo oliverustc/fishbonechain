@@ -105,6 +105,30 @@ describe('API endpoints', () => {
     assert.ok(!body.user.password);
   });
 
+  it('POST /api/users/register rejects missing password', async () => {
+    const { status, body } = await fetchJSON(serverPort, 'POST', '/api/users/register', {
+      body: { display_name: 'nopw', role: 'data_owner' },
+    });
+    assert.equal(status, 400);
+    assert.ok(body.error.message.includes('password'));
+  });
+
+  it('POST /api/users/register rejects empty password', async () => {
+    const { status, body } = await fetchJSON(serverPort, 'POST', '/api/users/register', {
+      body: { display_name: 'emptypw', role: 'data_owner', password: '' },
+    });
+    assert.equal(status, 400);
+    assert.ok(body.error.message.includes('password'));
+  });
+
+  it('POST /api/users/register rejects non-string password', async () => {
+    const { status, body } = await fetchJSON(serverPort, 'POST', '/api/users/register', {
+      body: { display_name: 'num', role: 'data_owner', password: 12345 },
+    });
+    assert.equal(status, 400);
+    assert.ok(body.error.message.includes('password'));
+  });
+
   it('POST /api/users/register rejects duplicate display_name', async () => {
     await fetchJSON(serverPort, 'POST', '/api/users/register', {
       body: { display_name: 'bob', role: 'data_requester', password: 'pwd' },

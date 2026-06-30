@@ -23,6 +23,10 @@ export class AuthService {
   }
 
   register(display_name, role, password) {
+    if (typeof password !== 'string' || password.length === 0) {
+      return { error: 'password must be a non-empty string', status: 400 };
+    }
+
     const existing = this.store.findOne('users', u => u.display_name === display_name);
     if (existing) {
       return { error: 'display_name already taken', status: 409 };

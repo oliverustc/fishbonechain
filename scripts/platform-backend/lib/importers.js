@@ -15,7 +15,11 @@ export function resolveImportPath(inputPath) {
   if (!fs.existsSync(resolved)) {
     return { error: `file not found: ${inputPath}`, status: 400 };
   }
-  return { resolved };
+  const real = fs.realpathSync(resolved);
+  if (!real.startsWith(REPO_ROOT + path.sep) && real !== REPO_ROOT) {
+    return { error: `path resolves outside repository: ${inputPath}`, status: 400 };
+  }
+  return { resolved: real };
 }
 
 export function parseJsonl(content) {
