@@ -4,6 +4,7 @@ Date: 2026-06-30
 Reviewer: opencode
 Plan: `docs/internal/agent-plans/2026-06-30-stage18-web-backend-skeleton.md`
 Review type: plan review
+Decision: **approved** (initial: `approved-with-required-fixes`, re-review: `approved`)
 
 ## Scope Reviewed
 
@@ -114,13 +115,13 @@ Review type: plan review
 
 **Suggested fix**: Add `! rg -q 'monitor/' scripts/platform-backend/` to validation commands, or add a task item to verify no monitor coupling.
 
-## Decision
+## Initial Review Decision
 
-**`approved-with-required-fixes`**
+**`approved-with-required-fixes`** (commit `e6b9925`)
 
 The plan has a concrete, bounded goal matching the roadmap; scope and non-goals are well-defined and prevent scope creep into Stage 19/20; current facts are verified and honest (especially the `chain_role` metadata status and `verified_at: null` admission); stop conditions are comprehensive and appropriate; risks are explicitly documented; and the dependency-free approach using Node built-in modules is consistent with the project's current `package.json` state. The plan is executable by an implementation agent without architectural invention.
 
-Three issues must be resolved before implementation:
+Three issues were identified for resolution before implementation:
 
 ## Required Fixes
 
@@ -197,3 +198,48 @@ rg "chain_role" docs/architecture/platform-business-model.md
 rg "chain_role" scripts/platform-model/types.ts
   → no matches (confirmed)
 ```
+
+## Re-Review (commit `1cea3e2`)
+
+Plan revised by Codex at `1cea3e2` (`789b51e` on working branch). All three required fixes applied and all six suggested improvements accepted.
+
+### Fix Verification
+
+| Fix | Status | Plan location |
+|-----|--------|---------------|
+| F1 — `test -f docs/implementation/platform-backend-skeleton.md` | Resolved | Validation commands line 233 |
+| F2 — `grep -q platform-backend-skeleton docs/README.md` + acceptance criterion | Resolved | Validation commands line 234, acceptance criteria line 219 |
+| F3 — Runtime-data hygiene: `git status --short` before/after, `git check-ignore` for runtime dir | Resolved | Validation commands lines 228, 236, 249; runtime data guidance lines 252-254 |
+
+### Accepted Improvements
+
+| Improvement | Status |
+|-------------|--------|
+| `--port 0` defined as ephemeral port with URL print | Accepted (lines 104-109) |
+| Node.js >=20 preferred, Node 18 experimental documented | Accepted (lines 94-98) |
+| Schema field-name alignment coverage in `node --test` | Accepted (task line 201, spec lines 239-243) |
+| Monitor-decoupling validation command | Accepted (`! rg -q 'monitor/'` line 235, task line 202) |
+| Chain-event file path safety testing explicit | Accepted (lines 240-243) |
+| Bounded server smoke validation (harness, terminate cleanly) | Accepted (lines 265-268) |
+
+### Plan Review Resolution section
+
+The plan now includes a `## Plan Review Resolution` section (lines 327-353) that records the plan-review path, decision, applied fixes, accepted improvements, and declares readiness for re-review. This is acceptable as a plan-embedded summary and does not replace the independent review record.
+
+### Re-Review Verification
+
+```
+git diff HEAD~1 -- docs/internal/agent-plans/2026-06-30-stage18-web-backend-skeleton.md
+  → 1 file changed, 69 insertions(+), 2 deletions(-)
+  → All fix locations confirmed in diff
+git status --short
+  → (clean)
+git branch --show-current
+  → stage/stage18-web-backend-skeleton
+```
+
+## Final Decision
+
+**`approved`**
+
+No required fixes remain. The plan is complete, executable, and honest about its development-grade limitations. Validation commands are sufficient and specific. The implementation agent can proceed without architectural invention.
