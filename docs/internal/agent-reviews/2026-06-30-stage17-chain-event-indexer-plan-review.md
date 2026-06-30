@@ -1,22 +1,24 @@
 # Stage 17 Plan Review: Chain Event Indexer And State Sync
 
 Date: 2026-06-30
-Reviewer: opencode
+Reviewer: opencode (re-review after plan revision)
 Plan: `docs/internal/agent-plans/2026-06-30-stage17-chain-event-indexer-state-sync.md`
-Decision: **approved-with-required-fixes**
+Decision: **approved**
 
 ## Scope Reviewed
 
-Entire plan: goal, scope, non-goals, current facts, event mapping baseline, state derivation baseline, risks, stop conditions, task list, acceptance criteria, validation commands, and documentation updates.
+Complete revised plan including the new Normalized Event Format section, Plan Review Resolution section, and all updated task and validation command blocks. Compared against commit `16bb21f` which resolves all five required fixes from the initial plan review (`b964467`).
 
 ## Inputs Read
 
 - `agent.md`
 - `docs/internal/agent-collaboration.md`
-- `docs/internal/agent-plans/2026-06-30-stage17-chain-event-indexer-state-sync.md`
+- `docs/internal/agent-plans/2026-06-30-stage17-chain-event-indexer-state-sync.md` (revised)
 - `docs/internal/agent-plans/2026-06-28-data-flow-platform-long-term-roadmap.md`
 - `docs/architecture/platform-business-model.md`
 - `docs/implementation/data-trade-cli-api-boundary.md`
+- `docs/implementation/data-trade-stage14-evidence-index.md`
+- `docs/implementation/data-trade-implementation.md`
 - `scripts/platform-model/types.ts`
 - `scripts/profiles/chains.json`
 - `scripts/lib/trade_profile.js`
@@ -24,71 +26,65 @@ Entire plan: goal, scope, non-goals, current facts, event mapping baseline, stat
 - `scripts/bridges/data_trade.js`
 - `package.json`
 - `pallets/data-registry/src/lib.rs` (events: DataPublished, ImtRootUpdated, ListingStatusChanged)
-- `pallets/trade-session/src/lib.rs` (events: all 13 variants claimed)
-- `pallets/main-escrow/src/lib.rs` (events: all 5 variants claimed)
-- `docs/implementation/data-trade-implementation.md`
-- `docs/implementation/data-trade-stage14-evidence-index.md`
-- `git status --short --branch` (branch: `stage/stage17-chain-event-indexer`, clean)
+- `pallets/trade-session/src/lib.rs` (all 13 variants verified)
+- `pallets/main-escrow/src/lib.rs` (all 5 variants verified)
+- `git diff b964467..16bb21f` (plan revision delta)
 
 ## Findings
 
-### 1. Verified Current Facts
+### 1. Resolution of Previous Required Fixes
 
-All plan factual claims are backed by repository evidence:
+| Fix | Status | Evidence |
+|-----|--------|----------|
+| F1 — fixture file ambiguity | Resolved | Line 54 adds committed fixture to scope; line 238 adds explicit task; validation path fixed at `scripts/fixtures/chain_events/data_trade_sample_events.jsonl` |
+| F2 — scan vs state.json inconsistency | Resolved | Line 227: "scan does not have to write state.json"; live scan validation (lines 337-340) runs separate `state` command |
+| F3 — inspect mappings unspecified | Resolved | Line 231: explicit schema with `version`, `generated_at`, `supported_events.child`, `supported_events.main`, `state_derivation_events` |
+| F4 — missing sample-dry-run-evidence task | Resolved | Line 239 adds explicit task; lines 311-314 add `inspect sample-evidence --kind dry-run` validation step |
+| F5 — chain_role underspecified | Resolved | Lines 79-80 define as `main`/`child` script-local metadata; lines 142, 225 reiterate it is not a platform `ChainEvent` field |
 
-- `ChainEvent` schema in `docs/architecture/platform-business-model.md:185-202` matches the plan's normalized event schema (event_id, chain_id, block_number, block_hash, extrinsic_index, event_index, pallet, variant, fields, cursor, ingested_at) ✓
-- `scripts/platform-model/types.ts:220-232` contains JSDoc type draft for ChainEvent with matching fields ✓
-- `docs/implementation/data-trade-cli-api-boundary.md` exists as Stage 16 output ✓
-- `scripts/profiles/chains.json` defines `child6-data-trade` and `child7-business-trade` with `main_ws`, `child_ws`, `settlement_mode`, `verifier_mode`, `verifier_authority`, `proof` config ✓
-- `scripts/lib/trade_profile.js` loads and validates trade profiles from `scripts/profiles/chains.json` ✓
-- `scripts/lib/data_trade_events.js` extracts events from tx results only; not a block scanner or durable indexer ✓
-- `scripts/bridges/data_trade.js` subscribes to live child-chain events but does not persist normalized events, cursors, or derived state ✓
-- `package.json` uses ES modules (`"type": "module"`) and has `@polkadot/api` as dev dependency ✓
-- Pallet events verified in source code match plan's event mapping baseline exactly:
-  - `pallet-data-registry`: `DataPublished`, `ImtRootUpdated`, `ListingStatusChanged` ✓
-  - `pallet-trade-session`: `SessionCreated`, `SessionAccepted`, `RoundOpened`, `PaymentProofSubmitted`, `DataProofSubmitted`, `DataProofAttested`, `ProofSignatureSubmitted`, `DataDelivered`, `PaymentPreimageSubmitted`, `RoundCompleted`, `SettlementClaimed`, `SessionPunished`, `LastPaymentClaimed` ✓
-  - `pallet-main-escrow`: `EscrowOpened`, `FundsLocked`, `DepositLocked`, `EscrowSettled`, `EscrowPunished` ✓
-- Stage 14 evidence schema (`docs/implementation/data-trade-stage14-evidence-index.md:119-137`) confirms `listing_id`, `escrow_id`, `session_id` are nullable integers, matching the plan's correlation risk note about null IDs for dry-run ✓
-- Branch `stage/stage17-chain-event-indexer` exists, working tree clean ✓
+### 2. Improvements Accepted
 
-### 2. Strengths
+- JSONL format specification added (lines 114-142): newline-delimited, no array wrapper, no trailing commas, EOF newline ✓
+- Replay/state delegation clarified (line 228): "replay may delegate the state derivation logic to the same helper used by `state`" ✓
 
-- Goal is concrete ("build a reusable, file-backed chain event indexer") with clear deliverables ✓
-- Scope is precisely bounded with explicit allowed changes and a strong non-goals list (no backend, no DB, no server, no protocol changes, no new deps) ✓
-- Stop conditions cover protocol, proof, settlement, metrics, deployment, and trust boundaries comprehensively ✓
-- Risks are well-categorized (security, data integrity, compatibility, deployment, performance, evidence-correlation, paper-facing) with explicit mitigations ✓
-- Task list is ordered and executable — 19 tasks with enough detail for implementation without architecture invention ✓
-- Event mapping baseline is verified against pallet source code ✓
-- State derivation baseline is concrete with required fields per derived record type and source event hints ✓
-- No-RPC fixture/replay validation pathway exists for when live chains are unavailable ✓
-- Evidence correlation correctly handles null IDs for dry-run/no-chain evidence ✓
+### 3. Plan Review Resolution Section
 
-### 3. Required Fixes
+The new section (lines 390-413) accurately records the review feedback cycle with required fixes, accepted suggestions, and rejected suggestions. It correctly states that implementation should proceed after re-review approval.
 
-**F1. Fixture file ambiguity** — The validation commands reference `scripts/fixtures/chain_events/data_trade_sample_events.jsonl` as an input fixture. The task list says "Prefer a small committed fixture under `scripts/fixtures/chain_events/` if it is stable and minimal; otherwise generate fixture files under `.agents/fwf/runs/stage17/fixtures/` during validation." The validation commands implicitly require the committed fixture to exist before validation can run, but no task explicitly creates it. Fix: add a task to create and commit the fixture file before it is referenced in validation, or change the validation commands to use a generated fixture path.
+### 4. Current Facts
 
-**F2. `scan` vs `state.json` inconsistency** — The optional live scan validation block (line 289-298) checks for `state.json` at the scan output. The `scan` task (line 194) only says "append/write `events.jsonl`, and update `cursor.json`." State derivation is described as `replay` or `state` subcommand territory (lines 195-196). These are inconsistent. Fix: either add `state.json` production to the `scan` task description, or remove `state.json` from the live scan validation check (and run `state` as a follow-up step).
+All current-fact claims from the original plan remain verifiable. The new `chain_role` fact (line 79-80) is internally consistent — it positions `chain_role` as a Stage 17 indexer convenience field, not an extension of the Stage 15 platform model. This is the correct boundary.
 
-**F3. `inspect mappings` subcommand unspecified** — The failidstion commands include `inspect mappings --out ...` but the task list describes `inspect` in general terms ("list supported event mappings", "print cursor summary", "print event/state counts"). No task explicitly defines the `mappings` sub-mode or specifies its output format. Fix: add an explicit task for the `inspect mappings` mode describing what the output should contain.
+### 5. Scope, Non-Goals, Stop Conditions, Risks
 
-**F4. Missing task for `sample-dry-run-evidence.json`** — The correlation validation references `.agents/fwf/runs/stage17/sample-dry-run-evidence.json` as input. This file does not exist and must be created before the correlation test can run. The plan says "If it generates `sample-dry-run-evidence.json` during validation, the command that creates it must be recorded." But generating it is not a listed task. Fix: add an explicit task to create a minimal dry-run evidence sample file before the correlation validation step.
+Unchanged from the original plan. All remain sufficient and well-grounded in repository evidence.
 
-**F5. `chain_role` field is underspecified** — Task line 192 defines normalized event fields including `chain_role`, but the plan never explains what values it takes, how it differs from `chain_id`, or where it comes from. The `ChainEvent` schema in `docs/architecture/platform-business-model.md:185-202` does not include `chain_role`. Fix: define `chain_role` semantics and values, or drop it from the normalized schema.
+### 6. Task List
 
-### 4. Suggested Improvements
+21 tasks, all executable without architecture invention:
+- New tasks for fixture creation (line 238) and evidence sample generation (line 239) are properly scoped
+- Inspect subcommands are concrete with output specifications
+- JSONL format constraint is explicit
 
-- Consider adding a task to verify that `@polkadot/api`'s `api.query.system.events.at(blockHash)` returns events with metadata containing named fields (Polkadot.js v16+ should have this, but it would be good to confirm during implementation).
-- The `replay` subcommand is defined as reproducing `state.json`, `summary.json`, and `summary.md` from events, but the `state` subcommand also produces `state.json`. Consider whether these should be distinct or whether `replay` should delegate to `state` for the state derivation step. The task list treats them independently (line 195-197), which is fine, but the overlap could be clarified.
-- Consider whether `--include-all` (line 110) should be a subcommand flag or a separate concerns. The current text mentions it only for `scan`, but it could be relevant for `replay` filtering as well.
-- The plan could benefit from a small note about the expected JSONL format: whether each line is a JSON object with no trailing comma, and whether the file should end with a newline. Minor but avoids format guesswork.
+### 7. Validation Commands
 
-### 5. Risks If Unchanged
+All commands are now internally consistent with the task list:
+- Fixture path is unambiguous (line 323 refers to the committed path)
+- Scan validation no longer checks for state.json at scan output
+- Evidence sample is generated before correlation
+- Live scan state is validated via a separate `state` command
 
-- F1/F2/F3/F4 result in validation commands that cannot pass as written because referenced files or subcommands don't match tasks. The implementation agent would need to deviate from the plan during validation.
-- F5 could cause the implementation agent to make up `chain_role` semantics, potentially diverging from future platform intent.
-- Even with fixes, the plan has enough detail that a competent implementation agent should succeed. No protocol, security, or data integrity risks arise from the plan itself.
+### 8. Minor Observation (not a blocker)
 
-### 6. Questions for Codex/Owner
+The validation command `node scripts/chain_event_indexer.js inspect sample-evidence --kind dry-run` (line 311) names a subcommand `sample-evidence` under `inspect`. The inspect task (lines 230-233) does not explicitly list `sample-evidence` alongside `mappings`, cursor summary, and counts. The implementation agent can resolve this from the validation command as specification — it does not block execution.
 
-- Should `scripts/fixtures/chain_events/data_trade_sample_events.jsonl` be created from real chain data (requiring live RPC) or as a hand-crafted fixture with synthetic events?
-- Is `chain_role` intended to be something like `"main"` / `"child"` derived from the chain profile, or a different concept? The `ChainEvent` in the platform model doesn't include it.
+### 9. Acceptance Criteria
+
+All seven criteria remain measurable and verifiable. No backend/server/database/protocol changes are permitted.
+
+## Verification Performed
+
+- `git status --short` — clean working tree
+- `git branch --show-current` — `stage/stage17-chain-event-indexer`
+- `git diff b964467..16bb21f` — verified all F1-F5 fixes are applied
+- Manual inspection of all 435 lines of the revised plan against repository evidence
