@@ -2,10 +2,8 @@
 target/
 **/*.rs.bk
 
-# References build artifacts (don't track compiled output in submodules)
-references/polkadot-sdk-solochain-template/target/
-references/polkadot-sdk-parachain-template/target/
-references/polkadot-sdk-minimal-template/target/
+# References (local-only reference material, not tracked in git)
+references/
 
 # Local chain data
 /tmp/fishbone/
