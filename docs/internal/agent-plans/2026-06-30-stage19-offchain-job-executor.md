@@ -322,18 +322,54 @@ Do not update experiment reports, deployment runbooks, paper gap matrices, chain
 
 ## Execution Record
 
-### YYYY-MM-DD opencode Pass N
+### 2026-07-01 opencode Pass 1
 
-- Branch:
-- Commits:
+- Branch: stage/stage19-offchain-job-executor
+- Base commit: 1daac43
+- Head commit: ecd5d26
+- Commits: ecd5d26 feat(backend): add offchain job executor
 - Tasks completed:
+  - Re-read required files and confirmed branch/state
+  - Added executor lib modules: job_runner.js, job_types.js, artifact_digest.js, safe_paths.js
+  - Added executor CLI entrypoint job_executor.js with --help, --data-dir, --job-id, --once, --work-dir, --worker-id, --dry-run
+  - Implemented workflow_run input resolution and Evidence creation with explicit categories
+  - Implemented dry-run execution with executor_dry_run: true marker
+  - Implemented real proof_generation execution via child_process spawn
+  - Added path safety with real-path checks
+  - Added 25 tests covering: job type validation, input contract, dry-run success, digest determinism, output_refs/evidence_id linkage, failure transitions, null job, missing workflow_run, unsupported types, real execution failure
+  - Added help/syntax validation path
+  - Created docs/implementation/offchain-job-executor.md
+  - Updated docs/README.md
+  - Updated docs/implementation/platform-backend-skeleton.md
+  - Updated docs/implementation/implementation-record.md
 - Files changed:
+  - scripts/platform-backend/job_executor.js (new)
+  - scripts/platform-backend/lib/safe_paths.js (new)
+  - scripts/platform-backend/lib/artifact_digest.js (new)
+  - scripts/platform-backend/lib/job_types.js (new)
+  - scripts/platform-backend/lib/job_runner.js (new)
+  - scripts/platform-backend/test/job_executor.test.js (new)
+  - docs/implementation/offchain-job-executor.md (new)
+  - docs/README.md (updated)
+  - docs/implementation/platform-backend-skeleton.md (updated)
+  - docs/implementation/implementation-record.md (updated)
 - Tests run:
+  - node --check on all 7 new JS files: passed
+  - node --test scripts/platform-backend/test/job_executor.test.js: 25/25 passed
+  - node --test scripts/platform-backend/test/backend_store.test.js scripts/platform-backend/test/backend_api.test.js: all passed (no regressions)
+  - node scripts/platform-backend/job_executor.js --help: printed valid help
+  - CLI error cases: missing args shows usage + error
+  - rg check: no shell injection patterns found
 - Tests not run:
+  - Optional real proof smoke: skipped (fishbone-zk binary not in environment; ZK_VERIFIER_CMD not set to executable)
 - Validation output paths:
-- Deviations from plan:
-- Questions for Codex/Owner:
+  - .agents/fwf/runs/stage19/executor-test/ (test runtime data, not committed)
+- Deviations from plan: none
+- Questions for Codex/Owner: none
 - Remaining risks:
+  - Real proof generation requires fishbone-zk binary; only dry-run and failure paths tested
+  - JSON store remains single-process; concurrent use not tested
+  - Path safety relies on repo-root boundary; no OS-level sandboxing
 
 ## Plan-Review Focus
 
