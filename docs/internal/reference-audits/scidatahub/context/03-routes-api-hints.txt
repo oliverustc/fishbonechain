@@ -1,0 +1,337 @@
+# Route And API Hints
+
+/home/swt/fishbonechain/references/SciDataHub/blockchain/prepare.md:175:export CORE_PEER_ADDRESS=localhost:7051
+/home/swt/fishbonechain/references/SciDataHub/blockchain/prepare.md:181:peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C mychannel -n basic --peerAddresses localhost:7051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt --peerAddresses localhost:9051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt -c '{"function":"InitLedger","Args":[]}'
+/home/swt/fishbonechain/references/SciDataHub/blockchain/prepare.md:212:peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C mychannel -n basic --peerAddresses localhost:7051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt --peerAddresses localhost:9051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt -c '{"function":"TransferAsset","Args":["asset6","Christopher"]}'
+/home/swt/fishbonechain/references/SciDataHub/blockchain/prepare.md:230:export CORE_PEER_ADDRESS=localhost:9051
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/blockchains/blockchainsTable.test.mjs:32:    app.post('/table/init', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/blockchains/blockchainsTable.test.mjs:41:    app.delete('/table/drop', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/blockchains/blockchainsTable.test.mjs:50:    app.post('/blockchain', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/blockchains/blockchainsTable.test.mjs:60:    app.get('/blockchain/:name', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/blockchains/blockchainsTable.test.mjs:72:    app.get('/blockchains', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/blockchains/blockchainsTable.test.mjs:81:    app.put('/blockchain/:name', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/blockchains/blockchainsTable.test.mjs:95:    app.delete('/blockchain/:name', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/ipfs/Readme.md:31:ipfs config --json API.HTTPHeaders.Access-Control-Allow-Origin '["http://192.168.8.22:5001", "http://localhost:3000", "http://127.0.0.1:5001", "https://webui.ipfs.io"]'
+/home/swt/fishbonechain/references/SciDataHub/backend/src/config/blockchain_config.mjs:88:const peerEndpoint = envOrDefault('PEER_ENDPOINT', 'localhost:7051');
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/datasets/datasetsTable.test.mjs:37:	app.post('/table/:blockchainName/init', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/datasets/datasetsTable.test.mjs:47:	app.delete('/table/:blockchainName/drop', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/datasets/datasetsTable.test.mjs:57:	app.post('/:blockchainName/dataset', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/datasets/datasetsTable.test.mjs:107:	app.delete('/:blockchainName/dataset/:name', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/datasets/datasetsTable.test.mjs:117:	app.get('/:blockchainName/datasets', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/datasets/datasetsTable.test.mjs:127:	app.get('/:blockchainName/public-datasets', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/datasets/datasetsTable.test.mjs:137:	app.get('/:blockchainName/dataset/:name', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/datasets/datasetsTable.test.mjs:150:	app.get('/:blockchainName/datasets/owner/:owner', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/datasets/datasetsTable.test.mjs:160:	app.put('/:blockchainName/dataset/:name/info', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/datasets/datasetsTable.test.mjs:171:	app.put('/:blockchainName/dataset/:name/public-level', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/datasets/datasetsTable.test.mjs:189:	app.put('/:blockchainName/dataset/:name/hash', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/datasets/datasetsTable.test.mjs:200:	app.put('/:blockchainName/dataset/:name/masking-ipfs', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/caliper/deploy-chaincode.sh:31:export CORE_PEER_ADDRESS=localhost:7051
+/home/swt/fishbonechain/references/SciDataHub/caliper/deploy-chaincode.sh:34:peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" -C mychannel -n datatrading --peerAddresses localhost:7051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" --peerAddresses localhost:9051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt" -c '{"function":"InitLedger","Args":[]}'
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/blockchains/blockchainsRoutes.mjs:13:router.get('/getblockchains', getAllBlockchains);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/blockchains/blockchainsRoutes.mjs:14:router.get('/blockchain/:name', getBlockchainByName);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/blockchains/blockchainsRoutes.mjs:15:router.post('/blockchain', addBlockchain);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/blockchains/blockchainsRoutes.mjs:16:router.put('/blockchain/:name', updateBlockchain);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/blockchains/blockchainsRoutes.mjs:17:router.delete('/blockchain/:name', deleteBlockchain);
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/chaincode-java/gradlew:58:#       https://github.com/gradle/gradle/blob/HEAD/subprojects/plugins/src/main/resources/org/gradle/api/internal/plugins/unixStartScript.txt
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/orders/tradeOrdersTable.test.mjs:36:    app.post('/trade/:blockchainName/table/init', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/orders/tradeOrdersTable.test.mjs:46:    app.delete('/trade/:blockchainName/table/drop', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/orders/tradeOrdersTable.test.mjs:56:    app.post('/trade/:blockchainName/orders', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/orders/tradeOrdersTable.test.mjs:67:    app.get('/trade/:blockchainName/orders', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/orders/tradeOrdersTable.test.mjs:77:    app.get('/trade/:blockchainName/orders/requester/:requester', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/orders/tradeOrdersTable.test.mjs:87:    app.get('/trade/:blockchainName/orders/owner/:owner', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/orders/tradeOrdersTable.test.mjs:97:    app.get('/trade/:blockchainName/orders/dataset/:datasetName', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/orders/tradeOrdersTable.test.mjs:107:    app.get('/trade/:blockchainName/orders/:orderId', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/orders/tradeOrdersTable.test.mjs:120:    app.put('/trade/:blockchainName/orders/:orderId/status', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/orders/tradeOrdersTable.test.mjs:131:    app.delete('/trade/:blockchainName/orders/:orderId', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/application-gateway-javascript/src/app.js:64:const peerEndpoint = envOrDefault('PEER_ENDPOINT', 'localhost:7051');
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/orders/serviceOrdersTable.test.mjs:36:    app.post('/service/:blockchainName/table/init', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/orders/serviceOrdersTable.test.mjs:46:    app.delete('/service/:blockchainName/table/drop', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/orders/serviceOrdersTable.test.mjs:56:    app.post('/service/:blockchainName/orders', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/orders/serviceOrdersTable.test.mjs:67:    app.get('/service/:blockchainName/orders', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/orders/serviceOrdersTable.test.mjs:77:    app.get('/service/:blockchainName/orders/requester/:requester', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/orders/serviceOrdersTable.test.mjs:87:    app.get('/service/:blockchainName/orders/owner/:owner', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/orders/serviceOrdersTable.test.mjs:97:    app.get('/service/:blockchainName/orders/dataset/:datasetName', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/orders/serviceOrdersTable.test.mjs:107:    app.get('/service/:blockchainName/orders/:orderId', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/orders/serviceOrdersTable.test.mjs:120:    app.put('/service/:blockchainName/orders/:orderId/status', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/orders/serviceOrdersTable.test.mjs:131:    app.delete('/service/:blockchainName/orders/:orderId', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/caliper/benchmarks/user-management-benchmark.yaml:102:        url: "http://localhost:9091"
+/home/swt/fishbonechain/references/SciDataHub/caliper/benchmarks/comprehensive-benchmark.yaml:144:        url: "http://localhost:9091"
+/home/swt/fishbonechain/references/SciDataHub/caliper/benchmarks/order-management-benchmark.yaml:125:        url: "http://localhost:9091"
+/home/swt/fishbonechain/references/SciDataHub/caliper/benchmarks/dataset-management-benchmark.yaml:104:        url: "http://localhost:9091"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/application-gateway-typescript/src/app.ts:31:const peerEndpoint = envOrDefault('PEER_ENDPOINT', 'localhost:7051');
+/home/swt/fishbonechain/references/SciDataHub/caliper/benchmarks/stress-test-benchmark.yaml:157:        url: "http://localhost:9091"
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/datasets/datasetsRoutes.mjs:19:router.get('/getPublicDatasets', getPublicDatasets);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/datasets/datasetsRoutes.mjs:21:router.post('/:blockchainName/addDataset', addDataset);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/datasets/datasetsRoutes.mjs:22:router.delete('/:blockchainName/:name', deleteDataset);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/datasets/datasetsRoutes.mjs:23:router.get('/:blockchainName/datasets', getAllDatasets);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/datasets/datasetsRoutes.mjs:24:router.get('/:blockchainName/datasets/owner/:owner', getDatasetsByOwner);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/datasets/datasetsRoutes.mjs:25:router.get('/:blockchainName/getAlldatasetsByOwner/:name', getAllDatasetsByOwner);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/datasets/datasetsRoutes.mjs:26:router.get('/:blockchainName/getDatasetByDatasetName/:name', getDatasetByName);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/datasets/datasetsRoutes.mjs:27:router.post('/:blockchainName/updateDatasetInfo/:name', updateDatasetInfo);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/datasets/datasetsRoutes.mjs:28:router.post('/:blockchainName/updateDatasetPublicLevel/:name', updateDatasetPublicLevel);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/datasets/datasetsRoutes.mjs:29:router.post('/:blockchainName/updateDatasetHash/:name', updateDatasetHash);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/datasets/datasetsRoutes.mjs:30:router.post('/:blockchainName/updateMaskingDatasetIPFSAddress/:name', updateMaskingDatasetIPFSAddress);
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/users/usersTable.test.mjs:29:	app.post('/table/init', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/users/usersTable.test.mjs:38:	app.delete('/table/drop', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/users/usersTable.test.mjs:47:	app.post('/user', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/users/usersTable.test.mjs:57:	app.get('/user/:username', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/backend/test/database/users/usersTable.test.mjs:70:	app.delete('/user/:username', async (req, res) => {
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/setOrgEnv.sh:28:   CORE_PEER_ADDRESS=localhost:7051
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/setOrgEnv.sh:35:   CORE_PEER_ADDRESS=localhost:9051
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/addOrg3/ccp-template.yaml:19:    url: grpcs://localhost:${P0PORT}
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/addOrg3/ccp-template.yaml:28:    url: https://localhost:${CAPORT}
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/users/usersRoutes.mjs:11:router.post('/register', register);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/users/usersRoutes.mjs:12:router.post('/login', login);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/users/usersRoutes.mjs:13:router.get('/user/username/:username', getUserByUsername);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/orders/orderRoutes.mjs:32:router.post('/:blockchainName/trade-orders', addTradeOrder);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/orders/orderRoutes.mjs:35:router.get('/:blockchainName/trade-orders', getTradeOrders);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/orders/orderRoutes.mjs:38:router.get('/:blockchainName/trade-orders/requester', getTradeOrdersByRequester);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/orders/orderRoutes.mjs:41:router.get('/:blockchainName/trade-orders/owner/:owner', getTradeOrdersByOwner);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/orders/orderRoutes.mjs:44:router.get('/:blockchainName/trade-orders/dataset/:datasetName', getTradeOrdersByDatasetName);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/orders/orderRoutes.mjs:47:router.get('/:blockchainName/trade-orders/:orderId', getTradeOrderDetails);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/orders/orderRoutes.mjs:50:router.put('/:blockchainName/trade-orders/:orderId/status', updateTradeOrderState);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/orders/orderRoutes.mjs:53:router.delete('/:blockchainName/trade-orders/:orderId', removeTradeOrder);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/orders/orderRoutes.mjs:58:router.post('/:blockchainName/service-orders', addServiceOrder);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/orders/orderRoutes.mjs:61:router.get('/:blockchainName/service-orders', getServiceOrders);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/orders/orderRoutes.mjs:64:router.get('/:blockchainName/service-orders/requester', getServiceOrdersByRequester);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/orders/orderRoutes.mjs:67:router.get('/:blockchainName/service-orders/owner/:owner', getServiceOrdersByOwner);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/orders/orderRoutes.mjs:70:router.get('/:blockchainName/service-orders/dataset/:datasetName', getServiceOrdersByDatasetName);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/orders/orderRoutes.mjs:73:router.get('/:blockchainName/service-orders/:orderId', getServiceOrderDetails);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/orders/orderRoutes.mjs:76:router.put('/:blockchainName/service-orders/:orderId/status', updateServiceOrderState);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/database/orders/orderRoutes.mjs:79:router.delete('/:blockchainName/service-orders/:orderId', removeServiceOrder);
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/prometheus-grafana/prometheus/prometheus.yml:9:      - targets: ["localhost:9090"]
+/home/swt/fishbonechain/references/SciDataHub/backend/src/services/chaincode/chaincodeRoutes.mjs:10:router.post('/bcAddUser', bcAddUser);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/services/chaincode/chaincodeRoutes.mjs:11:router.get('/bcGetUser', bcGetUser);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/services/chaincode/chaincodeRoutes.mjs:12:router.get('/bcGetTokenBalance', bcGetTokenBalance);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/services/chaincode/chaincodeRoutes.mjs:13:router.put('/bcSetTokenBalance', bcSetTokenBalance);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/services/chaincode/chaincodeRoutes.mjs:14:router.put('/bcAddTokenBalance', bcAddTokenBalance);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/services/chaincode/chaincodeRoutes.mjs:15:router.put('/bcTransferLockedTokenBalance', bcTransferLockedTokenBalance);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/services/chaincode/chaincodeRoutes.mjs:16:router.put('/bcTransferTokens', bcTransferTokens);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/services/chaincode/chaincodeRoutes.mjs:19:router.get('/bcGetDataset', bcGetDataset);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/services/chaincode/chaincodeRoutes.mjs:20:router.post('/bcAddDataset', bcAddDataset);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/services/chaincode/chaincodeRoutes.mjs:21:router.get('/bcGetAllDatasets', bcGetAllDatasets);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/services/chaincode/chaincodeRoutes.mjs:22:router.get('/bcGetDatasetOwner', bcGetDatasetOwner);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/services/chaincode/chaincodeRoutes.mjs:25:router.post('/bcCreateOrder', bcCreateOrder);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/services/chaincode/chaincodeRoutes.mjs:26:router.get('/bcGetOrder', bcGetOrder);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/services/chaincode/chaincodeRoutes.mjs:27:router.put('/bcUpdateOrderStatus', bcUpdateOrderStatus);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/services/chaincode/chaincodeRoutes.mjs:28:router.put('/bcCompleteOrder', bcCompleteOrder);
+/home/swt/fishbonechain/references/SciDataHub/backend/src/services/chaincode/chaincodeRoutes.mjs:29:router.get('/bcGetAllOrders', bcGetAllOrders);
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/addOrg3/fabric-ca/registerEnroll.sh:15:  fabric-ca-client enroll -u https://admin:adminpw@localhost:11054 --caname ca-org3 --tls.certfiles "${PWD}/fabric-ca/org3/tls-cert.pem"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/addOrg3/fabric-ca/registerEnroll.sh:21:    Certificate: cacerts/localhost-11054-ca-org3.pem
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/addOrg3/fabric-ca/registerEnroll.sh:24:    Certificate: cacerts/localhost-11054-ca-org3.pem
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/addOrg3/fabric-ca/registerEnroll.sh:27:    Certificate: cacerts/localhost-11054-ca-org3.pem
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/addOrg3/fabric-ca/registerEnroll.sh:30:    Certificate: cacerts/localhost-11054-ca-org3.pem
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/addOrg3/fabric-ca/registerEnroll.sh:50:	fabric-ca-client enroll -u https://peer0:peer0pw@localhost:11054 --caname ca-org3 -M "${PWD}/../organizations/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/msp" --tls.certfiles "${PWD}/fabric-ca/org3/tls-cert.pem"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/addOrg3/fabric-ca/registerEnroll.sh:57:  fabric-ca-client enroll -u https://peer0:peer0pw@localhost:11054 --caname ca-org3 -M "${PWD}/../organizations/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/tls" --enrollment.profile tls --csr.hosts peer0.org3.example.com --csr.hosts localhost --tls.certfiles "${PWD}/fabric-ca/org3/tls-cert.pem"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/addOrg3/fabric-ca/registerEnroll.sh:76:	fabric-ca-client enroll -u https://user1:user1pw@localhost:11054 --caname ca-org3 -M "${PWD}/../organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp" --tls.certfiles "${PWD}/fabric-ca/org3/tls-cert.pem"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/addOrg3/fabric-ca/registerEnroll.sh:83:	fabric-ca-client enroll -u https://org3admin:org3adminpw@localhost:11054 --caname ca-org3 -M "${PWD}/../organizations/peerOrganizations/org3.example.com/users/Admin@org3.example.com/msp" --tls.certfiles "${PWD}/fabric-ca/org3/tls-cert.pem"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/prometheus-grafana/README.md:14:3. Log in: type “localhost:3000” on your web browser -> username=“admin”, password=“admin” -> set a new password
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/prometheus-grafana/README.md:21:Metrics can also be displayed directly from Prometheus by going to "localhost:9090".
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/prometheus-grafana/README.md:47:Check the state of the connections with targets on http://localhost:9090/targets.
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/addOrg3/ccp-template.json:27:            "url": "grpcs://localhost:${P0PORT}",
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/addOrg3/ccp-template.json:39:            "url": "https://localhost:${CAPORT}",
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-go/main.go:17:		PeerEndpoint: "dns:///localhost:7051",
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/addOrg3/org3-crypto.yaml:19:        - localhost
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-go/web/app.go:27:	fmt.Println("Listening (http://localhost:3000/)...")
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/compose/podman/peercfg/core.yaml:498:    # http://localhost:2375
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/compose/podman/peercfg/core.yaml:499:    # https://localhost:2376
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-go/README.md:22:  --url http://localhost:3000/invoke \
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-go/README.md:38:  --url 'http://localhost:3000/query?channelid=mychannel&chaincodeid=basic&function=ReadAsset&args=Asset123' 
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/scripts/setAnchorPeer.sh:53:  peer channel update -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com -c $CHANNEL_NAME -f ${TEST_NETWORK_HOME}/channel-artifacts/${CORE_PEER_LOCALMSPID}anchors.tx --tls --cafile "$ORDERER_CA" >&log.txt
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/scripts/orderer3.sh:10:osnadmin channel join --channelID ${channel_name} --config-block ./channel-artifacts/${channel_name}.block -o localhost:7057 --ca-file "$ORDERER_CA" --client-cert "$ORDERER_ADMIN_TLS_SIGN_CERT" --client-key "$ORDERER_ADMIN_TLS_PRIVATE_KEY" >> log.txt 2>&1
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/scripts/configUpdate.sh:29:  peer channel fetch config ${TEST_NETWORK_HOME}/channel-artifacts/config_block.pb -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com -c $CHANNEL --tls --cafile "$ORDERER_CA"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/scripts/orderer2.sh:10:osnadmin channel join --channelID ${channel_name} --config-block ./channel-artifacts/${channel_name}.block -o localhost:7055 --ca-file "$ORDERER_CA" --client-cert "$ORDERER_ADMIN_TLS_SIGN_CERT" --client-key "$ORDERER_ADMIN_TLS_PRIVATE_KEY" >> log.txt 2>&1
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/addOrg3/compose/podman/peercfg/core.yaml:498:    # http://localhost:2375
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/addOrg3/compose/podman/peercfg/core.yaml:499:    # https://localhost:2376
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/application-gateway-go/assetTransfer.go:34:	peerEndpoint = "dns:///localhost:7051"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/compose/docker/peercfg/core.yaml:498:    # http://localhost:2375
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/compose/docker/peercfg/core.yaml:499:    # https://localhost:2376
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/chaincode-external/README.md:113:peer lifecycle chaincode queryinstalled --peerAddresses localhost:7051 --tlsRootCertFiles organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/chaincode-external/README.md:159:peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile "$PWD/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" --channelID mychannel --name basic --version 1.0 --package-id $CHAINCODE_ID --sequence 1
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/chaincode-external/README.md:162:peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile "$PWD/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" --channelID mychannel --name basic --version 1.0 --package-id $CHAINCODE_ID --sequence 1
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/chaincode-external/README.md:164:peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile "$PWD/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" --channelID mychannel --name basic --peerAddresses localhost:7051 --tlsRootCertFiles "$PWD/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" --peerAddresses localhost:9051 --tlsRootCertFiles organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt --version 1.0 --sequence 1
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/chaincode-external/README.md:170:2020-08-05 15:41:44.982 PDT [chaincodeCmd] ClientWait -> INFO 001 txid [6bdbe040b99a45cc90a23ec21f02ea5da7be8b70590eb04ff3323ef77fdedfc7] committed with status (VALID) at localhost:7051
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/chaincode-external/README.md:171:2020-08-05 15:41:44.983 PDT [chaincodeCmd] ClientWait -> INFO 002 txid [6bdbe040b99a45cc90a23ec21f02ea5da7be8b70590eb04ff3323ef77fdedfc7] committed with status (VALID) at localhost:9051
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/scripts/org3-scripts/updateChannelConfig.sh:53:peer channel update -f ${TEST_NETWORK_HOME}/channel-artifacts/org3_update_in_envelope.pb -c ${CHANNEL_NAME} -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile "$ORDERER_CA"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/scripts/org3-scripts/joinChannel.sh:63:peer channel fetch 0 $BLOCKFILE -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com -c $CHANNEL_NAME --tls --cafile "$ORDERER_CA" >&log.txt
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/addOrg3/compose/docker/peercfg/core.yaml:498:    # http://localhost:2375
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/addOrg3/compose/docker/peercfg/core.yaml:499:    # https://localhost:2376
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/scripts/orderer.sh:10:osnadmin channel join --channelID ${channel_name} --config-block ./channel-artifacts/${channel_name}.block -o localhost:7053 --ca-file "$ORDERER_CA" --client-cert "$ORDERER_ADMIN_TLS_SIGN_CERT" --client-key "$ORDERER_ADMIN_TLS_PRIVATE_KEY" >> log.txt 2>&1
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/jest.config.ts:167:    // testURL: "http://localhost",
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/demo.http:5:@hostname = localhost
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/cryptogen/crypto-config-org2.yaml:52:        - localhost
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/scripts/generateEnv.sh:53:REDIS_HOST=localhost
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/cryptogen/crypto-config-orderer.yaml:24:          - localhost
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/cryptogen/crypto-config-orderer.yaml:27:          - localhost
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/cryptogen/crypto-config-orderer.yaml:30:          - localhost
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/cryptogen/crypto-config-orderer.yaml:33:          - localhost
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/cryptogen/crypto-config-org1.yaml:52:        - localhost
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/README.md:51:While the basic asset transfer chaincode maps well to an `/api/assets` REST API, response times when submitting transactions to a Fabric network are problematic for REST APIs.
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/README.md:56:The `202 ACCEPTED` response includes a `jobId` which can be used with the `/api/jobs` endpoint to get the results of the create, update, delete, or transfer request.
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/README.md:62:  Defines the main `/api/assets` endpoint.
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/README.md:66:  Defines the `/api/jobs` endpoint for getting job status.
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/README.md:70:  Defines the `/api/transactions` endpoint for getting transaction status.
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/README.md:170:curl --header "X-Api-Key: ${SAMPLE_APIKEY}" http://localhost:3000/api/assets
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/README.md:182:curl --include --header "X-Api-Key: ${SAMPLE_APIKEY}" --request OPTIONS http://localhost:3000/api/assets/asset7
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/README.md:188:curl --include --header "Content-Type: application/json" --header "X-Api-Key: ${SAMPLE_APIKEY}" --request POST --data '{"ID":"asset7","Color":"red","Size":42,"Owner":"Jean","AppraisedValue":101}' http://localhost:3000/api/assets
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/README.md:200:curl --header "X-Api-Key: ${SAMPLE_APIKEY}" http://localhost:3000/api/jobs/__job_id__
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/README.md:214:curl --header "X-Api-Key: ${SAMPLE_APIKEY}" http://localhost:3000/api/transactions/__transaction_id__
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/README.md:228:curl --header "X-Api-Key: ${SAMPLE_APIKEY}" http://localhost:3000/api/assets/asset7
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/README.md:240:curl --include --header "Content-Type: application/json" --header "X-Api-Key: ${SAMPLE_APIKEY}" --request PUT --data '{"ID":"asset7","Color":"red","Size":11,"Owner":"Jean","AppraisedValue":101}' http://localhost:3000/api/assets/asset7
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/README.md:246:curl --include --header "Content-Type: application/json" --header "X-Api-Key: ${SAMPLE_APIKEY}" --request PATCH --data '[{"op":"replace","path":"/Owner","value":"Ashleigh"}]' http://localhost:3000/api/assets/asset7
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/README.md:252:curl --include --header "X-Api-Key: ${SAMPLE_APIKEY}" --request DELETE http://localhost:3000/api/assets/asset7
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/cfssl/ca-orderer.json:17:        "localhost",
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/config.spec.ts:484:        it('defaults to "localhost"', () => {
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/config.spec.ts:486:            expect(config.redisHost).toBe('localhost');
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/CHAINCODE_AS_A_SERVICE_TUTORIAL.md:64:export CORE_PEER_ADDRESS=localhost:7051
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/ccp-template.yaml:19:    url: grpcs://localhost:${P0PORT}
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/ccp-template.yaml:28:    url: https://localhost:${CAPORT}
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/ccp-template.json:27:            "url": "grpcs://localhost:${P0PORT}",
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/ccp-template.json:39:            "url": "https://localhost:${CAPORT}",
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/cfssl/client-csr-template.json:18:        "localhost",
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:10:  fabric-ca-client enroll -u https://admin:adminpw@localhost:7054 --caname ca-org1 --tls.certfiles "${PWD}/organizations/fabric-ca/org1/ca-cert.pem"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:16:    Certificate: cacerts/localhost-7054-ca-org1.pem
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:19:    Certificate: cacerts/localhost-7054-ca-org1.pem
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:22:    Certificate: cacerts/localhost-7054-ca-org1.pem
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:25:    Certificate: cacerts/localhost-7054-ca-org1.pem
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:59:  fabric-ca-client enroll -u https://peer0:peer0pw@localhost:7054 --caname ca-org1 -M "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp" --tls.certfiles "${PWD}/organizations/fabric-ca/org1/ca-cert.pem"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:66:  fabric-ca-client enroll -u https://peer0:peer0pw@localhost:7054 --caname ca-org1 -M "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls" --enrollment.profile tls --csr.hosts peer0.org1.example.com --csr.hosts localhost --tls.certfiles "${PWD}/organizations/fabric-ca/org1/ca-cert.pem"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:76:  fabric-ca-client enroll -u https://user1:user1pw@localhost:7054 --caname ca-org1 -M "${PWD}/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp" --tls.certfiles "${PWD}/organizations/fabric-ca/org1/ca-cert.pem"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:83:  fabric-ca-client enroll -u https://org1admin:org1adminpw@localhost:7054 --caname ca-org1 -M "${PWD}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp" --tls.certfiles "${PWD}/organizations/fabric-ca/org1/ca-cert.pem"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:96:  fabric-ca-client enroll -u https://admin:adminpw@localhost:8054 --caname ca-org2 --tls.certfiles "${PWD}/organizations/fabric-ca/org2/ca-cert.pem"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:102:    Certificate: cacerts/localhost-8054-ca-org2.pem
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:105:    Certificate: cacerts/localhost-8054-ca-org2.pem
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:108:    Certificate: cacerts/localhost-8054-ca-org2.pem
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:111:    Certificate: cacerts/localhost-8054-ca-org2.pem
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:145:  fabric-ca-client enroll -u https://peer0:peer0pw@localhost:8054 --caname ca-org2 -M "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp" --tls.certfiles "${PWD}/organizations/fabric-ca/org2/ca-cert.pem"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:152:  fabric-ca-client enroll -u https://peer0:peer0pw@localhost:8054 --caname ca-org2 -M "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls" --enrollment.profile tls --csr.hosts peer0.org2.example.com --csr.hosts localhost --tls.certfiles "${PWD}/organizations/fabric-ca/org2/ca-cert.pem"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:162:  fabric-ca-client enroll -u https://user1:user1pw@localhost:8054 --caname ca-org2 -M "${PWD}/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp" --tls.certfiles "${PWD}/organizations/fabric-ca/org2/ca-cert.pem"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:169:  fabric-ca-client enroll -u https://org2admin:org2adminpw@localhost:8054 --caname ca-org2 -M "${PWD}/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp" --tls.certfiles "${PWD}/organizations/fabric-ca/org2/ca-cert.pem"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:182:  fabric-ca-client enroll -u https://admin:adminpw@localhost:9054 --caname ca-orderer --tls.certfiles "${PWD}/organizations/fabric-ca/ordererOrg/ca-cert.pem"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:188:    Certificate: cacerts/localhost-9054-ca-orderer.pem
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:191:    Certificate: cacerts/localhost-9054-ca-orderer.pem
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:194:    Certificate: cacerts/localhost-9054-ca-orderer.pem
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:197:    Certificate: cacerts/localhost-9054-ca-orderer.pem
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:222:  fabric-ca-client enroll -u https://orderer:ordererpw@localhost:9054 --caname ca-orderer -M "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp" --tls.certfiles "${PWD}/organizations/fabric-ca/ordererOrg/ca-cert.pem"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:229:  fabric-ca-client enroll -u https://orderer:ordererpw@localhost:9054 --caname ca-orderer -M "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls" --enrollment.profile tls --csr.hosts orderer.example.com --csr.hosts localhost --tls.certfiles "${PWD}/organizations/fabric-ca/ordererOrg/ca-cert.pem"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/fabric-ca/registerEnroll.sh:243:  fabric-ca-client enroll -u https://ordererAdmin:ordererAdminpw@localhost:9054 --caname ca-orderer -M "${PWD}/organizations/ordererOrganizations/example.com/users/Admin@example.com/msp" --tls.certfiles "${PWD}/organizations/fabric-ca/ordererOrg/ca-cert.pem"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/cfssl/admin-csr-template.json:18:        "localhost",
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/explorer/docker-compose.yaml:23:      test: "pg_isready -h localhost -p 5432 -q -U postgres"
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/cfssl/orderer-csr-template.json:18:        "localhost",
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/cfssl/peer-csr-template.json:18:        "localhost",
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/cfssl/registerEnroll.sh:125:        -hostname="$USER,localhost,127.0.0.1" \
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/cfssl/registerEnroll.sh:153:        -hostname="$USER,localhost,127.0.0.1" \
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/cfssl/registerEnroll.sh:181:        -hostname="$USER,localhost,127.0.0.1" \
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/cfssl/registerEnroll.sh:210:        -hostname="$USER,localhost,127.0.0.1" \
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/cfssl/registerEnroll.sh:239:        -hostname="$USER,localhost,127.0.0.1" \
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/cfssl/registerEnroll.sh:268:        -hostname="$USER,localhost,127.0.0.1" \
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/blockchain/BlockchainList.vue:60:import axios from "@/api/axios";
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/blockchain/BlockchainList.vue:69:    const response = await axios.get('/getblockchains');
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/application-gateway-java/gradlew:58:#       https://github.com/gradle/gradle/blob/HEAD/subprojects/plugins/src/main/resources/org/gradle/api/internal/plugins/unixStartScript.txt
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/server.ts:65:    app.use('/api/assets', authenticateApiKey, assetsRouter);
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/server.ts:66:    app.use('/api/jobs', authenticateApiKey, jobsRouter);
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/server.ts:67:    app.use('/api/transactions', authenticateApiKey, transactionsRouter);
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/organizations/cfssl/ca-peer.json:17:        "localhost",
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/application-gateway-java/src/main/java/App.java:51:	private static final String PEER_ENDPOINT = "localhost:7051";
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Home/HomeView.vue:19:import axios from "@/api/axios";
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Home/HomeView.vue:32:    const response = await axios.get('/getDatasets');
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:109:    describe('/api/assets', () => {
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:125:                .get('/api/assets')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:145:                .get('/api/assets')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:161:                .get('/api/assets')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:188:                .post('/api/assets')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:211:                .post('/api/assets')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:242:                .post('/api/assets')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:264:    describe('/api/assets/:id', () => {
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:288:                .options('/api/assets/asset1')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:308:                .options('/api/assets/asset3')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:328:                .options('/api/assets/asset1')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:347:                .get('/api/assets/asset1')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:369:                .get('/api/assets/asset3')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:388:                .get('/api/assets/asset1')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:406:                .put('/api/assets/asset1')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:429:                .put('/api/assets/asset1')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:453:                .put('/api/assets/asset1')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:484:                .put('/api/assets/asset1')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:507:                .patch('/api/assets/asset1')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:524:                .patch('/api/assets/asset1')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:550:                .patch('/api/assets/asset1')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:567:                .delete('/api/assets/asset1')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:583:                .delete('/api/assets/asset1')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:598:    describe('/api/jobs/:id', () => {
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:601:                .get('/api/jobs/1')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:619:                .get('/api/jobs/3')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:645:                .get('/api/jobs/2')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:661:    describe('/api/transactions/:id', () => {
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:677:                .get('/api/transactions/txn1')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:701:                .get('/api/transactions/txn3')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/__tests__/api.test.ts:729:                .get('/api/transactions/txn2')
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Login/LoginView.vue:70:import axios from '../../api/axios';
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Login/LoginView.vue:84:    const response = await axios.post('/login', {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Login/LoginView.vue:104:    const response = await axios.post('/register', {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Login/LoginView.vue:130:    const response = await axios.post('/login', {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Login/LoginView.vue:155:    const response = await axios.post('/login', {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Finance/FinanceView.vue:89:import axios from "@/api/axios";
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Finance/FinanceView.vue:106:    const response = await axios.get('/getUser', {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Finance/FinanceView.vue:119:    await axios.post('/mint', { uID, value });
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Finance/FinanceView.vue:134:    await axios.post('/burn', { uID, value });
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Order/BuyOrder.vue:4:import axios from "@/api/axios";
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Order/BuyOrder.vue:47:    response = await axios.get('/getorder', { params: { id: route.params.id }, });
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Order/BuyOrder.vue:49:    response = await axios.get('/getdataset', { params: { id: order.value.DatasetID } });
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Order/BuyOrder.vue:60:    const response = await axios.post('/submitSecret', {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Order/BuyOrder.vue:76:    await axios.post('/getKey', {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Market/MarketView.vue:42:import axios from "@/api/axios";
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Market/MarketView.vue:58:    const response = await axios.get('/getDatasets');
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Order/BuyView.vue:41:import axios from '@/api/axios';
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Order/BuyView.vue:58:    const response = await axios.get('/getBuyOrders', {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/AddDataset.vue:4:import axios from "@/api/axios";
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/AddDataset.vue:71:    const response = await axios.get('/getblockchains');
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/AddDataset.vue:164:    const response = await axios.post(`/addDataset/${selectedBlockchain.value}`, requestData, {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/AddDataset.vue:175:    const bcresponse = await axios.post(`/bcAddDataset`, bcRequestData, {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Market/CreateOrder.vue:4:import axios from "@/api/axios";
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Market/CreateOrder.vue:38:    const response = await axios.get('/getdataset', { params: { id: route.params.id } });
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Market/CreateOrder.vue:66:    await axios.post('/createOrder', {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Market/CreateOrder.vue:79:    const response = await axios.get('/download', {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/api/axios.js:1:// src/axios.js
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/api/axios.js:4:const instance = axios.create({
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/api/axios.js:5:  baseURL: 'http://192.168.8.22:3101',
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Order/SellOrder.vue:4:import axios from "@/api/axios";
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Order/SellOrder.vue:48:    response = await axios.get('/getorder', { params: { id: route.params.id }, });
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Order/SellOrder.vue:50:    response = await axios.get('/getdataset', { params: { id: order.value.DatasetID } });
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Order/SellOrder.vue:61:    const response = await axios.post('/submitKey', {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Order/SellOrder.vue:78:    await axios.post('/handleOrder', {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/dataTrade/RequestDataTrade.vue:336:import axios from "@/api/axios";
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/dataTrade/RequestDataTrade.vue:368:    const response = await axios.get(`/getDatasetByDatasetName/${blockchainName.value}/${datasetName.value}`);
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/dataTrade/RequestDataTrade.vue:572:  const response = await axios.post(`/trade-orders`, requestData);
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/dataTrade/RequestDataTrade.vue:577:  const response = await axios.post(`/bcCreateOrder`, requestData);
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/DatasetView.vue:185:import axios from "@/api/axios";
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/DatasetView.vue:205:    const response = await axios.get(`/getDatasetByDatasetName/${blockchainName.value}/${datasetName.value}`);
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/scripts/orderer4.sh:10:osnadmin channel join --channelID ${channel_name} --config-block ./channel-artifacts/${channel_name}.block -o localhost:7059 --ca-file "$ORDERER_CA" --client-cert "$ORDERER_ADMIN_TLS_SIGN_CERT" --client-key "$ORDERER_ADMIN_TLS_PRIVATE_KEY" >> log.txt 2>&1
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/config.ts:105: * Whether to convert discovered host addresses to be 'localhost'
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/config.ts:249:    .default('localhost')
+/home/swt/fishbonechain/references/SciDataHub/blockchain/asset-transfer-basic/rest-api-typescript/src/config.ts:250:    .example('localhost')
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/MyDatasets.vue:159:import axios from "@/api/axios";
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/MyDatasets.vue:180:    const response = await axios.get(`/getAlldatasetsByOwner/${userName.value}`);
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/scripts/ccutils.sh:37:  peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile "$ORDERER_CA" --channelID $CHANNEL_NAME --name ${CC_NAME} --version ${CC_VERSION} --package-id ${PACKAGE_ID} --sequence ${CC_SEQUENCE} ${INIT_REQUIRED} ${CC_END_POLICY} ${CC_COLL_CONFIG} >&log.txt
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/scripts/ccutils.sh:86:  peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile "$ORDERER_CA" --channelID $CHANNEL_NAME --name ${CC_NAME} "${PEER_CONN_PARMS[@]}" --version ${CC_VERSION} --sequence ${CC_SEQUENCE} ${INIT_REQUIRED} ${CC_END_POLICY} ${CC_COLL_CONFIG} >&log.txt
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/scripts/ccutils.sh:140:    peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile "$ORDERER_CA" -C $CHANNEL_NAME -n ${CC_NAME} "${PEER_CONN_PARMS[@]}" --isInit -c ${fcn_call} >&log.txt
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/scripts/ccutils.sh:305:    peer chaincode invoke -o localhost:7050 -C $CHANNEL_NAME -n ${CC_NAME} -c ${CC_INVOKE_CONSTRUCTOR} --tls --cafile $ORDERER_CA  --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA  >&log.txt
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Order/SellView.vue:41:import axios from '@/api/axios';
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/Order/SellView.vue:58:    const response = await axios.get('/getSellOrders', {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/dataService/RequestDataService.vue:404:import axios from "@/api/axios";
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/dataService/RequestDataService.vue:437:    const response = await axios.get(`/getDatasetByDatasetName/${blockchainName.value}/${datasetName.value}`);
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/dataService/RequestDataService.vue:772:  const response = await axios.post('/submitDataServiceRequest', requestData);
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/DatasetEdit.vue:322:import axios from "@/api/axios";
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/DatasetEdit.vue:353:    const response = await axios.get(`/getDatasetByDatasetName/${blockchainName.value}/${datasetName.value}`);
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/DatasetEdit.vue:388:    const response = await axios.post(`/updateDatasetInfo/${blockchainName.value}/${datasetName.value}`, {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/DatasetEdit.vue:425:      const response = await axios.post(`/updateDatasetPublicLevel/${blockchainName.value}/${datasetName.value}`, {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/DatasetEdit.vue:463:      const response = await axios.post(`/updateDatasetPublicLevel/${blockchainName.value}/${datasetName.value}`, {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/DatasetEdit.vue:501:      const response = await axios.post(`/updateDatasetPublicLevel/${blockchainName.value}/${datasetName.value}`, {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/DatasetEdit.vue:536:      const response = await axios.post(`/updateDatasetPublicLevel/${blockchainName.value}/${datasetName.value}`, {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/DatasetEdit.vue:578:    const response = await axios.post(`/updateDatasetHash/${blockchainName.value}/${datasetName.value}`, {
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/DatasetEdit.vue:612:    const response = await axios.post(`/updateMaskingDatasetIPFSAddress/${blockchainName.value}/${datasetName.value}`, {
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/scripts/envVar.sh:39:    export CORE_PEER_ADDRESS=localhost:7051
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/scripts/envVar.sh:44:    export CORE_PEER_ADDRESS=localhost:9051
+/home/swt/fishbonechain/references/SciDataHub/blockchain/test-network/scripts/envVar.sh:49:    export CORE_PEER_ADDRESS=localhost:11051
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/PublicDatasets.vue:161:import axios from "@/api/axios";
+/home/swt/fishbonechain/references/SciDataHub/frontend/src/views/dataset/PublicDatasets.vue:179:    const response = await axios.get(`/getPublicDatasets/${blockchainName.value}`);

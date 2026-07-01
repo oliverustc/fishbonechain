@@ -13,6 +13,7 @@
 
 - [architecture/platform-architecture.md](architecture/platform-architecture.md)：平台层/场景层边界、chain profile 与结算模式
 - [architecture/platform-business-model.md](architecture/platform-business-model.md)：平台通用业务对象模型（Stage 15 设计基线）
+- [architecture/web-access-wallet-architecture.md](architecture/web-access-wallet-architecture.md)：Web 接入与用户本地签名全局规划，定义机构后端、前端钱包、用户私钥、身份背书和链上交易边界
 - [architecture/fishbonechain.md](architecture/fishbonechain.md)：FishboneChain 主链 + 多子链众包架构
 - [architecture/cdt.md](architecture/cdt.md)：可定制可验证数据交易协议
 - [architecture/cross-chain-proof.md](architecture/cross-chain-proof.md)：BPiano / 高效跨链状态证明
