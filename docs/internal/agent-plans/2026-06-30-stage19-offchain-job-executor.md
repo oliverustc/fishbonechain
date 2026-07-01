@@ -33,7 +33,7 @@ Implementation may add or update:
 
 - a worker CLI under `scripts/platform-backend/job_executor.js`;
 - worker helper modules under `scripts/platform-backend/lib/`, for example:
-  - `job_executor.js` or `job_runner.js`;
+  - `job_runner.js`;
   - `job_types.js`;
   - `artifact_digest.js`;
   - `safe_paths.js` if path safety is not already factored cleanly enough;
@@ -44,6 +44,7 @@ Implementation may add or update:
 - focused Node tests under `scripts/platform-backend/test/`;
 - a formal implementation document, preferably `docs/implementation/offchain-job-executor.md`;
 - `docs/implementation/platform-backend-skeleton.md` only to link forward to the new executor behavior and clarify that jobs are no longer metadata-only when the executor is run;
+- `docs/implementation/implementation-record.md` with a brief Stage 19 entry;
 - `docs/README.md` index entry for the new formal executor document;
 - `.gitignore` entries for generated executor runtime output if a new non-ignored runtime directory is introduced;
 - this plan's Execution Record.
@@ -54,7 +55,7 @@ Recommended file layout:
 scripts/platform-backend/
   job_executor.js
   lib/
-    job_executor.js
+    job_runner.js
     artifact_digest.js
   test/
     job_executor.test.js
@@ -86,6 +87,7 @@ docs/implementation/offchain-job-executor.md
   - `evidence_id` -> existing `evidence_id`.
 - The current proof-generation CLI can be exercised without chain RPC using `node scripts/data_trade_cli.js generate-proof ... --evidence-out <path>`.
 - The proof-generation CLI still depends on a working `fishbone-zk` binary via `ZK_VERIFIER_CMD` or profile config. In environments without the binary, unit tests should mock command execution instead of pretending the proof pipeline ran.
+- Stage 18 `Evidence` schema requires `run_id`, and `workflow_runs` already exists as a backend collection. Stage 19 should use an existing `WorkflowRun` reference instead of changing the schema or creating placeholder workflow runs.
 - Stage 18 tests use `.agents/fwf/runs/stage18/backend-test/`; Stage 19 validation should use `.agents/fwf/runs/stage19/...`.
 
 ## Design Constraints
@@ -111,7 +113,7 @@ Required semantics:
 - `--once` finds one queued job and runs at most one job, then exits.
 - `--work-dir` is repo-local or under `.agents/fwf/runs/stage19/...`; all generated evidence/artifacts/logs go under a per-job subdirectory.
 - `--worker-id` defaults to a stable local identifier such as `local-worker`.
-- `--dry-run` must not execute the proof CLI; it should validate inputs, transition the job through `running` to `completed`, write a deterministic dummy artifact/evidence file under `--work-dir`, compute its digest, and create/update metadata. This is for executor mechanics only and must be documented as not a proof result.
+- `--dry-run` must not execute the proof CLI; it should validate inputs, transition the job through `running` to `completed`, write a deterministic dummy artifact/evidence file under `--work-dir`, compute its digest, and create/update metadata. This is for executor mechanics only and must be documented as not a proof result. Dry-run output must be inspectably marked with `executor_dry_run: true`, and the created Evidence must use `scenario: "executor-dry-run"` and `result: "executor-dry-run-completed"`.
 
 `proof_generation` job input contract should be concrete and fit current `input_refs`:
 
@@ -120,6 +122,7 @@ Required semantics:
   "job_type": "proof_generation",
   "status": "queued",
   "input_refs": [
+    {"artifact_type": "workflow_run", "path": "run-id-from-workflow-runs", "digest": null},
     {"artifact_type": "profile", "path": "child6-data-trade", "digest": null},
     {"artifact_type": "dataset", "path": "scripts/fixtures/data_trade_datasets/factory_sensors.json", "digest": null},
     {"artifact_type": "request", "path": "scripts/fixtures/data_trade_requests/factory_temperature_range.json", "digest": null}
@@ -131,6 +134,10 @@ Required semantics:
   "evidence_id": null
 }
 ```
+
+For `artifact_type: "workflow_run"`, `path` is a platform `run_id`, not a filesystem path. Before creating Evidence, the executor must look up `workflow_runs` by that `run_id`; if the referenced run is missing, the job must fail with a concise error and no Evidence record. The executor must not create a placeholder `WorkflowRun`, must not create Evidence with a null or reserved `run_id`, and must not change the `Evidence` schema to bypass this dependency.
+
+For `artifact_type: "profile"`, `path` is the profile string passed to `scripts/data_trade_cli.js generate-proof --profile`. The executor may perform lightweight validation against `scripts/profiles/chains.json` when that is simple, but it must not duplicate the full CLI profile-loading behavior or change the Stage 16 CLI contract.
 
 The executor should map this to:
 
@@ -148,8 +155,13 @@ On success:
 - `worker_id`, `started_at`, and `completed_at` are set;
 - `output_refs` includes at least the evidence JSON path with `artifact_type: "evidence"`;
 - `digest` records a digest of the evidence output file;
-- a corresponding `Evidence` record is created in the backend store or linked if one was already created;
+- a corresponding `Evidence` record is created in the backend store with the validated `run_id`, or linked if a valid existing Evidence reference is explicitly supported by the implementation;
 - `evidence_id` points to that record.
+
+Evidence categories must be explicit:
+
+- dry-run executor Evidence uses `category: "dry_run"`, `scenario: "executor-dry-run"`, and `result: "executor-dry-run-completed"`;
+- real off-chain proof-generation Evidence uses `category: "postcheck"` because it records off-chain proof output without chain finality or live-chain verification.
 
 On failure:
 
@@ -157,6 +169,7 @@ On failure:
 - `error` records a concise error summary;
 - `completed_at` is set;
 - no false evidence success record is created.
+- if the failure is a missing or invalid `workflow_run` reference, no Evidence record is created.
 
 ## Risks
 
@@ -208,12 +221,13 @@ Validation:
 - [ ] Confirm the branch is `stage/stage19-offchain-job-executor` and record `git status --short`.
 - [ ] Add a dependency-free executor entrypoint at `scripts/platform-backend/job_executor.js` with `--help`, `--data-dir`, `--job-id`, `--once`, `--work-dir`, `--worker-id`, and `--dry-run`.
 - [ ] Add executor helper logic to load the Stage 18 JSON store, find queued jobs, validate job type, and perform safe status transitions.
-- [ ] Define and test the `proof_generation` input contract using `input_refs` artifact types `profile`, `dataset`, and `request`.
+- [ ] Define and test the `proof_generation` input contract using required `input_refs` artifact types `workflow_run`, `profile`, `dataset`, and `request`.
+- [ ] Resolve the required `workflow_run` input by treating `input_refs[].path` as a `run_id`, verifying that `workflow_runs` contains that record, and failing the job without Evidence if it does not.
 - [ ] Implement path safety for input files and output work directories using real paths. Reject unsafe paths outside the repository or non-ignored configured work roots.
-- [ ] Implement dry-run execution that writes a clearly marked dummy evidence JSON under `.agents/fwf/runs/stage19/...` and updates job/evidence metadata without invoking proof tools.
+- [ ] Implement dry-run execution that writes a clearly marked dummy evidence JSON under `.agents/fwf/runs/stage19/...` with `executor_dry_run: true`, and updates job/evidence metadata without invoking proof tools.
 - [ ] Implement real `proof_generation` execution by spawning `node scripts/data_trade_cli.js generate-proof ... --evidence-out <path>` and capturing exit code/stdout/stderr into per-job logs.
 - [ ] Compute a deterministic digest, preferably SHA-256 hex, for the generated evidence file and store it in job `digest` plus `output_refs[].digest`.
-- [ ] Create an `Evidence` record for completed jobs with Stage 15-compatible fields, linking it to `job.evidence_id`. For dry-run executor tests, mark result/category so it cannot be mistaken for a real ZK proof.
+- [ ] Create an `Evidence` record for completed jobs with Stage 15-compatible fields, the validated `run_id`, and explicit category values: `category: "dry_run"` for executor dry-runs and `category: "postcheck"` for real off-chain proof generation. Link it to `job.evidence_id`.
 - [ ] Ensure failed jobs record `status: "failed"`, `error`, `worker_id`, `started_at`, and `completed_at` without creating successful evidence.
 - [ ] Keep future job types (`data_preprocessing`, `anonymization`, `verification`, `training`) non-executable for now, returning a clear unsupported-job error and leaving/marking job state consistently.
 - [ ] Add tests for successful dry-run `proof_generation`, missing input rejection, unsupported type behavior, failure transition, digest/output_refs/evidence_id linkage, symlink/path escape rejection, and `--once` job selection.
@@ -221,18 +235,20 @@ Validation:
 - [ ] Update or extend backend docs:
   - add `docs/implementation/offchain-job-executor.md`;
   - update `docs/README.md`;
-  - update `docs/implementation/platform-backend-skeleton.md` to reference Stage 19 executor behavior.
+  - update `docs/implementation/platform-backend-skeleton.md` to reference Stage 19 executor behavior;
+  - update `docs/implementation/implementation-record.md` with a brief Stage 19 entry.
 - [ ] Update this plan's Execution Record with files changed, tests run, deviations, validation output paths, and remaining risks.
 - [ ] Run all validation commands and inspect generated output paths before committing.
 
 ## Acceptance Criteria
 
-- A queued `proof_generation` job can be executed in `--dry-run` mode, transitions to `completed`, writes repo-local output, records a digest, and links an `Evidence` record.
-- A missing required input, unsafe input path, unsafe output path, unsupported job type, or failed spawned command produces a `failed` job with an error and no false success evidence.
+- A queued `proof_generation` job with a valid `workflow_run` input can be executed in `--dry-run` mode, transitions to `completed`, writes repo-local output containing `executor_dry_run: true`, records a digest, and links an `Evidence` record with `category: "dry_run"`, `scenario: "executor-dry-run"`, and `result: "executor-dry-run-completed"`.
+- Real off-chain proof-generation success links Evidence with `category: "postcheck"` and the validated `run_id`; it must not claim chain finality or live-chain verification.
+- A missing required input, missing referenced `workflow_runs` record, unsafe input path, unsafe output path, unsupported job type, or failed spawned command produces a `failed` job with an error and no false success evidence.
 - The executor can run a specified `--job-id` or one queued job via `--once`.
 - Real proof execution path is implemented as a wrapper around the existing Stage 16 `generate-proof` CLI and does not change that CLI contract.
-- Tests cover executor mechanics without requiring live chain RPC or a real ZK binary.
-- Formal docs describe executor commands, input contract, output layout, trust boundaries, and known limitations.
+- Tests cover executor mechanics without requiring live chain RPC or a real ZK binary, including `workflow_run` lookup, Evidence category assignment, and dry-run marker fields.
+- Formal docs describe executor commands, input contract, workflow-run dependency, output layout, Evidence linkage/category behavior, trust boundaries, and known limitations.
 - No new package dependency or lockfile changes are introduced.
 - Runtime outputs are written only under ignored repo-local paths.
 
@@ -251,6 +267,7 @@ node scripts/platform-backend/job_executor.js --help
 test -f docs/implementation/offchain-job-executor.md
 grep -q offchain-job-executor docs/README.md
 grep -q offchain-job-executor docs/implementation/platform-backend-skeleton.md
+grep -q offchain-job-executor docs/implementation/implementation-record.md
 ! rg -q 'child_process.*shell:\\s*true|shell:\\s*true' scripts/platform-backend/
 git status --short
 ```
@@ -288,13 +305,14 @@ Required:
 - Add `docs/implementation/offchain-job-executor.md`.
 - Update `docs/README.md` implementation/development index.
 - Update `docs/implementation/platform-backend-skeleton.md` to point from Stage 18 metadata-only jobs to Stage 19 executor behavior.
+- Update `docs/implementation/implementation-record.md` with a brief Stage 19 entry.
 
 The formal executor document must include:
 
 - status and scope for Stage 19;
 - executor CLI commands and examples;
-- `proof_generation` job input contract;
-- output files, digest behavior, and evidence linkage;
+- `proof_generation` job input contract, including the required `workflow_run` input reference and profile handling;
+- output files, digest behavior, and Evidence linkage/category behavior;
 - dry-run vs real proof execution distinction;
 - unsupported future job types;
 - trust boundaries and non-goals;
@@ -322,8 +340,21 @@ Do not update experiment reports, deployment runbooks, paper gap matrices, chain
 opencode should review:
 
 - whether Stage 19 is narrow enough to avoid building a production queue/daemon;
-- whether the `proof_generation` input contract using `input_refs` is concrete and compatible with Stage 15/18 objects;
+- whether the `proof_generation` input contract using `input_refs` is concrete and compatible with Stage 15/18 objects, including the required `workflow_run` reference for Evidence `run_id`;
 - whether dry-run executor behavior is clearly separated from real proof execution;
 - whether path-safety and generated-output hygiene requirements are strong enough;
 - whether the validation commands can prove executor mechanics without requiring a live chain or a real ZK binary;
-- whether any formal docs beyond `offchain-job-executor.md`, `platform-backend-skeleton.md`, and `docs/README.md` must be updated.
+- whether any formal docs beyond `offchain-job-executor.md`, `platform-backend-skeleton.md`, `implementation-record.md`, and `docs/README.md` must be updated.
+
+## Plan Review Resolution
+
+Stage 19 opencode plan review `docs/internal/agent-reviews/2026-07-01-stage19-offchain-job-executor-plan-review.md` returned `approved-with-required-fixes`. This revision applies the required fixes and selected suggestions:
+
+- F1 applied: executor-created Evidence categories are now explicit. Dry-run Evidence must use `category: "dry_run"`, `scenario: "executor-dry-run"`, and `result: "executor-dry-run-completed"`; real off-chain proof-generation Evidence must use `category: "postcheck"`.
+- F2 applied: `proof_generation` jobs must include a `workflow_run` input reference whose `path` is an existing `workflow_runs.run_id`. The executor must verify it before Evidence creation and fail the job without Evidence if missing. The plan rejects placeholder workflow runs, null `run_id`, and Evidence schema changes.
+- S1 accepted: the helper module is named `scripts/platform-backend/lib/job_runner.js` to avoid confusing it with the CLI entrypoint.
+- S2 accepted: profile `input_refs[].path` is the `--profile` string for the existing CLI, with optional lightweight validation only.
+- S3 accepted: dry-run output must include `executor_dry_run: true` in addition to explicit Evidence scenario/result markers.
+- S4 accepted: `docs/implementation/implementation-record.md` is now a required documentation update and validation target.
+
+The revised plan is ready for opencode re-review. Implementation must wait for opencode to approve this revised plan unless the owner explicitly overrides the re-review gate.
