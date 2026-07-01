@@ -136,6 +136,14 @@ describe('safe_paths', () => {
     assert.ok(result.resolved.includes(jobId));
     assert.ok(fs.existsSync(result.resolved));
   });
+
+  it('resolveWorkDir rejects non-ignored repo directories', () => {
+    const workRoot = path.join('docs', `test-work-dir-${Date.now()}`);
+    const jobId = 'test-job-1';
+    const result = resolveWorkDir(workRoot, jobId);
+    assert.ok(result.error);
+    assert.ok(result.error.includes('must be under an ignored runtime root'));
+  });
 });
 
 describe('runJob', () => {
@@ -351,6 +359,50 @@ describe('runJob', () => {
     const content = JSON.parse(fs.readFileSync(evidencePath, 'utf-8'));
     assert.equal(content.executor_dry_run, true);
     assert.equal(content.mode, 'executor-dry-run');
+  });
+
+  it('dry-run rejects unsafe dataset path outside repo', () => {
+    const evidenceBefore = store.list('evidence').length;
+    const job = makeProofGenerationJob({
+      input_refs: [
+        { artifact_type: 'workflow_run', path: runId, digest: null },
+        { artifact_type: 'profile', path: 'test-profile', digest: null },
+        { artifact_type: 'dataset', path: '/etc/passwd', digest: null },
+        { artifact_type: 'request', path: 'scripts/fixtures/data_trade_requests/factory_temperature_range.json', digest: null },
+      ],
+    });
+    store.create('offchain_jobs', job);
+    const result = runJob(store, job, workRoot, 'test-worker', true);
+    assert.ok(result.error);
+    assert.ok(result.error.includes('input path unsafe'));
+    assert.ok(result.error.includes('/etc/passwd'));
+    const updated = store.findOne('offchain_jobs', j => j.job_id === job.job_id);
+    assert.equal(updated.status, 'failed');
+    assert.ok(updated.started_at);
+    assert.ok(updated.completed_at);
+    assert.ok(!updated.evidence_id);
+    assert.equal(store.list('evidence').length, evidenceBefore);
+  });
+
+  it('dry-run rejects unsafe request path outside repo', () => {
+    const evidenceBefore = store.list('evidence').length;
+    const job = makeProofGenerationJob({
+      input_refs: [
+        { artifact_type: 'workflow_run', path: runId, digest: null },
+        { artifact_type: 'profile', path: 'test-profile', digest: null },
+        { artifact_type: 'dataset', path: 'scripts/fixtures/data_trade_datasets/factory_sensors.json', digest: null },
+        { artifact_type: 'request', path: '/etc/shadow', digest: null },
+      ],
+    });
+    store.create('offchain_jobs', job);
+    const result = runJob(store, job, workRoot, 'test-worker', true);
+    assert.ok(result.error);
+    assert.ok(result.error.includes('input path unsafe'));
+    assert.ok(result.error.includes('/etc/shadow'));
+    const updated = store.findOne('offchain_jobs', j => j.job_id === job.job_id);
+    assert.equal(updated.status, 'failed');
+    assert.ok(!updated.evidence_id);
+    assert.equal(store.list('evidence').length, evidenceBefore);
   });
 
   it('real execution with no ZK binary fails with error', () => {

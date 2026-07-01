@@ -137,7 +137,7 @@ scripts/platform-backend/
 - **Executor is not a chain signer.** It never holds private keys, mnemonics, or chain signing material.
 - **Job completion is not proof of correctness.** Dry-run evidence is inspectably marked. Real proof generation evidence uses `category: "postcheck"` because it records off-chain proof output without chain finality or live-chain verification.
 - **Single-process only.** The JSON store is not safe for concurrent multi-worker use. Executor tests run sequentially.
-- **Path safety.** Input paths are validated against the repository root using real-path resolution. Output paths are constrained to the configured work root.
+- **Path safety.** Input paths are validated against the repository root using real-path resolution. `--work-dir` must be under an ignored repo-local runtime root (`.agents/` or `var/platform-backend/`); non-ignored paths such as `docs/` or `scripts/` are rejected.
 - **No production claims.** This is a development-grade executor. It is not a production daemon, queue server, or distributed worker pool.
 
 ## 7. Non-Goals

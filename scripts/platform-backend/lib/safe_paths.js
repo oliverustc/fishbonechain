@@ -6,6 +6,11 @@ const REPO_ROOT = path.resolve(
   '../../..'
 );
 
+const IGNORED_ROOTS = [
+  path.resolve(REPO_ROOT, '.agents'),
+  path.resolve(REPO_ROOT, 'var/platform-backend'),
+];
+
 export function resolveRepoPath(inputPath) {
   const resolved = path.resolve(inputPath);
   if (!resolved.startsWith(REPO_ROOT + path.sep) && resolved !== REPO_ROOT) {
@@ -23,14 +28,19 @@ export function resolveRepoPath(inputPath) {
 
 export function resolveWorkDir(workRoot, jobId) {
   const resolved = path.resolve(workRoot, jobId);
-  const repoResolved = path.resolve(REPO_ROOT, '.agents');
+
   if (!resolved.startsWith(REPO_ROOT + path.sep) && resolved !== REPO_ROOT) {
     return { error: `work directory outside repository: ${resolved}` };
   }
-  if (resolved.startsWith(repoResolved + path.sep) || resolved === repoResolved) {
-    fs.mkdirSync(resolved, { recursive: true });
-    return { resolved };
+
+  const isIgnored = IGNORED_ROOTS.some(root =>
+    resolved.startsWith(root + path.sep) || resolved === root
+  );
+
+  if (!isIgnored) {
+    return { error: `work directory must be under an ignored runtime root (.agents/ or var/platform-backend/): ${resolved}` };
   }
+
   fs.mkdirSync(resolved, { recursive: true });
   return { resolved };
 }

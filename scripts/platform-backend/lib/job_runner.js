@@ -129,6 +129,17 @@ export function runJob(store, job, workRoot, workerId, dryRun) {
   }
   const workDir = workResolved.resolved;
 
+  for (const artifactRef of [inputCheck.byType.dataset, inputCheck.byType.request]) {
+    if (!artifactRef || !artifactRef.path) continue;
+    const resolved = resolveRepoPath(artifactRef.path);
+    if (resolved.error) {
+      transitionJob(job, 'failed');
+      job.error = `input path unsafe: ${artifactRef.path} — ${resolved.error}`;
+      store.update('offchain_jobs', j => j.job_id === jobId, j => Object.assign(j, job));
+      return { error: job.error };
+    }
+  }
+
   if (!dryRun) {
     const cliResolved = resolveGenerateProofArgs(job, workDir);
     if (cliResolved.error) {
@@ -136,17 +147,6 @@ export function runJob(store, job, workRoot, workerId, dryRun) {
       job.error = cliResolved.error;
       store.update('offchain_jobs', j => j.job_id === jobId, j => Object.assign(j, job));
       return { error: job.error };
-    }
-
-    for (const artifactRef of [inputCheck.byType.dataset, inputCheck.byType.request]) {
-      if (!artifactRef || !artifactRef.path) continue;
-      const resolved = resolveRepoPath(artifactRef.path);
-      if (resolved.error) {
-        transitionJob(job, 'failed');
-        job.error = `input path unsafe: ${artifactRef.path} — ${resolved.error}`;
-        store.update('offchain_jobs', j => j.job_id === jobId, j => Object.assign(j, job));
-        return { error: job.error };
-      }
     }
   }
 

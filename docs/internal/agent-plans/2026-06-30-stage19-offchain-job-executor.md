@@ -371,6 +371,34 @@ Do not update experiment reports, deployment runbooks, paper gap matrices, chain
   - JSON store remains single-process; concurrent use not tested
   - Path safety relies on repo-root boundary; no OS-level sandboxing
 
+### 2026-07-01 opencode Pass 2 (review-fix)
+
+- Branch: stage/stage19-offchain-job-executor
+- Base commit: 1bfbaf3 (code review was committed)
+- Head commit: ac21507
+- Commits: ac21507 fix(backend): harden executor path safety and output root constraints
+- Tasks completed:
+  - **F1**: Moved dataset/request real-path validation to run for both dry-run and real execution modes (was previously inside `if (!dryRun)` block)
+  - **F1**: Added regression tests for dry-run unsafe dataset path (`/etc/passwd`) and unsafe request path (`/etc/shadow`) — both fail with `status: "failed"`, no Evidence created
+  - **F2**: Constrained `--work-dir` to ignored repo-local runtime roots (`.agents/` and `var/platform-backend/`); non-ignored paths like `docs/` are rejected
+  - **F2**: Added regression test proving non-ignored work root is rejected
+  - Updated `docs/implementation/offchain-job-executor.md` trust boundaries to document the work-dir constraint
+- Files changed:
+  - scripts/platform-backend/lib/job_runner.js (modified — path validation moved before dry-run gate)
+  - scripts/platform-backend/lib/safe_paths.js (modified — work-dir constrained to ignored roots)
+  - scripts/platform-backend/test/job_executor.test.js (modified — 3 new regression tests)
+  - docs/implementation/offchain-job-executor.md (modified — work-dir constraint documented)
+- Tests run:
+  - node --check on all modified files: passed
+  - node --test scripts/platform-backend/test/job_executor.test.js: 28/28 passed (3 new tests)
+  - node --test scripts/platform-backend/test/backend_store.test.js scripts/platform-backend/test/backend_api.test.js: no regressions
+  - rg check: no shell injection patterns found
+- Tests not run:
+  - Optional real proof smoke: skipped (fishbone-zk binary not in environment)
+- Deviations from plan: none
+- Questions for Codex/Owner: none
+- Remaining risks: unchanged from Pass 1
+
 ## Plan-Review Focus
 
 opencode should review:
