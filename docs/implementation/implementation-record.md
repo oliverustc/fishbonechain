@@ -39,6 +39,7 @@
 | Phase 5 | 2026-06-04 | 完成 | BABE runtime/service 修复，child6 BABE 出块和 GRANDPA finality |
 | 实验 A-D | 2026-06-04 至 2026-06-06 | 完成 | 单链瓶颈、专用链改善、6 链并发、线性扩展图表 |
 | 实验 E | 2026-06-11 | 部分完成 | `metrics_fund.js`、资金数据 CSV、fig7a/fig7b 图表 |
+| Stage 19 | 2026-07-01 | 完成 | [链下任务执行器](implementation/offchain-job-executor.md)，单次 CLI，`proof_generation` 执行，dry-run 分离，Evidence 自动创建 |
 
 ## 已实现代码
 

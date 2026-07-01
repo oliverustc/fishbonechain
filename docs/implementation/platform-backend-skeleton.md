@@ -119,6 +119,8 @@ Stage 17 `events.jsonl` records may include a `chain_role` field (`"main"` or `"
 - No Stage 19 job execution or Stage 20 data-trade module APIs.
 - No replacement of the Stage 17 indexer.
 
+Jobs are no longer metadata-only when the Stage 19 offchain job executor is run against the same data store. See [Offchain Job Executor](offchain-job-executor.md) for executor commands, input contract, and Evidence linkage.
+
 ## 7. Code Layout
 
 ```text
